@@ -1,0 +1,52 @@
+name: Bug report
+description: Report a reproducible problem in the active installer
+title: "[Bug]: "
+labels: [bug, triage]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Do not include passwords, tokens, private hostnames or production logs.
+        Legacy scripts are unsupported and should not be executed.
+  - type: input
+    id: version
+    attributes:
+      label: Installer version
+      placeholder: "1.0.0"
+    validations:
+      required: true
+  - type: input
+    id: distribution
+    attributes:
+      label: Distribution
+      placeholder: "Ubuntu 24.04 / Rocky Linux 9"
+    validations:
+      required: true
+  - type: input
+    id: command
+    attributes:
+      label: Command or module
+      placeholder: "./install.sh plan nginx"
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected behavior
+    validations:
+      required: true
+  - type: textarea
+    id: actual
+    attributes:
+      label: Actual behavior and sanitized output
+    validations:
+      required: true
+  - type: checkboxes
+    id: checks
+    attributes:
+      label: Checks
+      options:
+        - label: I reproduced this with the active root install.sh, not a legacy script.
+          required: true
+        - label: I removed secrets and sensitive infrastructure data.
+          required: true

@@ -1,0 +1,6 @@
+# Description: Network and process diagnostic commands
+bind-utils
+traceroute
+nmap
+net-tools
+lsof

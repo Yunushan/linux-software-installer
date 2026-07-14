@@ -1,0 +1,18 @@
+# Runtime and test output
+*.log
+coverage/
+reports/
+tmp/
+
+# Editor and operating-system files
+.idea/
+.vscode/
+*.swp
+*~
+.DS_Store
+Thumbs.db
+
+# Local environment overrides
+.env
+.env.*
+!.env.example

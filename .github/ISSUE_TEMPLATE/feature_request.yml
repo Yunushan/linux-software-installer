@@ -1,0 +1,33 @@
+name: Feature request
+description: Propose a module or installer improvement
+title: "[Feature]: "
+labels: [enhancement, triage]
+body:
+  - type: textarea
+    id: problem
+    attributes:
+      label: Problem or use case
+      description: Explain the administrator outcome, not only the package name.
+    validations:
+      required: true
+  - type: input
+    id: distributions
+    attributes:
+      label: Target distributions
+      placeholder: "Debian family, RHEL family, or both"
+    validations:
+      required: true
+  - type: textarea
+    id: source
+    attributes:
+      label: Package source and safety considerations
+      description: Identify enabled OS repositories, required services and configuration changes.
+    validations:
+      required: true
+  - type: checkboxes
+    id: policy
+    attributes:
+      label: Safety policy
+      options:
+        - label: The request does not require curl-to-shell, unsigned downloads, forced dependencies or embedded credentials.
+          required: true

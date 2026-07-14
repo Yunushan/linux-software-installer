@@ -1,0 +1,7 @@
+# Description: Compilers and common application-development runtimes
+base-tools
+git
+build-tools
+python
+nodejs
+openjdk

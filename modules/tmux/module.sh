@@ -1,0 +1,9 @@
+#!/usr/bin/env bash
+MODULE_ID='tmux'
+MODULE_NAME='tmux'
+MODULE_DESCRIPTION='Terminal multiplexer'
+MODULE_CATEGORY='utility'
+MODULE_FAMILIES=(debian rhel)
+MODULE_DEBIAN_PACKAGES=(tmux)
+MODULE_RHEL_PACKAGES=(tmux)
+MODULE_VERIFY_BINARIES=(tmux)

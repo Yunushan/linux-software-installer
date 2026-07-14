@@ -1,0 +1,5 @@
+# Description: PostgreSQL, MariaDB, Redis and SQLite database tools
+postgresql
+mariadb
+redis
+sqlite

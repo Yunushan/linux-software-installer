@@ -1,0 +1,66 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  lint-and-test:
+    name: Lint and test
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+
+      - name: Install shell tooling
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y shellcheck shfmt
+
+      - name: Validate Bash syntax
+        run: make syntax
+
+      - name: Run ShellCheck
+        run: make lint
+
+      - name: Check formatting
+        run: make format-check
+
+      - name: Run tests
+        run: make test
+
+  container-smoke:
+    name: Container smoke (${{ matrix.name }})
+    needs: lint-and-test
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - name: Ubuntu 24.04
+            image: ubuntu:24.04
+          - name: Debian 12
+            image: debian:12
+          - name: Rocky Linux 9
+            image: rockylinux:9
+          - name: AlmaLinux 9
+            image: almalinux:9
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+
+      - name: Run read-only smoke test
+        run: |
+          docker run --rm --read-only --tmpfs /tmp \
+            -v "${GITHUB_WORKSPACE}:/workspace:ro" \
+            "${{ matrix.image }}" \
+            bash /workspace/tests/container-smoke.sh

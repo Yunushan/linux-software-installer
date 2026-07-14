@@ -1,0 +1,9 @@
+#!/usr/bin/env bash
+MODULE_ID='jq'
+MODULE_NAME='jq'
+MODULE_DESCRIPTION='Command-line JSON processor'
+MODULE_CATEGORY='utility'
+MODULE_FAMILIES=(debian rhel)
+MODULE_DEBIAN_PACKAGES=(jq)
+MODULE_RHEL_PACKAGES=(jq)
+MODULE_VERIFY_BINARIES=(jq)

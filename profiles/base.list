@@ -1,0 +1,8 @@
+# Description: Baseline command-line utilities for a new Linux system
+base-tools
+git
+vim
+nano
+tmux
+net-tools
+lsof

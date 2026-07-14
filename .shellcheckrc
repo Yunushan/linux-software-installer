@@ -1,0 +1,5 @@
+shell=bash
+external-sources=true
+source-path=SCRIPTDIR
+severity=warning
+disable=SC2030,SC2031,SC2034

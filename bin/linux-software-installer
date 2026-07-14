@@ -1,0 +1,22 @@
+#!/usr/bin/env bash
+set -Eeuo pipefail
+IFS=$'\n\t'
+umask 022
+export LC_ALL=C
+export PATH='/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin'
+
+LSI_PROJECT_ROOT="$(CDPATH='' cd -- "$(dirname -- "${BASH_SOURCE[0]}")/.." && pwd -P)"
+export LSI_PROJECT_ROOT
+
+# shellcheck source=../lib/common.sh
+source "$LSI_PROJECT_ROOT/lib/common.sh"
+# shellcheck source=../lib/os.sh
+source "$LSI_PROJECT_ROOT/lib/os.sh"
+# shellcheck source=../lib/catalog.sh
+source "$LSI_PROJECT_ROOT/lib/catalog.sh"
+# shellcheck source=../lib/package.sh
+source "$LSI_PROJECT_ROOT/lib/package.sh"
+# shellcheck source=../lib/cli.sh
+source "$LSI_PROJECT_ROOT/lib/cli.sh"
+
+lsi_main "$@"

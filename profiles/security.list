@@ -1,0 +1,5 @@
+# Description: Host firewall, banning and malware-scanning packages
+firewalld
+ufw
+fail2ban
+clamav
