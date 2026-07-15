@@ -21,13 +21,28 @@ lsi_refresh_repositories() {
 }
 
 lsi_install_packages() {
+  local package
+  local -a packages=("$@") filtered_packages=()
   (($# > 0)) || return 0
   case "$LSI_OS_FAMILY" in
     debian)
-      lsi_run env DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends "$@"
+      lsi_run env DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends "${packages[@]}"
       ;;
     rhel)
-      lsi_run dnf -y install "$@"
+      # Rocky/Alma minimal installations use curl-minimal, which conflicts with
+      # the full curl RPM. Conversely, do not replace a full curl RPM already
+      # selected by an administrator merely because a module names the minimal
+      # provider.
+      if [[ ${LSI_DRY_RUN:-false} == false ]] &&
+        command -v rpm > /dev/null 2>&1 &&
+        rpm -q curl > /dev/null 2>&1; then
+        for package in "${packages[@]}"; do
+          [[ $package == curl-minimal ]] || filtered_packages+=("$package")
+        done
+        packages=("${filtered_packages[@]}")
+      fi
+      [[ ${#packages[@]} -gt 0 ]] || return 0
+      lsi_run dnf -y install "${packages[@]}"
       ;;
     *)
       lsi_die "No package installation implementation for $LSI_OS_FAMILY." 3
@@ -108,7 +123,8 @@ lsi_install_module() {
     return 0
   }
   lsi_load_module "$id"
-  lsi_module_supports_family "$LSI_OS_FAMILY" || lsi_die "Module $id does not support $LSI_OS_FAMILY systems." 3
+  lsi_module_supports_current_target ||
+    lsi_die "Module $id does not support target $(lsi_current_target_label) ($LSI_OS_FAMILY family)." 3
   mapfile -t packages < <(lsi_module_packages)
   [[ ${#packages[@]} -gt 0 && -n ${packages[0]} ]] || lsi_die "Module $id has no package mapping for $LSI_OS_FAMILY." 3
 

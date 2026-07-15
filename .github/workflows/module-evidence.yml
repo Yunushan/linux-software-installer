@@ -1,0 +1,285 @@
+name: Standalone module evidence
+
+on:
+  workflow_dispatch:
+    inputs:
+      scope:
+        description: Distribution family to test
+        required: true
+        default: all
+        type: choice
+        options:
+          - all
+          - debian
+          - rhel
+      module:
+        description: Optional single module ID; leave empty for the full catalog
+        required: false
+        type: string
+
+permissions:
+  contents: read
+
+concurrency:
+  group: standalone-module-evidence-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  catalog:
+    name: Resolve catalog and immutable targets
+    runs-on: ubuntu-latest
+    outputs:
+      matrix: ${{ steps.plan.outputs.matrix }}
+      matrix_count: ${{ steps.plan.outputs.matrix_count }}
+      expected_cell_count: ${{ steps.plan.outputs.expected_cell_count }}
+      ubuntu_ref: ${{ steps.plan.outputs.ubuntu_ref }}
+      debian_ref: ${{ steps.plan.outputs.debian_ref }}
+      rocky_9_8_ref: ${{ steps.plan.outputs.rocky_9_8_ref }}
+      alma_9_8_ref: ${{ steps.plan.outputs.alma_9_8_ref }}
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+        with:
+          persist-credentials: false
+
+      - name: Generate module matrix and resolve image digests once
+        id: plan
+        env:
+          FILTER_MODULE: ${{ inputs.module }}
+          INPUT_SCOPE: ${{ inputs.scope }}
+        run: |
+          set -euo pipefail
+          plan_dir="${RUNNER_TEMP}/module-evidence-plan"
+          mkdir -p "$plan_dir/image-pulls"
+
+          matrix=$(bash tests/evidence-matrix.sh \
+            "$GITHUB_WORKSPACE" matrix "$INPUT_SCOPE" "$FILTER_MODULE")
+          matrix_count=$(python3 -c \
+            'import json,sys; print(len(json.load(sys.stdin)["include"]))' <<< "$matrix")
+          ((matrix_count > 0))
+          bash tests/evidence-matrix.sh \
+            "$GITHUB_WORKSPACE" cells "$INPUT_SCOPE" "$FILTER_MODULE" \
+            > "$plan_dir/expected-cells.tsv"
+          cp tests/evidence-targets.tsv "$plan_dir/evidence-targets.tsv"
+
+          printf '%s\n' \
+            $'target_id\tref_env\tdisplay_name\tfamily\timage\tplatform\texpected_os_id\texpected_version_id\texpected_arch\timage_ref' \
+            > "$plan_dir/resolved-targets.tsv"
+          while IFS=$'\t' read -r target_id ref_env display_name family image \
+            platform expected_os_id expected_version_id expected_arch; do
+            expected_arch=${expected_arch%$'\r'}
+            [[ $target_id != target_id ]] || continue
+            timeout --signal=TERM --kill-after=30s 10m \
+              docker pull --platform "$platform" "$image" 2>&1 | \
+              tee "$plan_dir/image-pulls/${target_id}.log"
+            image_ref=$(docker image inspect --format '{{index .RepoDigests 0}}' "$image")
+            [[ $image_ref =~ @sha256:[0-9a-f]{64}$ ]] || {
+              printf 'Image %s did not resolve to an immutable repository digest.\n' "$image" >&2
+              exit 1
+            }
+            if [[ $image == *@sha256:* && ${image##*@} != "${image_ref##*@}" ]]; then
+              printf 'Pinned image %s resolved to unexpected digest %s.\n' \
+                "$image" "$image_ref" >&2
+              exit 1
+            fi
+            printf '%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\n' \
+              "$target_id" "$ref_env" "$display_name" "$family" "$image" \
+              "$platform" "$expected_os_id" "$expected_version_id" \
+              "$expected_arch" "$image_ref" >> "$plan_dir/resolved-targets.tsv"
+            case "$target_id" in
+              ubuntu-24-04) printf 'ubuntu_ref=%s\n' "$image_ref" >> "$GITHUB_OUTPUT" ;;
+              debian-12) printf 'debian_ref=%s\n' "$image_ref" >> "$GITHUB_OUTPUT" ;;
+              rocky-9-8) printf 'rocky_9_8_ref=%s\n' "$image_ref" >> "$GITHUB_OUTPUT" ;;
+              alma-9-8) printf 'alma_9_8_ref=%s\n' "$image_ref" >> "$GITHUB_OUTPUT" ;;
+              *) printf 'Unknown canonical target: %s\n' "$target_id" >&2; exit 1 ;;
+            esac
+          done < tests/evidence-targets.tsv
+
+          expected_cell_count=$(($(wc -l < "$plan_dir/expected-cells.tsv") - 1))
+          ((expected_cell_count > 0))
+          if [[ -z $FILTER_MODULE ]]; then
+            case "$INPUT_SCOPE" in
+              all) expected_modules=103; expected_cells=273 ;;
+              debian) expected_modules=100; expected_cells=197 ;;
+              rhel) expected_modules=38; expected_cells=76 ;;
+              *) printf 'Unknown evidence scope: %s\n' "$INPUT_SCOPE" >&2; exit 2 ;;
+            esac
+            [[ $matrix_count -eq $expected_modules && \
+              $expected_cell_count -eq $expected_cells ]] || {
+              printf 'Evidence plan coverage drifted: %s modules, %s cells.\n' \
+                "$matrix_count" "$expected_cell_count" >&2
+              exit 1
+            }
+          else
+            [[ $matrix_count -eq 1 ]] || {
+              printf 'A filtered evidence plan must contain exactly one module.\n' >&2
+              exit 1
+            }
+          fi
+          printf 'matrix=%s\n' "$matrix" >> "$GITHUB_OUTPUT"
+          printf 'matrix_count=%s\n' "$matrix_count" >> "$GITHUB_OUTPUT"
+          printf 'expected_cell_count=%s\n' "$expected_cell_count" >> "$GITHUB_OUTPUT"
+          printf '%s\n' "$GITHUB_SHA" > "$plan_dir/tested-commit.txt"
+
+      - name: Upload immutable evidence plan
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: module-evidence-plan
+          path: ${{ runner.temp }}/module-evidence-plan
+          if-no-files-found: error
+          retention-days: 90
+
+  module:
+    name: Module / ${{ matrix.module }}
+    needs: catalog
+    if: needs.catalog.outputs.matrix_count != '0'
+    runs-on: ubuntu-latest
+    timeout-minutes: 240
+    strategy:
+      fail-fast: false
+      max-parallel: 4
+      matrix: ${{ fromJSON(needs.catalog.outputs.matrix) }}
+    env:
+      UBUNTU_24_04_IMAGE_REF: ${{ needs.catalog.outputs.ubuntu_ref }}
+      DEBIAN_12_IMAGE_REF: ${{ needs.catalog.outputs.debian_ref }}
+      ROCKY_9_8_IMAGE_REF: ${{ needs.catalog.outputs.rocky_9_8_ref }}
+      ALMA_9_8_IMAGE_REF: ${{ needs.catalog.outputs.alma_9_8_ref }}
+      INPUT_SCOPE: ${{ inputs.scope }}
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+        with:
+          persist-credentials: false
+
+      - name: Prepare credential-free source export
+        run: |
+          mkdir -p "$RUNNER_TEMP/source"
+          git archive --format=tar --output="$RUNNER_TEMP/source.tar" "$GITHUB_SHA"
+          tar -xf "$RUNNER_TEMP/source.tar" -C "$RUNNER_TEMP/source"
+          test ! -e "$RUNNER_TEMP/source/.git"
+
+      - name: Run every applicable target in a fresh container
+        env:
+          LSI_ARTIFACT_NAME: module-cell-${{ matrix.module }}
+          LSI_RAW_EVIDENCE_ROOT: ${{ runner.temp }}/evidence-raw
+          LSI_RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+          LSI_SANITIZE_WITH_SUDO: '1'
+        run: |
+          bash tests/run-module-evidence.sh \
+            "$RUNNER_TEMP/source" "$INPUT_SCOPE" "${{ matrix.module }}" \
+            "$RUNNER_TEMP/evidence"
+
+      - name: Upload module evidence cells
+        if: always()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: module-cell-${{ matrix.module }}
+          path: ${{ runner.temp }}/evidence
+          if-no-files-found: warn
+          retention-days: 90
+
+  aggregate:
+    name: Validate complete evidence set
+    needs:
+      - catalog
+      - module
+    if: always() && needs.catalog.result == 'success'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    env:
+      FILTER_MODULE: ${{ inputs.module }}
+      INPUT_SCOPE: ${{ inputs.scope }}
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+        with:
+          persist-credentials: false
+
+      - name: Download immutable evidence plan
+        uses: actions/download-artifact@fd7ae8fda6dc16277a9ffbc91cdb0eedf156e912 # v7.0.0
+        with:
+          name: module-evidence-plan
+          path: ${{ runner.temp }}/module-evidence-plan
+
+      - name: Download all module evidence
+        continue-on-error: true
+        uses: actions/download-artifact@fd7ae8fda6dc16277a9ffbc91cdb0eedf156e912 # v7.0.0
+        with:
+          pattern: module-cell-*
+          path: ${{ runner.temp }}/module-cells
+          merge-multiple: true
+
+      - name: Recompute and verify the evidence plan from this commit
+        run: |
+          bash tests/evidence-matrix.sh \
+            "$GITHUB_WORKSPACE" cells "$INPUT_SCOPE" "$FILTER_MODULE" \
+            > "$RUNNER_TEMP/recomputed-expected-cells.tsv"
+          diff -u \
+            "$RUNNER_TEMP/recomputed-expected-cells.tsv" \
+            "$RUNNER_TEMP/module-evidence-plan/expected-cells.tsv"
+          diff -u \
+            tests/evidence-targets.tsv \
+            "$RUNNER_TEMP/module-evidence-plan/evidence-targets.tsv"
+          cmp \
+            <(printf '%s\n' "$GITHUB_SHA") \
+            "$RUNNER_TEMP/module-evidence-plan/tested-commit.txt"
+
+      - name: Validate coverage, identity, checksums and results
+        run: |
+          python3 tests/evidence-record.py validate-run \
+            --artifacts-root "$RUNNER_TEMP/module-cells" \
+            --expected-cells "$RUNNER_TEMP/recomputed-expected-cells.tsv" \
+            --resolved-targets "$RUNNER_TEMP/module-evidence-plan/resolved-targets.tsv" \
+            --repo-root "$GITHUB_WORKSPACE" \
+            --repository "$GITHUB_REPOSITORY" \
+            --commit "$GITHUB_SHA" \
+            --ref "$GITHUB_REF" \
+            --run-id "$GITHUB_RUN_ID" \
+            --run-attempt "$GITHUB_RUN_ATTEMPT" \
+            --run-url "${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}" \
+            --output "$RUNNER_TEMP/module-evidence-aggregate" \
+            --require-pass
+
+      - name: Build deterministic import bundle
+        if: always()
+        run: |
+          set -euo pipefail
+          mkdir -p "$RUNNER_TEMP/module-cells" "$RUNNER_TEMP/module-evidence-aggregate"
+          tar --sort=name --mtime='UTC 1970-01-01' \
+            --owner=0 --group=0 --numeric-owner \
+            -C "$RUNNER_TEMP" \
+            -cf - module-evidence-plan module-cells | gzip -n \
+            > "$RUNNER_TEMP/module-evidence-aggregate/module-evidence-cells.tar.gz"
+          (
+            cd "$RUNNER_TEMP/module-evidence-aggregate"
+            sha256sum module-evidence-cells.tar.gz \
+              > module-evidence-cells.tar.gz.sha256
+          )
+
+      - name: Upload aggregate evidence index and bundle
+        id: upload_aggregate
+        if: always()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: module-evidence-aggregate-${{ github.sha }}
+          path: ${{ runner.temp }}/module-evidence-aggregate
+          if-no-files-found: warn
+          retention-days: 90
+
+      - name: Record GitHub artifact digest
+        if: always() && steps.upload_aggregate.outcome == 'success'
+        env:
+          ARTIFACT_DIGEST: ${{ steps.upload_aggregate.outputs['artifact-digest'] }}
+          ARTIFACT_ID: ${{ steps.upload_aggregate.outputs['artifact-id'] }}
+          ARTIFACT_URL: ${{ steps.upload_aggregate.outputs['artifact-url'] }}
+        run: |
+          [[ $ARTIFACT_DIGEST =~ ^(sha256:)?[0-9a-fA-F]{64}$ ]]
+          [[ $ARTIFACT_ID =~ ^[0-9]+$ ]]
+          [[ -n $ARTIFACT_URL ]]
+          {
+            printf '### Aggregate evidence artifact\n\n'
+            printf -- '- Artifact ID: `%s`\n' "$ARTIFACT_ID"
+            printf -- '- Artifact digest: `%s`\n' "$ARTIFACT_DIGEST"
+            printf -- '- Artifact URL: %s\n' "$ARTIFACT_URL"
+          } >> "$GITHUB_STEP_SUMMARY"

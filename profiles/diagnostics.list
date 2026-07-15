@@ -1,4 +1,5 @@
 # Description: Network and process diagnostic commands
+monitoring-tools
 bind-utils
 traceroute
 nmap

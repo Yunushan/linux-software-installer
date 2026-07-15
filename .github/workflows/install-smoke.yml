@@ -1,0 +1,148 @@
+name: Real install smoke
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: '17 3 * * 1'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: real-install-smoke
+  cancel-in-progress: false
+
+jobs:
+  install-and-repeat:
+    name: ${{ matrix.name }} / ${{ matrix.batch }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 75
+    strategy:
+      fail-fast: false
+      max-parallel: 4
+      matrix:
+        include:
+          - name: Ubuntu 24.04
+            key: ubuntu-main
+            image: ubuntu:24.04
+            batch: conflict-safe catalog batch 0
+            modules: --catalog-batch 0
+          - name: Ubuntu 24.04
+            key: ubuntu-conflicts
+            image: ubuntu:24.04
+            batch: conflict-safe catalog batch 1
+            modules: --catalog-batch 1
+          - name: Debian 12
+            key: debian-main
+            image: debian:12
+            batch: conflict-safe catalog batch 0
+            modules: --catalog-batch 0
+          - name: Debian 12
+            key: debian-conflicts
+            image: debian:12
+            batch: conflict-safe catalog batch 1
+            modules: --catalog-batch 1
+          - name: Rocky Linux 9.8
+            key: rocky-main
+            image: rockylinux/rockylinux:9.8@sha256:8101994123cf3d0a8fee517bee7f39e555c7d92bd2d9eb3303cc988a0eeed00f
+            batch: conflict-safe catalog batch 0
+            modules: --catalog-batch 0
+          - name: Rocky Linux 9.8
+            key: rocky-conflicts
+            image: rockylinux/rockylinux:9.8@sha256:8101994123cf3d0a8fee517bee7f39e555c7d92bd2d9eb3303cc988a0eeed00f
+            batch: conflict-safe catalog batch 1
+            modules: --catalog-batch 1
+          - name: AlmaLinux 9.8
+            key: alma-main
+            image: almalinux:9.8@sha256:d2515c769e7b73f95c4fde38c0a505336ff38f14990c0b7253b77060a049a743
+            batch: conflict-safe catalog batch 0
+            modules: --catalog-batch 0
+          - name: AlmaLinux 9.8
+            key: alma-conflicts
+            image: almalinux:9.8@sha256:d2515c769e7b73f95c4fde38c0a505336ff38f14990c0b7253b77060a049a743
+            batch: conflict-safe catalog batch 1
+            modules: --catalog-batch 1
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+        with:
+          persist-credentials: false
+
+      - name: Prepare credential-free source export
+        run: |
+          mkdir -p "$RUNNER_TEMP/source"
+          git archive --format=tar --output="$RUNNER_TEMP/source.tar" "$GITHUB_SHA"
+          tar -xf "$RUNNER_TEMP/source.tar" -C "$RUNNER_TEMP/source"
+          test ! -e "$RUNNER_TEMP/source/.git"
+
+      - name: Pull and record image digest
+        id: image
+        run: |
+          mkdir -p "${RUNNER_TEMP}/runner-evidence"
+          timeout --signal=TERM --kill-after=30s 10m \
+            docker pull "${{ matrix.image }}"
+          image_ref=$(docker image inspect --format '{{index .RepoDigests 0}}' "${{ matrix.image }}")
+          [[ $image_ref =~ @sha256:[0-9a-f]{64}$ ]]
+          printf '%s\n' "$image_ref" | tee "${RUNNER_TEMP}/runner-evidence/image-digest.txt"
+          printf 'image_ref=%s\n' "$image_ref" >> "$GITHUB_OUTPUT"
+
+      - name: Install, check binary presence and repeat
+        run: |
+          set -o pipefail
+          mkdir -p "${RUNNER_TEMP}/raw-evidence" \
+            "${RUNNER_TEMP}/raw-installer-logs" \
+            "${RUNNER_TEMP}/runner-evidence"
+          set +e
+          timeout --signal=TERM --kill-after=30s 45m \
+            docker run --name "lsi-${{ matrix.key }}" \
+            -v "${RUNNER_TEMP}/source:/workspace:ro" \
+            -v "${RUNNER_TEMP}/raw-evidence:/evidence" \
+            -v "${RUNNER_TEMP}/raw-installer-logs:/var/log/linux-software-installer" \
+            -e LSI_EVIDENCE_DIR=/evidence \
+            "${{ steps.image.outputs.image_ref }}" \
+            bash /workspace/tests/install-smoke.sh \
+            /workspace ${{ matrix.modules }} 2>&1 | \
+              tee "${RUNNER_TEMP}/runner-evidence/container.log"
+          container_status=${PIPESTATUS[0]}
+          set -e
+          printf 'field\tvalue\ncontainer_exit_code\t%s\ncommit\t%s\nrun_id\t%s\n' \
+            "$container_status" "$GITHUB_SHA" "$GITHUB_RUN_ID" \
+            > "${RUNNER_TEMP}/runner-evidence/runner.tsv"
+          exit "$container_status"
+
+      - name: Stop evidence container
+        id: stop
+        if: always()
+        run: |
+          bash tests/remove-evidence-container.sh "lsi-${{ matrix.key }}"
+
+      - name: Sanitize container evidence
+        id: sanitize
+        if: always() && steps.stop.outcome == 'success'
+        run: |
+          set +e
+          sudo --non-interactive python3 tests/evidence-record.py sanitize-tree \
+            --source "$RUNNER_TEMP/raw-evidence" \
+            --destination "$RUNNER_TEMP/safe-evidence/install-evidence" \
+            --owner-uid "$(id -u)" \
+            --owner-gid "$(id -g)"
+          evidence_status=$?
+          sudo --non-interactive python3 tests/evidence-record.py sanitize-tree \
+            --source "$RUNNER_TEMP/raw-installer-logs" \
+            --destination "$RUNNER_TEMP/safe-evidence/installer-logs" \
+            --owner-uid "$(id -u)" \
+            --owner-gid "$(id -g)"
+          logs_status=$?
+          set -e
+          ((evidence_status == 0 && logs_status == 0))
+
+      - name: Upload install evidence
+        if: always()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: install-evidence-${{ matrix.key }}
+          path: |
+            ${{ runner.temp }}/runner-evidence
+            ${{ runner.temp }}/safe-evidence
+          if-no-files-found: error
+          retention-days: 30

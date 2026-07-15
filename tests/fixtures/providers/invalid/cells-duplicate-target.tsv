@@ -1,0 +1,3 @@
+cell_id	os_id	version_id	arch	manager	channel	repository_uri	suite	components	key_file	key_fingerprints	expected_origin	metadata_signature
+ubuntu-24-04-amd64-a	ubuntu	24.04	amd64	apt-get	stable	https://packages.example.invalid/apt/ubuntu/24.04	stable	main	keys/test-only.asc	FF8AD1344597106ECE813B918A3872BF3228467C	Example Test Publisher	apt-release
+ubuntu-24-04-amd64-b	ubuntu	24.04	amd64	apt-get	stable	https://packages.example.invalid/apt/ubuntu/24.04	stable	main	keys/test-only.asc	FF8AD1344597106ECE813B918A3872BF3228467C	Example Test Publisher	apt-release

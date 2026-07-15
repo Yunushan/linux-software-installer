@@ -1,0 +1,13 @@
+#!/usr/bin/env bash
+# Unit-test-only parser stand-in for development hosts without GnuPG.
+# This does not perform cryptography and must never enter a production PATH.
+set -Eeuo pipefail
+
+key_path=${!#}
+[[ $* == *'--with-colons'* && $* == *'--import-options show-only'* && -r $key_path ]] || exit 2
+grep -q '^mQINBGE3mOsB' "$key_path" || exit 2
+printf '%s\n' \
+  'pub:::::::::' \
+  'fpr:::::::::FF8AD1344597106ECE813B918A3872BF3228467C:' \
+  'sub:::::::::' \
+  'fpr:::::::::1111111111111111111111111111111111111111:'

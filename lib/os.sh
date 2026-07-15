@@ -62,6 +62,10 @@ lsi_validate_os_support() {
   if [[ $LSI_OS_ID == centos && $LSI_OS_MAJOR =~ ^[0-9]+$ && $LSI_OS_MAJOR -lt 8 ]]; then
     lsi_die "CentOS $LSI_OS_VERSION_ID is legacy-only and is not supported by the active installer." 3
   fi
+
+  if [[ $LSI_OS_ID == ubuntu && $LSI_OS_MAJOR =~ ^[0-9]+$ && $LSI_OS_MAJOR -le 16 ]]; then
+    lsi_die "Ubuntu $LSI_OS_VERSION_ID is legacy-only and is not supported by the active installer." 3
+  fi
 }
 
 lsi_print_os_info() {

@@ -9,4 +9,5 @@ MODULE_RHEL_PACKAGES=(mariadb-server mariadb)
 MODULE_DEBIAN_SERVICES=(mariadb)
 MODULE_RHEL_SERVICES=(mariadb)
 MODULE_VERIFY_BINARIES=(mariadb)
+MODULE_CONFLICTS=(mysql)
 MODULE_NOTES='Existing databases are never deleted or initialized by this module.'

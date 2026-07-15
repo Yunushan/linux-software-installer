@@ -1,0 +1,3 @@
+module_id	cell_id	package	version	arch	sha256	verify_binary
+demo-tool	ubuntu-24-04-amd64	demo-tool	1.2.3-1	amd64	deadbeef	demo-tool
+demo-tool	rocky-9-8-x86-64	demo-tool	1.2.3-1.el9	x86_64	bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb	demo-tool

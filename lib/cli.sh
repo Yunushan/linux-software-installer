@@ -13,6 +13,8 @@ Usage:
   ./install.sh list                    List stable modules
   ./install.sh profiles                List module profiles
   ./install.sh info MODULE             Show module details
+  ./install.sh migrations              List all read-only legacy guidance
+  ./install.sh migrate LEGACY_ID       Show read-only guidance for one legacy entry
   ./install.sh doctor                  Check the local environment
   ./install.sh plan MODULE...          Preview commands without changes
   ./install.sh plan --profile PROFILE  Preview a profile
@@ -116,17 +118,18 @@ lsi_expand_requests() {
   LSI_FINAL_MODULES=()
   for module in "${LSI_DIRECT_MODULES[@]}"; do
     lsi_load_module "$module"
-    lsi_module_supports_family "$LSI_OS_FAMILY" || lsi_die "Module $module does not support $LSI_OS_FAMILY systems." 3
+    lsi_module_supports_current_target ||
+      lsi_die "Module $module does not support target $(lsi_current_target_label) ($LSI_OS_FAMILY family)." 3
     lsi_append_unique LSI_FINAL_MODULES "$module"
   done
 
   for profile in "${LSI_REQUESTED_PROFILES[@]}"; do
     while IFS= read -r module; do
       lsi_load_module "$module"
-      if lsi_module_supports_family "$LSI_OS_FAMILY"; then
+      if lsi_module_supports_current_target; then
         lsi_append_unique LSI_FINAL_MODULES "$module"
       else
-        lsi_warn "Profile $profile: skipping $module on $LSI_OS_FAMILY."
+        lsi_warn "Profile $profile: skipping $module on $LSI_OS_FAMILY (target $(lsi_current_target_label))."
       fi
     done < <(lsi_profile_modules "$profile")
   done
@@ -166,7 +169,7 @@ lsi_interactive_select() {
   printf '\nAvailable modules for %s:\n\n' "$LSI_OS_FAMILY"
   for id in "${LSI_MODULE_IDS[@]}"; do
     lsi_load_module "$id"
-    if lsi_module_supports_family "$LSI_OS_FAMILY"; then
+    if lsi_module_supports_current_target; then
       available+=("$id")
       printf '  %2d) %-18s %s\n' "${#available[@]}" "$id" "$MODULE_DESCRIPTION"
     fi
@@ -253,6 +256,14 @@ lsi_main() {
     info)
       (($# >= 1)) || lsi_die 'info requires a module name.' 2
       lsi_show_module "$1"
+      ;;
+    migrations)
+      (($# == 0)) || lsi_die 'migrations does not accept arguments.' 2
+      lsi_migration_list
+      ;;
+    migrate)
+      (($# == 1)) || lsi_die 'migrate requires exactly one legacy ID.' 2
+      lsi_migration_show "$1"
       ;;
     doctor)
       lsi_parse_options "$@"

@@ -11,6 +11,11 @@ Both upstream projects were MIT-licensed by Yunus ÇOĞAL. Their copyright
 notices are consolidated in the root license and their original license files
 remain beside the snapshots.
 
+The pinned `legacy/README.md` phrase “excluded from tests” means excluded from
+active functional execution tests and shell linting. Maintained inventory and
+quarantine validators still inspect names, modes, hashes and locators to prove
+the snapshot remains immutable without executing its scripts.
+
 ## Inventory
 
 - Ubuntu 16.04: one 4,401-line launcher containing 159 installer choices.
@@ -32,7 +37,7 @@ installer, including:
 - hard-coded example credentials;
 - firewall, SELinux, kernel and bootloader changes;
 - destructive MariaDB logic that can remove `/var/lib/mysql`;
-- five known launcher-to-module filename mistakes;
+- nine known launcher/menu-to-module mapping mistakes;
 - no OS guard, strict error handling, automated tests or rollback boundary.
 
 Removing executable bits reduces accidental use but is not a security sandbox.
@@ -40,18 +45,36 @@ Opening a legacy file and running it manually remains dangerous.
 
 ## Migration model
 
-Migration means reimplementing the useful intent as a small active module that
-uses enabled OS repositories and passes current tests. Copying a legacy script
+Package-only migration means reimplementing the useful intent as a small active
+module that uses already enabled repositories and passes current tests. A
+third-party capability instead requires the explicit trust boundary in
+[`PROVIDERS.md`](PROVIDERS.md), or a reviewed handoff. Copying a legacy script
 into `modules/` is not migration.
 
-| State | Meaning |
+Module manifests use `stable` for active catalog entries. The legacy ledger
+uses a separate disposition taxonomy:
+
+| Disposition | Meaning |
 |---|---|
-| `stable` | Active package-only module in the catalog |
-| `planned` | Useful legacy feature awaiting safe design |
-| `blocked-third-party` | Requires an explicit signed repository design |
-| `blocked-safety` | Replaces critical system components or changes security policy |
-| `retired` | Product or distribution is obsolete |
+| `planned` | Decision or evidence is incomplete |
+| `implemented` | An active replacement meets its declared parity and evidence gates |
+| `superseded` | Another active workflow intentionally replaces the useful outcome |
+| `retired` | The exact product, release or behavior is obsolete |
+| `blocked-safety` | Reproduction is permanently rejected by the safety boundary |
+| `blocked-third-party` | A signed external-provider design is still unresolved and non-terminal |
+| `out-of-scope` | Ownership is explicitly rejected with a documented handoff |
 
 The active catalog begins with common editors, runtimes, diagnostics, web
 servers, databases, containers and Debian-family desktop packages. Kernel,
 OpenSSL and OpenSSH replacement are permanently blocked from normal modules.
+
+The complete 355-entry source ledger and the evidence gates required before
+the historical repositories can be archived are maintained in
+[`REPLACEMENT.md`](REPLACEMENT.md) and
+[`legacy-inventory.tsv`](legacy-inventory.tsv). Proposed routes for every
+remaining third-party gap are machine-checked in
+[`PROVIDER_BACKLOG.md`](PROVIDER_BACKLOG.md). The read-only
+[`MIGRATION.md`](MIGRATION.md) lookup exposes those dispositions without
+executing any quarantined source. Until every ledger row has a terminal,
+evidence-backed disposition, this project replaces the active execution path
+but does not claim complete legacy feature parity.

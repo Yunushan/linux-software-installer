@@ -6,4 +6,4 @@ MODULE_CATEGORY='developer'
 MODULE_FAMILIES=(debian rhel)
 MODULE_DEBIAN_PACKAGES=(build-essential cmake pkg-config)
 MODULE_RHEL_PACKAGES=(gcc gcc-c++ make cmake pkgconf-pkg-config)
-MODULE_VERIFY_BINARIES=(gcc make cmake pkg-config)
+MODULE_VERIFY_BINARIES=(gcc g++ make cmake pkg-config)

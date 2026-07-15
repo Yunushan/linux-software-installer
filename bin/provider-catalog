@@ -1,0 +1,24 @@
+#!/usr/bin/env bash
+set -Eeuo pipefail
+IFS=$'\n\t'
+umask 022
+export LC_ALL=C
+export PATH='/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin'
+
+LSI_PROJECT_ROOT="$(CDPATH='' cd -- "$(dirname -- "${BASH_SOURCE[0]}")/.." && pwd -P)"
+LSI_PROVIDER_ROOT="$LSI_PROJECT_ROOT/providers"
+export LSI_PROJECT_ROOT LSI_PROVIDER_ROOT
+
+# This process is launched through env -i by install.sh. Keep provider catalog
+# parsing isolated from exported Bash functions, BASH_ENV, TMPDIR, and all
+# installer test hooks supplied by a caller.
+# shellcheck source=../lib/common.sh
+source "$LSI_PROJECT_ROOT/lib/common.sh"
+# shellcheck source=../lib/os.sh
+source "$LSI_PROJECT_ROOT/lib/os.sh"
+# shellcheck source=../lib/provider_catalog.sh
+source "$LSI_PROJECT_ROOT/lib/provider_catalog.sh"
+
+provider_status=0
+lsi_provider_main "$@" || provider_status=$?
+exit "$provider_status"

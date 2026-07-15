@@ -1,0 +1,2 @@
+provider_id	display_name	publisher	homepage	backend	status	default_persistence	license_mode	license_url	license_revision	auth_mode	auth_url	dependencies	description	unexpected
+demo-provider	Demo Provider	Example Test Publisher	https://provider.example.invalid	repository	preview	disabled	explicit-ack	https://provider.example.invalid/license	2026-01	none	-	-	Test-only signed repository provider	rejected

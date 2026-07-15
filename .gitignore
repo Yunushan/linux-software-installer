@@ -3,6 +3,8 @@
 coverage/
 reports/
 tmp/
+__pycache__/
+*.py[cod]
 
 # Editor and operating-system files
 .idea/

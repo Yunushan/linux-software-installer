@@ -20,11 +20,13 @@ jobs:
     steps:
       - name: Check out repository
         uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+        with:
+          persist-credentials: false
 
       - name: Install shell tooling
         run: |
           sudo apt-get update
-          sudo apt-get install -y shellcheck shfmt
+          sudo apt-get install -y gnupg shellcheck shfmt
 
       - name: Validate Bash syntax
         run: make syntax
@@ -36,12 +38,15 @@ jobs:
         run: make format-check
 
       - name: Run tests
+        env:
+          LSI_REQUIRE_REAL_GPG: '1'
         run: make test
 
   container-smoke:
     name: Container smoke (${{ matrix.name }})
     needs: lint-and-test
     runs-on: ubuntu-latest
+    timeout-minutes: 10
     strategy:
       fail-fast: false
       matrix:
@@ -50,17 +55,63 @@ jobs:
             image: ubuntu:24.04
           - name: Debian 12
             image: debian:12
-          - name: Rocky Linux 9
-            image: rockylinux:9
-          - name: AlmaLinux 9
-            image: almalinux:9
+          - name: Rocky Linux 9.8
+            image: rockylinux/rockylinux:9.8@sha256:8101994123cf3d0a8fee517bee7f39e555c7d92bd2d9eb3303cc988a0eeed00f
+          - name: AlmaLinux 9.8
+            image: almalinux:9.8@sha256:d2515c769e7b73f95c4fde38c0a505336ff38f14990c0b7253b77060a049a743
     steps:
       - name: Check out repository
         uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+        with:
+          persist-credentials: false
+
+      - name: Prepare credential-free source export
+        run: |
+          mkdir -p "$RUNNER_TEMP/source"
+          git archive --format=tar --output="$RUNNER_TEMP/source.tar" "$GITHUB_SHA"
+          tar -xf "$RUNNER_TEMP/source.tar" -C "$RUNNER_TEMP/source"
+          test ! -e "$RUNNER_TEMP/source/.git"
 
       - name: Run read-only smoke test
         run: |
           docker run --rm --read-only --tmpfs /tmp \
-            -v "${GITHUB_WORKSPACE}:/workspace:ro" \
+            -v "${RUNNER_TEMP}/source:/workspace:ro" \
             "${{ matrix.image }}" \
             bash /workspace/tests/container-smoke.sh
+
+  repository-resolution:
+    name: Repository resolution (${{ matrix.name }})
+    needs: lint-and-test
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - name: Ubuntu 24.04
+            image: ubuntu:24.04
+          - name: Debian 12
+            image: debian:12
+          - name: Rocky Linux 9.8
+            image: rockylinux/rockylinux:9.8@sha256:8101994123cf3d0a8fee517bee7f39e555c7d92bd2d9eb3303cc988a0eeed00f
+          - name: AlmaLinux 9.8
+            image: almalinux:9.8@sha256:d2515c769e7b73f95c4fde38c0a505336ff38f14990c0b7253b77060a049a743
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+        with:
+          persist-credentials: false
+
+      - name: Prepare credential-free source export
+        run: |
+          mkdir -p "$RUNNER_TEMP/source"
+          git archive --format=tar --output="$RUNNER_TEMP/source.tar" "$GITHUB_SHA"
+          tar -xf "$RUNNER_TEMP/source.tar" -C "$RUNNER_TEMP/source"
+          test ! -e "$RUNNER_TEMP/source/.git"
+
+      - name: Resolve every declared package
+        run: |
+          docker run --rm \
+            -v "${RUNNER_TEMP}/source:/workspace:ro" \
+            "${{ matrix.image }}" \
+            bash /workspace/tests/repository-smoke.sh

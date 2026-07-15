@@ -1,0 +1,9 @@
+#!/usr/bin/env bash
+MODULE_ID='irssi'
+MODULE_NAME='Irssi'
+MODULE_DESCRIPTION='Terminal IRC client'
+MODULE_CATEGORY='network'
+MODULE_FAMILIES=(debian rhel)
+MODULE_DEBIAN_PACKAGES=(irssi)
+MODULE_RHEL_PACKAGES=(irssi)
+MODULE_VERIFY_BINARIES=(irssi)

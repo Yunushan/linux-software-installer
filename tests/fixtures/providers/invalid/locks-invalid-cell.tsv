@@ -1,0 +1,2 @@
+module_id	cell_id	package	version	arch	sha256	verify_binary
+demo-app	$(printf-pwned)	demo-app	1.2.3-1	amd64	AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA	demo-app

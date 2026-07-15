@@ -1,0 +1,3 @@
+cell_id	os_id	version_id	arch	manager	channel	repository_uri	suite	components	key_file	key_fingerprints	expected_origin	metadata_signature
+ubuntu-24-04-amd64	ubuntu	24.04	amd64	apt-get	stable	https://packages.example.invalid/apt/flat/	/	main	keys/test-only.asc	FF8AD1344597106ECE813B918A3872BF3228467C	Example Test Publisher	apt-release
+rocky-9-8-x86-64	rocky	9.8	x86_64	dnf	stable	https://packages.example.invalid/rpm/rocky/9	-	-	keys/test-only.asc	FF8AD1344597106ECE813B918A3872BF3228467C	Example Test Publisher	rpm-repodata-and-package

@@ -5,3 +5,8 @@ build-tools
 python
 nodejs
 openjdk
+ruby
+composer
+dotnet-sdk
+qt
+thonny

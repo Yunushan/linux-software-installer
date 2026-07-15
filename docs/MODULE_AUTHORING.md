@@ -35,6 +35,31 @@ MODULE_RISK='low'
 MODULE_NOTES='Important administrator-facing behavior.'
 ```
 
+By default, a manifest supports every detected target in each declared package
+family. When package availability is narrower, trusted manifest metadata can
+restrict it to exact cells:
+
+```bash
+MODULE_TARGET_CELLS=(
+  ubuntu:24.04:x86_64
+  debian:12:x86_64
+)
+```
+
+Each cell is `ID:VERSION_ID:ARCH`, using the literal lowercase `/etc/os-release`
+`ID`, the literal `VERSION_ID`, and the literal `uname -m` architecture. Matching
+is exact: `24.04` does not match `24.04.1`, and `x86_64` does not match `amd64`.
+Supported IDs are `debian`, `ubuntu`, `linuxmint`, `almalinux`, `centos`,
+`fedora`, `ol`, `rhel` and `rocky`; supported architecture names are
+`x86_64`, `aarch64`, `armv7l`, `ppc64le`, `s390x` and `riscv64`. Every family
+in `MODULE_FAMILIES` must have at least one exact cell when a restriction is
+present. Duplicate, malformed, unknown and cross-family declarations fail
+catalog loading.
+
+Target restrictions are repository-trusted metadata, not a CLI override. The
+runtime rechecks detected host identity for both planning and installation,
+and evidence generation omits cells not listed by the module.
+
 The active catalog currently accepts only low-risk packages from enabled OS
 repositories. A module that needs external downloads, repositories, config
 rewrites or credentials requires a separate reviewed provider design and must
@@ -43,6 +68,7 @@ not be added as a simple manifest.
 ## Checklist
 
 - Confirm exact package names on every declared family.
+- Add exact target cells when a family-wide claim is too broad.
 - Use a command installed by the package for verification.
 - Declare services only when their names are stable and startup needs no
   initialization.
