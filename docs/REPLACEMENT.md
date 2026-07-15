@@ -186,6 +186,18 @@ mutable image tags are not accepted per-module evidence tied to exact image
 digests. A local standalone bundle has stronger G4 integrity metadata, but its
 self-contained hashes are not an external authenticity anchor.
 
+### Accepted-evidence admission
+
+[`accepted-evidence.tsv`](accepted-evidence.tsv) is intentionally header-only:
+there is no accepted external evidence to admit yet. Once an external bundle is
+downloaded, revalidated and reviewed, one record per module-family evidence key
+must bind the current commit to its GitHub Actions run, artifact URL and digest,
+aggregate-index hash, exact target cells and a parity review. Service contracts
+also require externally hosted systemd-run and artifact attestations with a
+digest. The readiness validator derives `accepted` and `promotion_ready` only
+from records that satisfy those exact checks; adding a registry row never
+changes inventory status by itself.
+
 The smallest safe path to close these 142 rows is:
 
 1. Publish repository-resolution evidence for the tested commit, exact image
@@ -375,6 +387,9 @@ separate responsibilities:
 - [`legacy-promotion-readiness.tsv`](legacy-promotion-readiness.tsv) derives the
   shared evidence keys and still-missing acceptance gates for every planned row;
   it cannot promote or override the source inventory.
+- [`accepted-evidence.tsv`](accepted-evidence.tsv) is the reviewed external
+  evidence admission registry; it is currently empty and cannot promote or
+  override the source inventory.
 - [`legacy-source-defects.tsv`](legacy-source-defects.tsv) records preserved
   launcher/menu defects that replacements must not reproduce.
 - [`provider-backlog.tsv`](provider-backlog.tsv) maps every unresolved

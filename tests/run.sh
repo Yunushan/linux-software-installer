@@ -311,6 +311,10 @@ test_legacy_promotion_readiness_contract() {
   bash "$ROOT_DIR/tests/validate-legacy-promotion-readiness.sh" > /dev/null
 }
 
+test_accepted_evidence_admission_contract() {
+  python3 "$ROOT_DIR/tests/test-accepted-evidence.py" > /dev/null
+}
+
 test_legacy_quarantine_contract() {
   bash "$ROOT_DIR/tests/validate-legacy-quarantine.sh" > /dev/null
 }
@@ -453,6 +457,7 @@ run_test 'module manifests satisfy schema and token safety rules' test_module_sc
 run_test 'all profile entries resolve to module manifests' test_all_profile_modules_exist
 run_test 'legacy inventory reconciles all 355 source entries' test_legacy_inventory_contract
 run_test 'planned legacy rows have a fail-closed promotion ledger' test_legacy_promotion_readiness_contract
+run_test 'accepted evidence admissions bind external artifacts to exact contracts' test_accepted_evidence_admission_contract
 run_test 'legacy snapshot is pinned and excluded from the active path' test_legacy_quarantine_contract
 run_test 'provider backlog covers every unresolved third-party row' test_provider_backlog_contract
 run_test 'read-only migration lookup fails closed on ledger drift' test_migration_lookup_contract

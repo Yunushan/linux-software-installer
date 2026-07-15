@@ -73,8 +73,10 @@ All notable changes to this project are documented here. The format follows
 - Constrain migration evidence to valid HTTPS authorities or physical,
   repository-local, single-link documentation paths; reject linked module
   directories, hardlinked manifests and traversal-shaped RHEL provenance.
-- Refuse `implemented` and `superseded` migration claims until a reviewed
-  machine-readable accepted-evidence admission registry exists.
+- Refuse `implemented` and `superseded` migration claims until they join the
+  reviewed, machine-readable accepted-evidence admission process.
+- Make accepted-evidence registry input single-link, size-bounded, NUL-free and
+  newline-terminated before it is parsed.
 - Make concurrent-run locking fail closed, create installer logs with
   no-clobber ownership/link/mode checks, and redact sensitive command
   arguments before display or logging.

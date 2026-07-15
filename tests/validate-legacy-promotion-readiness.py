@@ -6,7 +6,9 @@ from __future__ import annotations
 import argparse
 import csv
 import io
+import os
 import re
+import stat
 import subprocess
 import sys
 import unicodedata
@@ -40,6 +42,25 @@ TARGET_HEADER = [
     "expected_version_id",
     "expected_arch",
 ]
+ADMISSION_HEADER = [
+    "evidence_key",
+    "commit_sha",
+    "run_url",
+    "artifact_url",
+    "artifact_digest",
+    "index_sha256",
+    "target_cells",
+    "parity_report",
+    "systemd_run_url",
+    "systemd_artifact_url",
+    "systemd_artifact_digest",
+]
+COMMIT_PATTERN = re.compile(r"^[0-9a-f]{40}$")
+SHA256_PATTERN = re.compile(r"^[0-9a-f]{64}$")
+GITHUB_RUN_URL_PATTERN = re.compile(
+    r"^https://github\.com/Yunushan/linux-software-installer/actions/runs/[1-9][0-9]*$"
+)
+HTTPS_URL_PATTERN = re.compile(r"^https://[^\s]+$")
 BASE_MISSING = (
     "G3-repository-resolution+G4-standalone-install+"
     "row-parity-review+durable-trust-anchor"
@@ -102,7 +123,7 @@ def review_route(row: dict[str, str]) -> str:
 
 
 def valid_reference(root: Path, reference: str) -> bool:
-    if re.fullmatch(r"https://[^\s]+", reference):
+    if HTTPS_URL_PATTERN.fullmatch(reference):
         return True
     if not reference.startswith("docs/"):
         return False
@@ -117,6 +138,149 @@ def valid_reference(root: Path, reference: str) -> bool:
     ):
         return False
     return (root / path_text).is_file()
+
+
+def checked_out_commit(root: Path) -> str | None:
+    try:
+        completed = subprocess.run(
+            ["git", "rev-parse", "HEAD"],
+            cwd=root,
+            check=False,
+            capture_output=True,
+            text=True,
+            encoding="utf-8",
+            timeout=10,
+        )
+    except (OSError, UnicodeDecodeError, subprocess.TimeoutExpired):
+        completed = None
+    if completed is not None:
+        candidate = completed.stdout.strip()
+        if completed.returncode == 0 and COMMIT_PATTERN.fullmatch(candidate):
+            return candidate
+    for candidate in (os.environ.get("GITHUB_SHA", ""), os.environ.get("LSI_TESTED_COMMIT", "")):
+        if COMMIT_PATTERN.fullmatch(candidate):
+            return candidate
+    return None
+
+
+def validate_admission_registry_file(path: Path) -> None:
+    try:
+        metadata = path.lstat()
+        if not stat.S_ISREG(metadata.st_mode) or metadata.st_nlink != 1:
+            raise ReadinessError(
+                "accepted-evidence admission registry must be a single-link regular file"
+            )
+        if metadata.st_size > 1024 * 1024:
+            raise ReadinessError("accepted-evidence admission registry exceeds 1 MiB")
+        contents = path.read_bytes()
+    except OSError as error:
+        raise ReadinessError(f"cannot read accepted-evidence admission registry: {error}") from None
+    if b"\0" in contents or not contents.endswith(b"\n"):
+        raise ReadinessError(
+            "accepted-evidence admission registry must be NUL-free and end with a newline"
+        )
+
+
+def comma_tokens(value: str) -> tuple[str, ...] | None:
+    if not value or value == "-" or value.startswith(",") or value.endswith(","):
+        return None
+    values = tuple(value.split(","))
+    if any(not token or not re.fullmatch(r"[a-z0-9]+(?:-[a-z0-9]+)*", token) for token in values):
+        return None
+    return values if len(values) == len(set(values)) else None
+
+
+def load_accepted_admissions(
+    root: Path, expected: list[dict[str, str]], commit: str | None = None
+) -> dict[str, dict[str, str]]:
+    registry_path = root / "docs" / "accepted-evidence.tsv"
+    validate_admission_registry_file(registry_path)
+    rows = read_tsv(
+        registry_path,
+        ADMISSION_HEADER,
+        "accepted-evidence admission registry",
+    )
+    if not rows:
+        return {}
+
+    commit = commit or checked_out_commit(root)
+    if commit is None:
+        raise ReadinessError(
+            "accepted evidence requires a checked-out or explicitly supplied full commit ID"
+        )
+    targets = read_tsv(
+        root / "tests" / "evidence-targets.tsv", TARGET_HEADER, "evidence target table"
+    )
+    targets_by_family = {
+        family: tuple(sorted(row["target_id"] for row in targets if row["family"] == family))
+        for family in {"debian", "rhel"}
+    }
+    expected_by_key = {row["evidence_key"]: row for row in expected}
+    admissions: dict[str, dict[str, str]] = {}
+
+    for row in rows:
+        evidence_key = row["evidence_key"]
+        derived = expected_by_key.get(evidence_key)
+        if derived is None:
+            raise ReadinessError(
+                f"accepted-evidence registry references unknown or stale evidence key {evidence_key}"
+            )
+        if evidence_key in admissions:
+            raise ReadinessError(
+                f"accepted-evidence registry repeats evidence key {evidence_key}"
+            )
+        if row["commit_sha"] != commit:
+            raise ReadinessError(
+                f"{evidence_key} is bound to {row['commit_sha']}, not checked-out commit {commit}"
+            )
+        run_url = row["run_url"]
+        artifact_url = row["artifact_url"]
+        if not GITHUB_RUN_URL_PATTERN.fullmatch(run_url):
+            raise ReadinessError(f"{evidence_key} has an invalid GitHub Actions run URL")
+        if not artifact_url.startswith(run_url + "/artifacts/") or not re.fullmatch(
+            re.escape(run_url) + r"/artifacts/[1-9][0-9]*", artifact_url
+        ):
+            raise ReadinessError(f"{evidence_key} artifact URL is not bound to its run URL")
+        if not SHA256_PATTERN.fullmatch(row["artifact_digest"].removeprefix("sha256:")):
+            raise ReadinessError(f"{evidence_key} has an invalid external artifact digest")
+        if not SHA256_PATTERN.fullmatch(row["index_sha256"]):
+            raise ReadinessError(f"{evidence_key} has an invalid aggregate index digest")
+        target_cells = comma_tokens(row["target_cells"])
+        expected_cells = targets_by_family[derived["target_family"]]
+        if target_cells != expected_cells:
+            raise ReadinessError(
+                f"{evidence_key} target cells do not exactly match its target family"
+            )
+        if not valid_reference(root, row["parity_report"]):
+            raise ReadinessError(f"{evidence_key} has an invalid parity review reference")
+
+        systemd_fields = (
+            row["systemd_run_url"],
+            row["systemd_artifact_url"],
+            row["systemd_artifact_digest"],
+        )
+        if derived["service_contract"] == "yes":
+            if (
+                not HTTPS_URL_PATTERN.fullmatch(systemd_fields[0])
+                or not HTTPS_URL_PATTERN.fullmatch(systemd_fields[1])
+                or not SHA256_PATTERN.fullmatch(systemd_fields[2].removeprefix("sha256:"))
+            ):
+                raise ReadinessError(
+                    f"{evidence_key} lacks a valid external systemd evidence attestation"
+                )
+        elif systemd_fields != ("-", "-", "-"):
+            raise ReadinessError(
+                f"{evidence_key} declares systemd evidence for a non-service contract"
+            )
+        admissions[evidence_key] = row
+    return admissions
+
+
+def admission_reference(admission: dict[str, str]) -> str:
+    return (
+        f"{admission['run_url']}#artifact-digest="
+        f"{admission['artifact_digest'].removeprefix('sha256:')}"
+    )
 
 
 def derive_contract(root: Path, module: str, family: str) -> tuple[str, ...]:
@@ -241,6 +405,16 @@ def expected_rows_and_summary(root: Path) -> tuple[list[dict[str, str]], dict[st
             }
         )
 
+    admissions = load_accepted_admissions(root, expected)
+    for row in expected:
+        admission = admissions.get(row["evidence_key"])
+        if admission is None:
+            continue
+        row["evidence_class"] = "accepted"
+        row["evidence_reference"] = admission_reference(admission)
+        row["promotion_ready"] = "yes"
+        row["missing_acceptance"] = "-"
+
     service_pairs = {key for key, values in services.items() if values}
     routes = Counter(row["review_route"] for row in expected)
     families = Counter(row["target_family"] for row in expected)
@@ -282,7 +456,10 @@ def validate_readiness(
     for observed, derived in zip(report_rows, expected):
         legacy_id = derived["legacy_id"]
         for key in READINESS_HEADER:
-            if key in {"evidence_class", "evidence_reference"}:
+            if (
+                derived["evidence_class"] == "none"
+                and key in {"evidence_class", "evidence_reference"}
+            ):
                 continue
             if observed[key] != derived[key]:
                 raise ReadinessError(
@@ -291,7 +468,12 @@ def validate_readiness(
                 )
         evidence_class = observed["evidence_class"]
         evidence_reference = observed["evidence_reference"]
-        if evidence_class == "none":
+        if derived["evidence_class"] == "accepted":
+            if evidence_class != "accepted":
+                raise ReadinessError(
+                    f"{legacy_id} has admitted evidence but is not marked accepted"
+                )
+        elif evidence_class == "none":
             if evidence_reference != "-":
                 raise ReadinessError(
                     f"{legacy_id} has an evidence reference but class none"
@@ -303,7 +485,7 @@ def validate_readiness(
                 )
         elif evidence_class == "accepted":
             raise ReadinessError(
-                f"{legacy_id} remains planned and cannot claim accepted evidence"
+                f"{legacy_id} claims accepted evidence without an admission registry entry"
             )
         else:
             raise ReadinessError(
@@ -373,8 +555,9 @@ def main() -> int:
     print(
         "Evidence classes: "
         f"{evidence_classes['none']} none, "
-        f"{evidence_classes['provisional']} provisional, 0 accepted; "
-        "0 planned rows promotion-ready."
+        f"{evidence_classes['provisional']} provisional, "
+        f"{evidence_classes['accepted']} accepted; "
+        f"{sum(row['promotion_ready'] == 'yes' for row in expected)} planned rows promotion-ready."
     )
     return 0
 

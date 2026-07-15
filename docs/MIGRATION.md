@@ -60,6 +60,8 @@ Repository and artifact proposals remain subject to the trust contract in
 contract in [`SYSTEMD_EVIDENCE.md`](SYSTEMD_EVIDENCE.md).
 
 The runtime parser currently rejects every `implemented` or `superseded` row
-because no accepted-evidence admission registry exists yet. Adding a supported
-promotion therefore requires a reviewed machine-readable admission contract;
-pointing a row at an arbitrary document cannot create a terminal replacement.
+until its promotion can join the reviewed acceptance process. The header-only
+[`accepted-evidence.tsv`](accepted-evidence.tsv) registry records the required
+external-artifact admission data for planned rows, but it does not change the
+inventory. Pointing a row at an arbitrary document cannot create a terminal
+replacement.
