@@ -544,10 +544,10 @@ lsi_migration_validate_terminal_admissions() {
     --readiness "$LSI_MIGRATION_READINESS" \
     --admissions "$LSI_MIGRATION_ACCEPTED_EVIDENCE" \
     --report-root "$LSI_MIGRATION_ADMISSION_REPORT_ROOT" > /dev/null || {
-      lsi_migration_error \
-        'terminal replacement claims do not match the accepted-evidence admission ledger.'
-      return 1
-    }
+    lsi_migration_error \
+      'terminal replacement claims do not match the accepted-evidence admission ledger.'
+    return 1
+  }
 }
 
 lsi_migration_load() {
