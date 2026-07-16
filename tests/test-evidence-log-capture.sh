@@ -35,5 +35,12 @@ fi
 
 grep -Fq 'capture-installer-logs.sh /evidence' "$ROOT_DIR/tests/run-module-evidence.sh"
 grep -Fq 'capture-installer-logs.sh /evidence' "$ROOT_DIR/.github/workflows/install-smoke.yml"
-! grep -Fq ':/var/log/linux-software-installer' "$ROOT_DIR/tests/run-module-evidence.sh"
-! grep -Fq ':/var/log/linux-software-installer' "$ROOT_DIR/.github/workflows/install-smoke.yml"
+if grep -Fq ':/var/log/linux-software-installer' "$ROOT_DIR/tests/run-module-evidence.sh"; then
+  printf 'Standalone evidence runner still bind-mounts the installer log directory.\n' >&2
+  exit 1
+fi
+
+if grep -Fq ':/var/log/linux-software-installer' "$ROOT_DIR/.github/workflows/install-smoke.yml"; then
+  printf 'Install-smoke workflow still bind-mounts the installer log directory.\n' >&2
+  exit 1
+fi
