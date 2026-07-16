@@ -1,7 +1,7 @@
 # Linux Software Installer
 
 [![CI](https://github.com/Yunushan/linux-software-installer/actions/workflows/ci.yml/badge.svg)](https://github.com/Yunushan/linux-software-installer/actions/workflows/ci.yml)
-[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
+[![License: 0BSD](https://img.shields.io/badge/License-0BSD-blue.svg)](LICENSE)
 [![Bash](https://img.shields.io/badge/Bash-4.3%2B-4EAA25.svg)](https://www.gnu.org/software/bash/)
 
 A modular, distro-aware Bash installer for Debian/Ubuntu and RHEL-compatible
@@ -355,9 +355,9 @@ in a public issue.
 
 ## License
 
-The installer code is available under the [MIT License](LICENSE), with the
+The installer code is available under the [0BSD license](LICENSE), with the
 copyright range consolidated from both original projects.
 
 Software installed by this project remains subject to its own license and
-distribution terms. The MIT license for this repository does not relicense
+distribution terms. The 0BSD license for this repository does not relicense
 third-party packages.
