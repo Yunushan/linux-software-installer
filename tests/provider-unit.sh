@@ -260,6 +260,198 @@ test_provider_plan_is_explicit_and_non_mutating() {
     grep -Eq '^Plan SHA-256 \(body\): [0-9a-f]{64}$' <<< "$output"
 }
 
+test_provider_plan_snapshot_is_retained_for_apply_binding() {
+  local calculated
+  LSI_PROVIDER_ROOT="$FIXTURE_DIR/valid" \
+    LSI_OS_RELEASE_FILE="$ROOT_DIR/tests/fixtures/ubuntu.env" \
+    lsi_provider_plan_prepare demo-provider \
+    --allow-provider demo-provider@2026-01 \
+    --allow-preview-provider demo-provider \
+    --accept-provider-license demo-provider@2026-01 \
+    demo-tool || return 1
+  calculated=$(printf '%s\n' "$LSI_PROVIDER_PLAN_BODY" | sha256sum) || return 1
+  calculated=${calculated%% *}
+  [[ $LSI_PROVIDER_PLAN_BODY == *'Provider transaction plan (non-mutating)'* &&
+    $LSI_PROVIDER_PLAN_BODY == *'demo-tool=1.2.3-1 (amd64)'* &&
+    $LSI_PROVIDER_PLAN_DIGEST == "$calculated" ]]
+}
+
+test_provider_config_is_exact_and_read_only() {
+  local output
+  output=$(LSI_PROVIDER_ROOT="$FIXTURE_DIR/valid" \
+    LSI_OS_RELEASE_FILE="$ROOT_DIR/tests/fixtures/ubuntu.env" \
+    lsi_provider_config_current demo-provider \
+    --allow-provider demo-provider@2026-01 \
+    --allow-preview-provider demo-provider \
+    --accept-provider-license demo-provider@2026-01 \
+    demo-tool) || return 1
+  grep -q '^Provider repository configuration (read-only; no system changes are made).$' <<< "$output" &&
+    grep -Eq '^Plan SHA-256 \(body\): [0-9a-f]{64}$' <<< "$output" &&
+    grep -q '^Types: deb$' <<< "$output" &&
+    grep -q '^URIs: https://packages.example.invalid/apt/ubuntu/24.04$' <<< "$output" &&
+    grep -q '^Suites: stable$' <<< "$output" &&
+    grep -q '^Components: main$' <<< "$output" &&
+    grep -q '^Signed-By: /usr/share/keyrings/linux-software-installer-demo-provider.asc$' <<< "$output" &&
+    grep -q '^# Expected origin: Example Test Publisher; metadata signature policy: apt-release$' <<< "$output"
+}
+
+test_provider_dnf_config_is_exact_and_read_only() {
+  local output
+  output=$(LSI_PROVIDER_ROOT="$FIXTURE_DIR/valid" \
+    LSI_OS_RELEASE_FILE="$ROOT_DIR/tests/fixtures/rocky.env" \
+    lsi_provider_config_current demo-provider \
+    --allow-provider demo-provider@2026-01 \
+    --allow-preview-provider demo-provider \
+    --accept-provider-license demo-provider@2026-01 \
+    demo-tool) || return 1
+  grep -q '^\[linux-software-installer-demo-provider\]$' <<< "$output" &&
+    grep -q '^baseurl=https://packages.example.invalid/rpm/rocky/9$' <<< "$output" &&
+    grep -q '^gpgcheck=1$' <<< "$output" &&
+    grep -q '^repo_gpgcheck=1$' <<< "$output" &&
+    grep -q '^gpgkey=file:///etc/pki/rpm-gpg/RPM-GPG-KEY-linux-software-installer-demo-provider$' <<< "$output" &&
+    grep -q '^# Expected origin: Example Test Publisher; metadata signature policy: rpm-repodata-and-package$' <<< "$output"
+}
+
+prepare_apply_root() {
+  local root=$1
+  mkdir -p "$root/usr/share/keyrings" "$root/etc/apt/sources.list.d" \
+    "$root/etc/pki/rpm-gpg" "$root/etc/yum.repos.d"
+}
+
+prepare_apply_digest() {
+  LSI_PROVIDER_ROOT="$FIXTURE_DIR/valid" \
+    LSI_OS_RELEASE_FILE="$ROOT_DIR/tests/fixtures/ubuntu.env" \
+    lsi_provider_plan_prepare demo-provider \
+    --allow-provider demo-provider@2026-01 \
+    --allow-preview-provider demo-provider \
+    --accept-provider-license demo-provider@2026-01 \
+    demo-tool || return 1
+  printf '%s\n' "$LSI_PROVIDER_PLAN_DIGEST"
+}
+
+test_provider_apply_writes_only_digest_bound_files() {
+  local root="$TEST_TMP/apply-root" digest output
+  prepare_apply_root "$root" || return 1
+  digest=$(prepare_apply_digest) || return 1
+  output=$(LSI_PROVIDER_ROOT="$FIXTURE_DIR/valid" \
+    LSI_OS_RELEASE_FILE="$ROOT_DIR/tests/fixtures/ubuntu.env" \
+    LSI_PROVIDER_APPLY_ROOT="$root" \
+    LSI_PROVIDER_APPLY_ALLOW_NONROOT_TEST=true \
+    lsi_provider_apply_current demo-provider \
+      --plan-sha256 "$digest" \
+      --allow-provider demo-provider@2026-01 \
+      --allow-preview-provider demo-provider \
+      --accept-provider-license demo-provider@2026-01 \
+      demo-tool) || return 1
+  cmp -s "$FIXTURE_DIR/valid/demo-provider/keys/test-only.asc" \
+    "$root/usr/share/keyrings/linux-software-installer-demo-provider.asc" &&
+    grep -q '^Types: deb$' "$root/etc/apt/sources.list.d/linux-software-installer-demo-provider.sources" &&
+    grep -q '^Signed-By: /usr/share/keyrings/linux-software-installer-demo-provider.asc$' \
+      "$root/etc/apt/sources.list.d/linux-software-installer-demo-provider.sources" &&
+    grep -q '^Provider repository files activated from reviewed plan SHA-256:' <<< "$output" &&
+    grep -q '^No repository metadata refresh or package installation was performed; run provider-deactivate to remove these files.$' <<< "$output"
+}
+
+test_provider_apply_rejects_stale_digest_without_mutation() {
+  local root="$TEST_TMP/apply-stale" output
+  prepare_apply_root "$root" || return 1
+  output=$(LSI_PROVIDER_ROOT="$FIXTURE_DIR/valid" \
+    LSI_OS_RELEASE_FILE="$ROOT_DIR/tests/fixtures/ubuntu.env" \
+    LSI_PROVIDER_APPLY_ROOT="$root" \
+    LSI_PROVIDER_APPLY_ALLOW_NONROOT_TEST=true \
+    lsi_provider_apply_current demo-provider \
+      --plan-sha256 aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa \
+      --allow-provider demo-provider@2026-01 \
+      --allow-preview-provider demo-provider \
+      --accept-provider-license demo-provider@2026-01 \
+      demo-tool 2>&1) && return 1
+  grep -q 'does not match the current exact plan' <<< "$output" &&
+    [[ ! -e $root/usr/share/keyrings/linux-software-installer-demo-provider.asc ]] &&
+    [[ ! -e $root/etc/apt/sources.list.d/linux-software-installer-demo-provider.sources ]]
+}
+
+test_provider_apply_rejects_configuration_drift() {
+  local root="$TEST_TMP/apply-drift" digest output config
+  prepare_apply_root "$root" || return 1
+  digest=$(prepare_apply_digest) || return 1
+  config="$root/etc/apt/sources.list.d/linux-software-installer-demo-provider.sources"
+  printf '%s\n' '# drift' > "$config"
+  output=$(LSI_PROVIDER_ROOT="$FIXTURE_DIR/valid" \
+    LSI_OS_RELEASE_FILE="$ROOT_DIR/tests/fixtures/ubuntu.env" \
+    LSI_PROVIDER_APPLY_ROOT="$root" \
+    LSI_PROVIDER_APPLY_ALLOW_NONROOT_TEST=true \
+    lsi_provider_apply_current demo-provider \
+      --plan-sha256 "$digest" \
+      --allow-provider demo-provider@2026-01 \
+      --allow-preview-provider demo-provider \
+      --accept-provider-license demo-provider@2026-01 \
+      demo-tool 2>&1) && return 1
+  grep -q 'Refusing to replace provider activation drift' <<< "$output" &&
+    tail -n 1 "$config" | grep -q '^# drift$' &&
+    [[ ! -e $root/usr/share/keyrings/linux-software-installer-demo-provider.asc ]]
+}
+
+test_provider_deactivate_removes_only_reviewed_files() {
+  local root="$TEST_TMP/deactivate-root" digest output
+  prepare_apply_root "$root" || return 1
+  digest=$(prepare_apply_digest) || return 1
+  LSI_PROVIDER_ROOT="$FIXTURE_DIR/valid" \
+    LSI_OS_RELEASE_FILE="$ROOT_DIR/tests/fixtures/ubuntu.env" \
+    LSI_PROVIDER_APPLY_ROOT="$root" \
+    LSI_PROVIDER_APPLY_ALLOW_NONROOT_TEST=true \
+    lsi_provider_apply_current demo-provider \
+      --plan-sha256 "$digest" \
+      --allow-provider demo-provider@2026-01 \
+      --allow-preview-provider demo-provider \
+      --accept-provider-license demo-provider@2026-01 \
+      demo-tool > /dev/null || return 1
+  output=$(LSI_PROVIDER_ROOT="$FIXTURE_DIR/valid" \
+    LSI_OS_RELEASE_FILE="$ROOT_DIR/tests/fixtures/ubuntu.env" \
+    LSI_PROVIDER_APPLY_ROOT="$root" \
+    LSI_PROVIDER_APPLY_ALLOW_NONROOT_TEST=true \
+    lsi_provider_deactivate_current demo-provider \
+      --plan-sha256 "$digest" \
+      --allow-provider demo-provider@2026-01 \
+      --allow-preview-provider demo-provider \
+      --accept-provider-license demo-provider@2026-01 \
+      demo-tool) || return 1
+  [[ ! -e $root/usr/share/keyrings/linux-software-installer-demo-provider.asc ]] &&
+    [[ ! -e $root/etc/apt/sources.list.d/linux-software-installer-demo-provider.sources ]] &&
+    grep -q '^Provider repository files deactivated from reviewed plan SHA-256:' <<< "$output" &&
+    grep -q '^No repository metadata refresh, package removal or package installation was performed.$' <<< "$output"
+}
+
+test_provider_deactivate_rejects_drift_without_removal() {
+  local root="$TEST_TMP/deactivate-drift" digest output config key
+  prepare_apply_root "$root" || return 1
+  digest=$(prepare_apply_digest) || return 1
+  LSI_PROVIDER_ROOT="$FIXTURE_DIR/valid" \
+    LSI_OS_RELEASE_FILE="$ROOT_DIR/tests/fixtures/ubuntu.env" \
+    LSI_PROVIDER_APPLY_ROOT="$root" \
+    LSI_PROVIDER_APPLY_ALLOW_NONROOT_TEST=true \
+    lsi_provider_apply_current demo-provider \
+      --plan-sha256 "$digest" \
+      --allow-provider demo-provider@2026-01 \
+      --allow-preview-provider demo-provider \
+      --accept-provider-license demo-provider@2026-01 \
+      demo-tool > /dev/null || return 1
+  config="$root/etc/apt/sources.list.d/linux-software-installer-demo-provider.sources"
+  key="$root/usr/share/keyrings/linux-software-installer-demo-provider.asc"
+  printf '%s\n' '# drift' >> "$config"
+  output=$(LSI_PROVIDER_ROOT="$FIXTURE_DIR/valid" \
+    LSI_OS_RELEASE_FILE="$ROOT_DIR/tests/fixtures/ubuntu.env" \
+    LSI_PROVIDER_APPLY_ROOT="$root" \
+    LSI_PROVIDER_APPLY_ALLOW_NONROOT_TEST=true \
+    lsi_provider_deactivate_current demo-provider \
+      --plan-sha256 "$digest" \
+      --allow-provider demo-provider@2026-01 \
+      --allow-preview-provider demo-provider \
+      --accept-provider-license demo-provider@2026-01 \
+      demo-tool 2>&1) && return 1
+  grep -q 'Refusing to replace provider activation drift' <<< "$output" &&
+    [[ -f $config && -f $key ]] && tail -n 1 "$config" | grep -q '^# drift$'
+}
+
 test_provider_plan_requires_distinct_authorization() {
   ! LSI_PROVIDER_ROOT="$FIXTURE_DIR/valid" \
     LSI_OS_RELEASE_FILE="$ROOT_DIR/tests/fixtures/ubuntu.env" \
@@ -588,9 +780,12 @@ test_existing_install_dispatch_is_unchanged() {
 test_help_exposes_provider_commands() {
   local output
   output=$("$ROOT_DIR/install.sh" --help) || return 1
-  grep -q '^Read-only provider catalog commands:' <<< "$output" &&
+    grep -q '^Provider catalog commands:' <<< "$output" &&
     grep -q './install.sh provider-info PROVIDER' <<< "$output" &&
-    grep -q './install.sh provider-plan PROVIDER --allow-provider PROVIDER@CATALOG_REVISION' <<< "$output"
+    grep -q './install.sh provider-plan PROVIDER --allow-provider PROVIDER@CATALOG_REVISION' <<< "$output" &&
+    grep -q './install.sh provider-config PROVIDER --allow-provider PROVIDER@CATALOG_REVISION' <<< "$output" &&
+    grep -q './install.sh provider-apply PROVIDER --plan-sha256 PLAN_SHA256' <<< "$output" &&
+    grep -q './install.sh provider-deactivate PROVIDER --plan-sha256 PLAN_SHA256' <<< "$output"
 }
 
 run_test 'provider schema columns are documented' test_schema_documented
@@ -620,6 +815,14 @@ run_test 'normal APT components cannot contain path separators' test_invalid_nor
 run_test 'normal APT cells require one exact suite' test_invalid_normal_apt_coordinates multiple-suites
 run_test 'normal APT component lists cannot end with an empty item' test_invalid_normal_apt_coordinates trailing-component-separator
 run_test 'provider plan is explicit and non-mutating' test_provider_plan_is_explicit_and_non_mutating
+run_test 'prepared provider plan retains its exact digest-bound snapshot' test_provider_plan_snapshot_is_retained_for_apply_binding
+run_test 'provider configuration renders the exact reviewed target without mutation' test_provider_config_is_exact_and_read_only
+run_test 'provider configuration renders exact signed DNF settings without mutation' test_provider_dnf_config_is_exact_and_read_only
+run_test 'provider apply writes only exact digest-bound repository files' test_provider_apply_writes_only_digest_bound_files
+run_test 'provider apply rejects a stale digest before mutation' test_provider_apply_rejects_stale_digest_without_mutation
+run_test 'provider apply rejects repository configuration drift' test_provider_apply_rejects_configuration_drift
+run_test 'provider deactivation removes only reviewed repository files' test_provider_deactivate_removes_only_reviewed_files
+run_test 'provider deactivation rejects drift without removal' test_provider_deactivate_rejects_drift_without_removal
 run_test 'provider plan requires per-provider authorization' test_provider_plan_requires_distinct_authorization
 run_test 'provider plan rejects the global --yes alias' test_provider_plan_rejects_yes_alias
 run_test 'preview provider requires a separate acknowledgement' test_provider_plan_requires_preview_ack

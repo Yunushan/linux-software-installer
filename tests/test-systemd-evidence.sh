@@ -5,14 +5,12 @@ IFS=$'\n\t'
 export LC_ALL=C
 
 ROOT_DIR="$(CDPATH='' cd -- "$(dirname -- "${BASH_SOURCE[0]}")/.." && pwd -P)"
-if command -v python3 > /dev/null 2>&1; then
-  PYTHON=python3
-elif command -v python > /dev/null 2>&1; then
-  PYTHON=python
-else
-  printf 'Python is required for the systemd evidence contract test.\n' >&2
+# shellcheck source=python.sh
+source "$ROOT_DIR/tests/python.sh"
+PYTHON=$(lsi_find_python) || {
+  printf 'Python 3.8 or newer is required for the systemd evidence contract test.\n' >&2
   exit 2
-fi
+}
 TEMP_DIR=$(mktemp -d)
 trap 'rm -rf "$TEMP_DIR"' EXIT
 MOCK_BIN=$TEMP_DIR/mock-bin

@@ -190,13 +190,33 @@ self-contained hashes are not an external authenticity anchor.
 
 [`accepted-evidence.tsv`](accepted-evidence.tsv) is intentionally header-only:
 there is no accepted external evidence to admit yet. Once an external bundle is
-downloaded, revalidated and reviewed, one record per module-family evidence key
+downloaded, verified with the offline verifier below, revalidated and reviewed,
+one record per module-family evidence key
 must bind the current commit to its GitHub Actions run, artifact URL and digest,
 aggregate-index hash, exact target cells and a parity review. Service contracts
 also require externally hosted systemd-run and artifact attestations with a
 digest. The readiness validator derives `accepted` and `promotion_ready` only
 from records that satisfy those exact checks; adding a registry row never
 changes inventory status by itself.
+
+The downloaded artifact ZIP must match the GitHub Actions `artifact-digest`
+displayed by the aggregate job. Revalidate it before considering a registry
+row:
+
+```bash
+python3 tests/verify-accepted-evidence-artifact.py \
+  --artifact-zip module-evidence-aggregate.zip \
+  --artifact-digest sha256:FROM_GITHUB_ARTIFACT_DIGEST \
+  --commit TESTED_COMMIT_SHA \
+  --run-url https://github.com/Yunushan/linux-software-installer/actions/runs/RUN_ID \
+  --output verified-evidence-artifact.json
+```
+
+The verifier rejects a mismatched ZIP digest, unsafe ZIP/TAR entries, checksum
+drift, an aggregate that is not a clean pass, source/run/commit disagreement,
+and coverage or summary disagreement. A successful report is still not an
+admission: parity review, any service attestation and a reviewed registry row
+remain separate requirements.
 
 The smallest safe path to close these 142 rows is:
 

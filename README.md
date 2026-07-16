@@ -101,11 +101,15 @@ command prints usage and exits instead of guessing.
 | `./install.sh info nginx` | Show module packages and safety notes | No |
 | `./install.sh migrations` | List read-only guidance for all 355 legacy entries | No |
 | `./install.sh migrate ubuntu-002` | Show read-only guidance for one legacy entry | No |
+| `./install.sh retirement-status` | Show the evidence-backed retirement decision for the old repositories | No |
 | `./install.sh doctor` | Check distro detection and prerequisites | No |
 | `./install.sh plan nginx git` | Print the exact package commands | No |
 | `./install.sh providers` | List validated third-party provider metadata | No |
 | `./install.sh provider-info ID` | Show a registered provider's local catalog contract and integrity fields | No |
 | `./install.sh provider-plan ID --allow-provider ID@CATALOG_REVISION MODULE` | Validate revision-bound policy consent and print the locked, non-mutating provider plan | No |
+| `./install.sh provider-config ID --allow-provider ID@CATALOG_REVISION MODULE` | Render the reviewed provider repository configuration without enabling it | No |
+| `sudo ./install.sh provider-apply ID --plan-sha256 PLAN_SHA256 --allow-provider ID@CATALOG_REVISION MODULE` | Materialize only the reviewed keyring and repository file; it never refreshes metadata or installs packages | Yes |
+| `sudo ./install.sh provider-deactivate ID --plan-sha256 PLAN_SHA256 --allow-provider ID@CATALOG_REVISION MODULE` | Remove only matching installer-managed provider files; it rejects drift and never removes packages | Yes |
 | `sudo ./install.sh install nginx git` | Apply an approved plan | Yes |
 
 Common options:
@@ -173,14 +177,17 @@ exact package mapping, notes and target policy. A module can further restrict
 support to literal `ID:VERSION_ID:architecture` cells; plan and install reject
 same-family hosts outside those trusted manifest declarations.
 
-The provider commands are currently read-only and the live provider catalog is
-intentionally empty. `providers/registry.tsv` is the sole admission source and
+The live provider catalog is intentionally empty. `providers/registry.tsv` is the sole admission source and
 pins each admitted provider ID to a catalog revision and provider-tree SHA-256.
 In addition to exact local GnuPG binding between declared primary fingerprints
 and checked-in public keys, `provider-plan` validates an exact
 target/dependency/package-lock contract, requires revision-bound provider
 authorization plus provider-specific preview, license, authentication and
-persistence consent, and emits a digest of its cached plan snapshot. Local
+persistence consent, and emits a digest of its cached plan snapshot.
+`provider-apply` requires that exact digest and atomically writes only the
+checked-in keyring and rendered repository file; it rejects file drift and
+never refreshes metadata or installs packages. Its files remain active until
+the matching digest-bound `provider-deactivate` is run. Local
 tree, key and plan hashes detect drift; they do not establish publisher or live
 repository authenticity. The command rejects `--yes` and does not add or
 enable a repository. See
@@ -239,7 +246,11 @@ Module authoring is documented in
 
 ## Testing
 
-The local test suite has no third-party test dependency:
+The local test suite has no third-party test dependency. Its evidence and
+promotion validators use the Python standard library and POSIX no-follow file
+protection, so run every check from Linux with Python 3.8 or newer. A host
+without that runtime reports those checks as skipped rather than as test
+failures:
 
 ```bash
 make test
@@ -278,6 +289,12 @@ bundle. This remains candidate infrastructure until reviewed runs and durable
 evidence are published. The bundle's internal hashes detect corruption but do
 not authenticate themselves; an accepted import must also record an external
 GitHub artifact digest, signed release hash or attestation.
+
+Before considering an aggregate GitHub artifact for admission, download its ZIP
+and run `tests/verify-accepted-evidence-artifact.py` with the aggregate job's
+published artifact digest, tested commit and run URL. It rechecks the external
+ZIP digest and aggregate/bundle contract, but does not replace the required
+parity review or service attestation.
 
 The 100 family-wide modules contribute 270 cells. Three distro-package
 candidates are deliberately limited to one exact cell each, producing the

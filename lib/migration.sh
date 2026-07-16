@@ -2,8 +2,12 @@
 
 LSI_MIGRATION_INVENTORY="$LSI_PROJECT_ROOT/docs/legacy-inventory.tsv"
 LSI_MIGRATION_BACKLOG="$LSI_PROJECT_ROOT/docs/provider-backlog.tsv"
+LSI_MIGRATION_ACCEPTED_EVIDENCE="$LSI_PROJECT_ROOT/docs/accepted-evidence.tsv"
+LSI_MIGRATION_PROVIDER_REGISTRY="$LSI_PROJECT_ROOT/providers/registry.tsv"
 LSI_MIGRATION_INVENTORY_HEADER=$'legacy_id\tsource_set\tsource_path\tsource_item\tdisplay_name\tnormalized_capability\ttarget_family\tdisposition\treplacement\tparity_level\tevidence\trationale'
 LSI_MIGRATION_BACKLOG_HEADER=$'legacy_id\tnormalized_capability\tstrategy\trecommended_action\treplacement_outcome\trationale'
+LSI_MIGRATION_ACCEPTED_EVIDENCE_HEADER=$'evidence_key\tcommit_sha\trun_url\tartifact_url\tartifact_digest\tindex_sha256\ttarget_cells\tparity_report\tsystemd_run_url\tsystemd_artifact_url\tsystemd_artifact_digest'
+LSI_MIGRATION_PROVIDER_REGISTRY_HEADER=$'provider_id\tcatalog_revision\tcatalog_sha256'
 
 declare -ga LSI_MIGRATION_IDS=()
 declare -gA LSI_MIGRATION_ROWS=()
@@ -12,6 +16,8 @@ declare -g LSI_MIGRATION_TOTAL=0
 declare -g LSI_MIGRATION_PLANNED=0
 declare -g LSI_MIGRATION_BLOCKED=0
 declare -g LSI_MIGRATION_TERMINAL=0
+declare -g LSI_MIGRATION_ACCEPTED_EVIDENCE_COUNT=0
+declare -g LSI_MIGRATION_REGISTERED_PROVIDER_COUNT=0
 declare -g LSI_MIGRATION_LOADED=false
 
 lsi_migration_error() {
@@ -27,7 +33,52 @@ lsi_migration_reset() {
   LSI_MIGRATION_PLANNED=0
   LSI_MIGRATION_BLOCKED=0
   LSI_MIGRATION_TERMINAL=0
+  LSI_MIGRATION_ACCEPTED_EVIDENCE_COUNT=0
+  LSI_MIGRATION_REGISTERED_PROVIDER_COUNT=0
   LSI_MIGRATION_LOADED=false
+}
+
+lsi_migration_count_exact_tsv_rows() {
+  local path=$1 label=$2 header=$3 fields=$4 maximum_size=$5 line expected_size=0 observed_size=0
+  local line_number=0 count=0
+  local -a row=()
+  local -n output=$6
+
+  lsi_migration_validate_file "$path" "$label" "$maximum_size" expected_size || return
+  {
+    IFS= read -r line || {
+      lsi_migration_error "$label is empty."
+      return 1
+    }
+    [[ $line == "$header" ]] || {
+      lsi_migration_error "$label header does not match the canonical schema."
+      return 1
+    }
+    observed_size=$((${#line} + 1))
+    line_number=1
+    while IFS= read -r line; do
+      line_number=$((line_number + 1))
+      observed_size=$((observed_size + ${#line} + 1))
+      ((${#line} <= 4096)) || {
+        lsi_migration_error "$label line $line_number is too long."
+        return 1
+      }
+      lsi_migration_split_tsv "$line" "$fields" row || {
+        lsi_migration_error "$label line $line_number has an unexpected field count."
+        return 1
+      }
+      count=$((count + 1))
+      ((count <= 512)) || {
+        lsi_migration_error "$label has too many rows."
+        return 1
+      }
+    done
+  } < "$path" || return
+  [[ $observed_size -eq $expected_size ]] || {
+    lsi_migration_error "$label byte count is inconsistent (missing newline or binary data)."
+    return 1
+  }
+  output=$count
 }
 
 lsi_migration_split_tsv() {
@@ -518,6 +569,35 @@ lsi_migration_list() {
     "$LSI_MIGRATION_PLANNED" "$LSI_MIGRATION_BLOCKED"
   printf '%s\n' \
     'Candidates and proposed routes are not support claims; inspect one with ./install.sh migrate LEGACY_ID.'
+}
+
+lsi_migration_retirement_status() {
+  lsi_migration_load || return 1
+  lsi_migration_count_exact_tsv_rows \
+    "$LSI_MIGRATION_ACCEPTED_EVIDENCE" 'accepted-evidence admission registry' \
+    "$LSI_MIGRATION_ACCEPTED_EVIDENCE_HEADER" 11 1048576 \
+    LSI_MIGRATION_ACCEPTED_EVIDENCE_COUNT || return 1
+  lsi_migration_count_exact_tsv_rows \
+    "$LSI_MIGRATION_PROVIDER_REGISTRY" 'provider admission registry' \
+    "$LSI_MIGRATION_PROVIDER_REGISTRY_HEADER" 3 1048576 \
+    LSI_MIGRATION_REGISTERED_PROVIDER_COUNT || return 1
+
+  printf '%s\n\n' 'Legacy replacement retirement status (read-only; no system changes are made).'
+  printf 'Tracked legacy entries        : %d\n' "$LSI_MIGRATION_TOTAL"
+  printf 'Terminal dispositions         : %d\n' "$LSI_MIGRATION_TERMINAL"
+  printf 'Provisional module candidates : %d\n' "$LSI_MIGRATION_PLANNED"
+  printf 'Unresolved third-party routes : %d\n' "$LSI_MIGRATION_BLOCKED"
+  printf 'Accepted evidence admissions  : %d\n' "$LSI_MIGRATION_ACCEPTED_EVIDENCE_COUNT"
+  printf 'Registered live providers     : %d\n' "$LSI_MIGRATION_REGISTERED_PROVIDER_COUNT"
+  printf '\n%s\n' 'Retirement decision           : NOT READY'
+  printf '%s\n' \
+    'The old repositories remain necessary for any requested capability that is' \
+    'still provisional or third-party blocked. Candidate module mappings do not' \
+    'become replacements until accepted evidence is recorded for their exact' \
+    'target cells. Third-party routes require a reviewed provider or documented' \
+    'terminal handoff before they can leave the backlog.'
+  printf '\n%s\n' \
+    'Next checks: ./install.sh migrations; ./install.sh migrate LEGACY_ID; see docs/REPLACEMENT.md.'
 }
 
 lsi_migration_show() {

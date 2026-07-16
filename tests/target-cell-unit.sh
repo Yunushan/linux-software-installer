@@ -2,6 +2,12 @@
 set -Eeuo pipefail
 
 ROOT_DIR="$(CDPATH='' cd -- "$(dirname -- "${BASH_SOURCE[0]}")/.." && pwd -P)"
+# shellcheck source=python.sh
+source "$ROOT_DIR/tests/python.sh"
+PYTHON=$(lsi_find_python) || {
+  printf 'Python 3.8 or newer is required for target-cell tests.\n' >&2
+  exit 2
+}
 FIXTURE_ROOT="$ROOT_DIR/tests/fixtures/target-cells"
 VALID_MODULES="$FIXTURE_ROOT/valid"
 INVALID_MODULES="$FIXTURE_ROOT/invalid"
@@ -205,7 +211,7 @@ test_evidence_filtering() {
     "$fixture_repo" family-wide debian > /dev/null ||
     fail 'family-wide evidence contract compatibility was not preserved'
 
-  if ! python3 -B - "$ROOT_DIR/tests/evidence-record.py" "$fixture_repo" << 'PY'; then
+  if ! "$PYTHON" -B - "$ROOT_DIR/tests/evidence-record.py" "$fixture_repo" << 'PY'; then
 import importlib.util
 import sys
 from pathlib import Path

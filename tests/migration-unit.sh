@@ -101,6 +101,19 @@ test_list_is_complete_and_nonclaiming() (
     grep -q 'Read-only migration guidance' <<< "$output"
 )
 
+test_retirement_status_reports_exact_blockers() (
+  local output
+  output=$(lsi_migration_retirement_status) || return 1
+  grep -q '^Tracked legacy entries        : 355$' <<< "$output" &&
+    grep -q '^Terminal dispositions         : 84$' <<< "$output" &&
+    grep -q '^Provisional module candidates : 142$' <<< "$output" &&
+    grep -q '^Unresolved third-party routes : 129$' <<< "$output" &&
+    grep -q '^Accepted evidence admissions  : 0$' <<< "$output" &&
+    grep -q '^Registered live providers     : 0$' <<< "$output" &&
+    grep -q '^Retirement decision           : NOT READY$' <<< "$output" &&
+    grep -q 'Candidate module mappings do not become replacements' <<< "$output"
+)
+
 test_unknown_and_unsafe_ids_fail() (
   ! lsi_migration_show does-not-exist > /dev/null 2>&1 &&
     ! lsi_migration_show ../../legacy > /dev/null 2>&1 &&
@@ -257,9 +270,12 @@ test_public_cli_is_exact_and_location_independent() (
   local output
   output=$(cd "$TEST_TMP" && "$ROOT_DIR/install.sh" migrate ubuntu-005) || return 1
   grep -q '^Legacy ID     : ubuntu-005$' <<< "$output" &&
+    output=$(cd "$TEST_TMP" && "$ROOT_DIR/install.sh" retirement-status) &&
+    grep -q '^Retirement decision           : NOT READY$' <<< "$output" &&
     ! "$ROOT_DIR/install.sh" migrate > /dev/null 2>&1 &&
     ! "$ROOT_DIR/install.sh" migrate ubuntu-005 extra > /dev/null 2>&1 &&
-    ! "$ROOT_DIR/install.sh" migrations extra > /dev/null 2>&1
+    ! "$ROOT_DIR/install.sh" migrations extra > /dev/null 2>&1 &&
+    ! "$ROOT_DIR/install.sh" retirement-status extra > /dev/null 2>&1
 )
 
 test_public_cli_ignores_exported_shell_functions() (
@@ -284,6 +300,7 @@ run_test 'planned lookup remains explicitly provisional' test_planned_lookup_is_
 run_test 'terminal lookup is a documented handoff' test_terminal_lookup_is_handoff
 run_test 'blocked lookup cannot become an install command' test_blocked_lookup_is_not_installable
 run_test 'complete list reports counts without support claims' test_list_is_complete_and_nonclaiming
+run_test 'retirement status reports exact remaining blockers' test_retirement_status_reports_exact_blockers
 run_test 'unknown and unsafe legacy IDs are rejected' test_unknown_and_unsafe_ids_fail
 run_test 'unexpected inventory header fails closed' test_bad_header_fails_closed
 run_test 'duplicate legacy IDs fail closed' test_duplicate_id_fails_closed

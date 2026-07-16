@@ -15,6 +15,8 @@ export LSI_PROJECT_ROOT="$ROOT_DIR"
   printf 'Usage: %s ROOT {all|debian|rhel} MODULE OUTPUT_DIR\n' "$0" >&2
   exit 2
 }
+# shellcheck source=python.sh
+source "$ROOT_DIR/tests/python.sh"
 [[ $SCOPE == all || $SCOPE == debian || $SCOPE == rhel ]] || {
   printf 'Invalid evidence scope: %s\n' "$SCOPE" >&2
   exit 2
@@ -23,8 +25,8 @@ command -v docker > /dev/null 2>&1 || {
   printf 'docker is required for standalone module evidence.\n' >&2
   exit 2
 }
-command -v python3 > /dev/null 2>&1 || {
-  printf 'python3 is required for standalone module evidence.\n' >&2
+PYTHON=$(lsi_find_python) || {
+  printf 'Python 3.8 or newer is required for standalone module evidence.\n' >&2
   exit 2
 }
 command -v timeout > /dev/null 2>&1 || {
@@ -44,7 +46,7 @@ if [[ $SCOPE != all ]]; then
     lsi_die "Module $MODULE does not support evidence scope $SCOPE." 2
 fi
 [[ -r $TARGETS_FILE ]] || lsi_die "Cannot read evidence targets: $TARGETS_FILE" 3
-if ! python3 - "$OUTPUT_DIR" "$RAW_ROOT" << 'PY'; then
+if ! "$PYTHON" - "$OUTPUT_DIR" "$RAW_ROOT" << 'PY'; then
 import os
 import sys
 
@@ -94,9 +96,9 @@ remove_current_container() {
 
 sanitize_cell() {
   local source=$1 destination=$2
-  local -a command=(python3 "$ROOT_DIR/tests/evidence-record.py")
+  local -a command=("$PYTHON" "$ROOT_DIR/tests/evidence-record.py")
   if [[ ${LSI_SANITIZE_WITH_SUDO:-0} == 1 ]]; then
-    command=(sudo --non-interactive python3 "$ROOT_DIR/tests/evidence-record.py")
+    command=(sudo --non-interactive "$PYTHON" "$ROOT_DIR/tests/evidence-record.py")
   fi
   "${command[@]}" sanitize-tree \
     --source "$source" \
@@ -223,7 +225,7 @@ while IFS= read -r target_row || [[ -n $target_row ]]; do
     "$container_status" "$image_id" "$image_arch" "$started_at"
 
   finalize_args=(
-    python3 "$ROOT_DIR/tests/evidence-record.py" finalize-cell
+    "$PYTHON" "$ROOT_DIR/tests/evidence-record.py" finalize-cell
     --cell-dir "$cell_dir"
     --repo-root "$ROOT_DIR"
     --target-id "$target_id"

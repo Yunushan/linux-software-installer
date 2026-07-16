@@ -1,16 +1,17 @@
 # Third-party provider architecture
 
-The provider catalog is currently a **read-only catalog-integrity and
-transaction-planning foundation**. It can validate and display local provider
-metadata, resolve an exact dependency closure and print a fully authorized
-package-lock plan, but no live provider is registered and the installer cannot
-add, enable or mutate a third-party repository. The ordinary package-only
-catalog continues to use repositories already enabled by the administrator.
+The provider catalog is currently a **catalog-integrity and transaction-planning
+foundation**. It can validate and display local provider metadata, resolve an
+exact dependency closure, print a fully authorized package-lock plan and,
+when a provider has been admitted, materialize only the reviewed keyring and
+repository file. No live provider is registered, and it cannot refresh remote
+metadata or install third-party packages. The ordinary package-only catalog
+continues to use repositories already enabled by the administrator.
 
 This separation is intentional. A provider must fail closed at metadata review
 before privileged repository code exists.
 
-## Read-only commands
+## Provider commands
 
 ```bash
 ./install.sh providers
@@ -22,6 +23,17 @@ before privileged repository code exists.
   [--ack-provider-auth PROVIDER] \
   [--persist-provider PROVIDER] \
   MODULE...
+./install.sh provider-config PROVIDER \
+  --allow-provider PROVIDER@CATALOG_REVISION \
+  [ACKNOWLEDGEMENTS...] MODULE...
+sudo ./install.sh provider-apply PROVIDER \
+  --plan-sha256 PLAN_SHA256 \
+  --allow-provider PROVIDER@CATALOG_REVISION \
+  [ACKNOWLEDGEMENTS...] MODULE...
+sudo ./install.sh provider-deactivate PROVIDER \
+  --plan-sha256 PLAN_SHA256 \
+  --allow-provider PROVIDER@CATALOG_REVISION \
+  [ACKNOWLEDGEMENTS...] MODULE...
 ```
 
 `providers` currently reports an empty live catalog. Tests use isolated fixture
@@ -29,6 +41,29 @@ providers to exercise validation without creating a production trust claim.
 Only an exact row in `providers/registry.tsv` admits a provider. A directory
 that is absent from the registry is rejected, and a registry row without its
 matching directory is also rejected.
+
+`provider-config` performs the same exact target, catalog revision, key and
+package-lock validation as `provider-plan`, then renders the APT Deb822 or DNF
+repository configuration that the reviewed provider cell specifies. It remains
+read-only: it does not copy a key, create a repository file, refresh metadata
+or install a package. Rendering a configuration is not provider admission or
+installation evidence.
+
+`provider-apply` repeats that validation and requires the exact body digest
+printed by an immediately reviewed `provider-plan`. It requires root and only
+atomically materializes the checked-in public key and exact APT/DNF repository
+file into fixed system locations. Existing files must be the same single-link
+regular file byte-for-byte; symlinks, hard links and drift are rejected instead
+of overwritten. It does not refresh metadata, invoke a package manager or
+install a package. Its files remain active until the matching
+`provider-deactivate` command runs. The live registry is empty, so no real
+provider can currently reach this operation.
+
+`provider-deactivate` repeats the same digest-bound validation and removes only
+the matching installer-managed key and repository file, in reverse dependency
+order. It preflights both files before deletion and rejects drift, links or
+foreign content without removing either file. It does not refresh metadata or
+remove packages.
 
 `provider-plan` is deliberately non-mutating. For the exact detected OS,
 `VERSION_ID`, package architecture and package manager it validates every
@@ -94,11 +129,11 @@ publisher identity, catalog provenance, live repository metadata authenticity
 or package signatures. No repository installation may be enabled until those
 runtime checks and the remaining gates below exist.
 
-## Required mutation boundary
+## Required package-install boundary
 
-The read-only planner already requires a separate explicit, catalog-revision-
-bound allow flag for each provider. A future provider installer must preserve
-that contract and bind any apply operation to the exact reviewed plan digest.
+The planner and configuration activation path require a separate explicit,
+catalog-revision-bound allow flag for each provider. A future package installer
+must preserve that contract and bind its work to the exact reviewed plan digest.
 `--yes`, `--force-unsupported` and ordinary module selection must never imply
 provider authorization, license acknowledgement, classic Snap confinement or
 authentication consent.

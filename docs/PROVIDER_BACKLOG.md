@@ -19,6 +19,13 @@ modern cells. Its exact repository coordinates and package locks are planning
 inputs only: no live apply path exists, and key provenance/expiry, APT replay,
 TLS-clean EL probes and accepted evidence remain explicit blockers.
 
+The dated [`VSCODE_PROVIDER_AUDIT.md`](VSCODE_PROVIDER_AUDIT.md) investigation
+records a planning-only Microsoft repository route for the two Visual Studio
+Code rows. The vendor's published APT and RPM coordinates are useful planning
+inputs only: provider mutation code, key provenance and lifecycle controls,
+exact-cell locks, authenticated metadata/origin checks and accepted evidence
+remain explicit blockers.
+
 Run `bash tests/validate-provider-backlog.sh` after changing either ledger. The
 validator requires an exact one-to-one join by `legacy_id`, rejects duplicate or
 extra rows, checks capability identity, and freezes both the action and strategy

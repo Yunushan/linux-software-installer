@@ -27,6 +27,11 @@ The current immutable denominator is 355 entries: 142 provisional candidates,
 129 unresolved third-party routes and 84 terminal dispositions. Those numbers
 describe migration accounting, not the public support level of a module.
 
+`./install.sh retirement-status` also reports the read-only counts of accepted
+external-evidence admissions and registered live providers. Those counts make
+future publication progress visible, but neither count independently changes a
+legacy disposition or proves retirement readiness.
+
 ## Fail-closed data contract
 
 The lookup parses [`legacy-inventory.tsv`](legacy-inventory.tsv) and, for every

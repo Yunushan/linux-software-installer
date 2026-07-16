@@ -2,12 +2,17 @@
 set -uo pipefail
 
 ROOT_DIR="$(CDPATH='' cd -- "$(dirname -- "${BASH_SOURCE[0]}")/.." && pwd -P)"
+# shellcheck source=python.sh
+source "$ROOT_DIR/tests/python.sh"
 PASS_COUNT=0
 FAIL_COUNT=0
+SKIP_COUNT=0
+TEST_COUNT=0
 
 pass() {
   PASS_COUNT=$((PASS_COUNT + 1))
-  printf 'ok %d - %s\n' "$PASS_COUNT" "$1"
+  TEST_COUNT=$((TEST_COUNT + 1))
+  printf 'ok %d - %s\n' "$TEST_COUNT" "$1"
 }
 
 fail() {
@@ -15,14 +20,30 @@ fail() {
   printf 'not ok - %s\n' "$1" >&2
 }
 
+skip() {
+  SKIP_COUNT=$((SKIP_COUNT + 1))
+  TEST_COUNT=$((TEST_COUNT + 1))
+  printf 'ok %d - %s # SKIP %s\n' "$TEST_COUNT" "$1" "$2"
+}
+
 run_test() {
-  local name=$1
+  local name=$1 status
   shift
-  if "$@"; then
+  "$@"
+  status=$?
+  if [[ $status -eq 0 ]]; then
     pass "$name"
+  elif [[ $status -eq 77 ]]; then
+    skip "$name" 'POSIX Python 3.8+ with O_NOFOLLOW is unavailable'
+  elif [[ $status -eq 78 ]]; then
+    skip "$name" 'Git is unavailable (legacy snapshot integrity cannot be checked)'
   else
     fail "$name"
   fi
+}
+
+test_python_available() {
+  lsi_find_python > /dev/null
 }
 
 test_syntax() {
@@ -292,7 +313,12 @@ test_standalone_evidence_matrices() {
 }
 
 test_evidence_record_integrity() {
+  test_python_available || return 77
   bash "$ROOT_DIR/tests/test-evidence-record.sh"
+}
+
+test_python_runtime_resolver() {
+  bash "$ROOT_DIR/tests/python-unit.sh"
 }
 
 test_workflow_security_contract() {
@@ -308,14 +334,24 @@ test_legacy_inventory_contract() {
 }
 
 test_legacy_promotion_readiness_contract() {
+  test_python_available || return 77
   bash "$ROOT_DIR/tests/validate-legacy-promotion-readiness.sh" > /dev/null
 }
 
 test_accepted_evidence_admission_contract() {
-  python3 "$ROOT_DIR/tests/test-accepted-evidence.py" > /dev/null
+  local python
+  python=$(lsi_find_python) || return 77
+  "$python" "$ROOT_DIR/tests/test-accepted-evidence.py" > /dev/null
+}
+
+test_downloaded_evidence_artifact_contract() {
+  local python
+  python=$(lsi_find_python) || return 77
+  "$python" "$ROOT_DIR/tests/test-accepted-evidence-artifact.py" > /dev/null
 }
 
 test_legacy_quarantine_contract() {
+  command -v git > /dev/null 2>&1 || return 78
   bash "$ROOT_DIR/tests/validate-legacy-quarantine.sh" > /dev/null
 }
 
@@ -336,10 +372,12 @@ test_operational_safety_contract() {
 }
 
 test_systemd_evidence_contract() {
+  test_python_available || return 77
   bash "$ROOT_DIR/tests/test-systemd-evidence.sh" > /dev/null
 }
 
 test_exact_target_cell_contract() {
+  test_python_available || return 77
   bash "$ROOT_DIR/tests/target-cell-unit.sh" > /dev/null
 }
 
@@ -458,6 +496,7 @@ run_test 'all profile entries resolve to module manifests' test_all_profile_modu
 run_test 'legacy inventory reconciles all 355 source entries' test_legacy_inventory_contract
 run_test 'planned legacy rows have a fail-closed promotion ledger' test_legacy_promotion_readiness_contract
 run_test 'accepted evidence admissions bind external artifacts to exact contracts' test_accepted_evidence_admission_contract
+run_test 'downloaded GitHub evidence artifacts are revalidated before admission' test_downloaded_evidence_artifact_contract
 run_test 'legacy snapshot is pinned and excluded from the active path' test_legacy_quarantine_contract
 run_test 'provider backlog covers every unresolved third-party row' test_provider_backlog_contract
 run_test 'read-only migration lookup fails closed on ledger drift' test_migration_lookup_contract
@@ -476,6 +515,7 @@ run_test 'declared module conflicts are rejected' test_conflict_rejected
 run_test 'real-install catalog batches cover every module without conflicts' test_conflict_safe_catalog_batches
 run_test 'standalone evidence matrices cover every module-image cell' test_standalone_evidence_matrices
 run_test 'standalone evidence records detect payload tampering' test_evidence_record_integrity
+run_test 'Python runtime resolver rejects broken command aliases' test_python_runtime_resolver
 run_test 'container workflows preserve the evidence trust boundary' test_workflow_security_contract
 run_test 'evidence cleanup verifies exact container absence' test_evidence_container_cleanup_contract
 run_test 'CentOS 7 is blocked from the active installer' test_centos7_guard
@@ -487,5 +527,5 @@ run_test 'explicit systemctl activation is opt-in' test_explicit_service_activat
 run_test 'family-incompatible direct modules are rejected' test_unsupported_direct_module_rejected
 run_test 'comma-separated module input is supported' test_csv_module_input
 
-printf '\n%d passed, %d failed\n' "$PASS_COUNT" "$FAIL_COUNT"
+printf '\n%d passed, %d skipped, %d failed\n' "$PASS_COUNT" "$SKIP_COUNT" "$FAIL_COUNT"
 ((FAIL_COUNT == 0))

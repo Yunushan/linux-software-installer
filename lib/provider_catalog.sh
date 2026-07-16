@@ -2,10 +2,10 @@
 
 # Third-party provider manifests are deliberately parsed as fixed-column TSV.
 # They are never sourced and cannot supply commands or executable hooks. This
-# discovery-only layer validates full fingerprint declarations and binds them
-# to the primary OpenPGP keys in each provider-local key file. A future mutation
-# layer must still verify repository metadata and package signatures before any
-# repository can be configured.
+# discovery layer validates full fingerprint declarations and binds them to the
+# primary OpenPGP keys in each provider-local key file. The configuration
+# activation layer still must not be treated as repository-metadata or package
+# verification.
 
 LSI_PROVIDER_ROOT=${LSI_PROVIDER_ROOT:-${LSI_PROJECT_ROOT:+$LSI_PROJECT_ROOT/providers}}
 
@@ -61,6 +61,9 @@ declare -gA LSI_PROVIDER_PLAN_CATALOG_SHA256=()
 declare -ga LSI_PROVIDER_PLAN_PRIMARY_LOCK_ROWS=()
 LSI_PROVIDER_PLAN_PRIMARY=''
 LSI_PROVIDER_PLAN_REGISTRY_SHA256=''
+LSI_PROVIDER_PLAN_BODY=''
+LSI_PROVIDER_PLAN_DIGEST=''
+LSI_PROVIDER_APPLY_EXPECTED_DIGEST=''
 
 lsi_provider_error() {
   printf 'Provider error: %s\n' "$*" >&2
@@ -1060,6 +1063,8 @@ lsi_provider_plan_reset() {
   LSI_PROVIDER_PLAN_PRIMARY_LOCK_ROWS=()
   LSI_PROVIDER_PLAN_PRIMARY=''
   LSI_PROVIDER_PLAN_REGISTRY_SHA256=''
+  LSI_PROVIDER_PLAN_BODY=''
+  LSI_PROVIDER_PLAN_DIGEST=''
 }
 
 lsi_provider_plan_add_once() {
@@ -1370,8 +1375,8 @@ lsi_provider_plan_render() {
   printf 'Repository mutation: disabled; this command only validates and displays the exact transaction contract.\n'
 }
 
-lsi_provider_plan_current() {
-  local provider_id=${1:-} manager package_arch plan_output plan_digest sha256_bin
+lsi_provider_plan_prepare() {
+  local provider_id=${1:-} manager package_arch sha256_bin
   (($# > 0)) && shift
   lsi_provider_valid_slug "$provider_id" || {
     lsi_provider_error 'provider-plan requires a valid provider ID.'
@@ -1405,27 +1410,418 @@ lsi_provider_plan_current() {
     return 3
   }
 
-  plan_output=$(lsi_provider_plan_render "$provider_id" "$manager") || return
+  LSI_PROVIDER_PLAN_BODY=$(lsi_provider_plan_render "$provider_id" "$manager") || return
   sha256_bin=$(lsi_provider_system_tool sha256sum) || return
-  plan_digest=$(printf '%s\n' "$plan_output" | "$sha256_bin") || {
+  LSI_PROVIDER_PLAN_DIGEST=$(printf '%s\n' "$LSI_PROVIDER_PLAN_BODY" | "$sha256_bin") || {
     lsi_provider_error 'Unable to hash the provider plan snapshot.'
     return 3
   }
-  plan_digest=${plan_digest%% *}
-  [[ $plan_digest =~ ^[0-9a-f]{64}$ ]] || {
+  LSI_PROVIDER_PLAN_DIGEST=${LSI_PROVIDER_PLAN_DIGEST%% *}
+  [[ $LSI_PROVIDER_PLAN_DIGEST =~ ^[0-9a-f]{64}$ ]] || {
     lsi_provider_error 'Provider plan snapshot produced an invalid SHA-256 digest.'
     return 3
   }
-  printf '%s\n' "$plan_output"
-  printf 'Plan SHA-256 (body): %s\n' "$plan_digest"
+}
+
+lsi_provider_plan_current() {
+  lsi_provider_plan_prepare "$@" || return
+  printf '%s\n' "$LSI_PROVIDER_PLAN_BODY"
+  printf 'Plan SHA-256 (body): %s\n' "$LSI_PROVIDER_PLAN_DIGEST"
+}
+
+lsi_provider_config_render_provider() {
+  local provider_id=$1 row cell_id cell_os cell_version cell_arch cell_manager channel
+  local repository_uri suite components key_file key_fingerprints expected_origin metadata_signature
+  local component
+  local -a provider_components=()
+
+  row=${LSI_PROVIDER_PLAN_ACTIVATION[$provider_id]:-}
+  [[ -n $row ]] || {
+    lsi_provider_error "Provider configuration snapshot is missing activation data: $provider_id"
+    return 3
+  }
+  IFS=$'\t' read -r cell_id cell_os cell_version cell_arch cell_manager channel repository_uri \
+    suite components key_file key_fingerprints expected_origin metadata_signature <<< "$row"
+
+  printf '\n# Provider: %s; catalog revision: %s\n' "$provider_id" \
+    "${LSI_PROVIDER_PLAN_CATALOG_REVISION[$provider_id]}"
+  printf '# Checked-in key: providers/%s/%s\n' "$provider_id" "$key_file"
+  case "$cell_manager" in
+    apt-get)
+      printf '# Target keyring: /usr/share/keyrings/linux-software-installer-%s.asc\n' "$provider_id"
+      printf '# Target source: /etc/apt/sources.list.d/linux-software-installer-%s.sources\n' "$provider_id"
+      printf 'Types: deb\nURIs: %s\nSuites: %s\n' "$repository_uri" "$suite"
+      if [[ $suite != / ]]; then
+        printf 'Components:'
+        IFS=',' read -r -a provider_components <<< "$components"
+        for component in "${provider_components[@]}"; do
+          printf ' %s' "$component"
+        done
+        printf '\n'
+      fi
+      printf 'Architectures: %s\nSigned-By: /usr/share/keyrings/linux-software-installer-%s.asc\n' \
+        "$cell_arch" "$provider_id"
+      ;;
+    dnf)
+      printf '# Target keyring: /etc/pki/rpm-gpg/RPM-GPG-KEY-linux-software-installer-%s\n' "$provider_id"
+      printf '# Target repository: /etc/yum.repos.d/linux-software-installer-%s.repo\n' "$provider_id"
+      printf '[linux-software-installer-%s]\nname=%s\nbaseurl=%s\nenabled=1\n' \
+        "$provider_id" "$provider_id" "$repository_uri"
+      printf 'gpgcheck=1\nrepo_gpgcheck=1\ngpgkey=file:///etc/pki/rpm-gpg/RPM-GPG-KEY-linux-software-installer-%s\n' \
+        "$provider_id"
+      ;;
+    *)
+      lsi_provider_error "Provider configuration uses an unsupported package manager: $cell_manager"
+      return 3
+      ;;
+  esac
+  printf '# Expected origin: %s; metadata signature policy: %s\n' \
+    "$expected_origin" "$metadata_signature"
+}
+
+lsi_provider_config_current() {
+  local provider_id=${1:-} provider
+  (($# > 0)) && shift
+  lsi_provider_plan_prepare "$provider_id" "$@" || return
+  printf '%s\n' 'Provider repository configuration (read-only; no system changes are made).'
+  printf 'Plan SHA-256 (body): %s\n' "$LSI_PROVIDER_PLAN_DIGEST"
+  printf '%s\n' 'Do not enable a rendered configuration until a provider apply command and accepted evidence are available.'
+  for provider in "${LSI_PROVIDER_PLAN_ORDER[@]}"; do
+    lsi_provider_config_render_provider "$provider" || return
+  done
+}
+
+lsi_provider_apply_parse_args() {
+  local token
+  LSI_PROVIDER_APPLY_EXPECTED_DIGEST=''
+  LSI_PROVIDER_APPLY_ARGS=()
+  while (($# > 0)); do
+    case "$1" in
+      --plan-sha256)
+        (($# >= 2)) || {
+          lsi_provider_error '--plan-sha256 requires the exact reviewed plan SHA-256.'
+          return 2
+        }
+        token=$2
+        [[ $token =~ ^[0-9a-f]{64}$ && -z $LSI_PROVIDER_APPLY_EXPECTED_DIGEST ]] || {
+          lsi_provider_error '--plan-sha256 must be supplied exactly once as 64 lowercase hexadecimal characters.'
+          return 2
+        }
+        LSI_PROVIDER_APPLY_EXPECTED_DIGEST=$token
+        shift 2
+        ;;
+      *)
+        LSI_PROVIDER_APPLY_ARGS+=("$1")
+        shift
+        ;;
+    esac
+  done
+  [[ -n $LSI_PROVIDER_APPLY_EXPECTED_DIGEST ]] || {
+    lsi_provider_error 'provider-apply requires --plan-sha256 from an immediately reviewed provider-plan.'
+    return 2
+  }
+}
+
+lsi_provider_apply_check_directory() {
+  local directory=$1 stat_bin owner mode
+  stat_bin=$(lsi_provider_system_tool stat) || return
+  [[ -d $directory && ! -L $directory ]] || {
+    lsi_provider_error "Provider activation directory is unavailable or unsafe: $directory"
+    return 3
+  }
+  if [[ ${LSI_PROVIDER_APPLY_ALLOW_NONROOT_TEST:-false} == true ]]; then
+    return 0
+  fi
+  owner=$("$stat_bin" -c '%u' -- "$directory") || return 3
+  mode=$("$stat_bin" -c '%a' -- "$directory") || return 3
+  [[ $owner == 0 && $mode =~ ^[0-7]{3,4}$ && $((8#${mode: -2:1})) -lt 2 && $((8#${mode: -1})) -lt 2 ]] || {
+    lsi_provider_error "Provider activation directory has unsafe ownership or mode: $directory"
+    return 3
+  }
+}
+
+lsi_provider_apply_write_file() {
+  local source=$1 destination=$2 directory=$3 label=$4
+  local stat_bin mktemp_bin chmod_bin cmp_bin mv_bin rm_bin tmp link_count
+
+  lsi_provider_apply_check_file_destination "$source" "$destination" "$directory" "$label" || return
+  [[ ! -e $destination && ! -L $destination ]] || return 0
+
+  stat_bin=$(lsi_provider_system_tool stat) || return
+  chmod_bin=$(lsi_provider_system_tool chmod) || return
+  cmp_bin=$(lsi_provider_system_tool cmp) || return
+  mv_bin=$(lsi_provider_system_tool mv) || return
+  rm_bin=$(lsi_provider_system_tool rm) || return
+  mktemp_bin=$(lsi_provider_system_tool mktemp) || return
+  tmp=$(umask 077; "$mktemp_bin" "$directory/.linux-software-installer-provider.XXXXXX") || {
+    lsi_provider_error "Unable to create provider activation temporary file in $directory"
+    return 3
+  }
+  [[ -f $tmp && ! -L $tmp && ${tmp#"$directory"/} == .linux-software-installer-provider.* ]] || {
+    lsi_provider_error 'Provider activation temporary file is unsafe.'
+    return 3
+  }
+  if ! /bin/cat -- "$source" > "$tmp" || ! "$chmod_bin" 0644 -- "$tmp"; then
+    "$rm_bin" -f -- "$tmp"
+    lsi_provider_error "Unable to prepare provider activation file: $destination"
+    return 3
+  fi
+  if ! "$cmp_bin" -s -- "$source" "$tmp" || ! "$mv_bin" -n -- "$tmp" "$destination"; then
+    "$rm_bin" -f -- "$tmp"
+    lsi_provider_error "Unable to install provider activation file safely: $destination"
+    return 3
+  fi
+  [[ -f $destination && ! -L $destination ]] || {
+    "$rm_bin" -f -- "$tmp"
+    lsi_provider_error "Provider activation output is unsafe: $destination"
+    return 3
+  }
+  link_count=$("$stat_bin" -c '%h' -- "$destination") || return 3
+  [[ $link_count == 1 ]] || {
+    "$rm_bin" -f -- "$tmp"
+    lsi_provider_error "Provider activation output has unsafe links: $destination"
+    return 3
+  }
+  if ! "$cmp_bin" -s -- "$source" "$destination"; then
+    "$rm_bin" -f -- "$tmp"
+    lsi_provider_error "Provider activation output changed during installation: $destination"
+    return 3
+  fi
+  "$rm_bin" -f -- "$tmp"
+}
+
+lsi_provider_apply_check_file_destination() {
+  local source=$1 destination=$2 directory=$3 label=$4
+  local stat_bin cmp_bin link_count
+
+  [[ -f $source && ! -L $source ]] || {
+    lsi_provider_error "Provider activation source is unavailable or unsafe: $label"
+    return 3
+  }
+  lsi_provider_apply_check_directory "$directory" || return
+  stat_bin=$(lsi_provider_system_tool stat) || return
+  cmp_bin=$(lsi_provider_system_tool cmp) || return
+  if [[ -e $destination || -L $destination ]]; then
+    [[ -f $destination && ! -L $destination ]] || {
+      lsi_provider_error "Refusing unsafe existing provider activation file: $destination"
+      return 3
+    }
+    link_count=$("$stat_bin" -c '%h' -- "$destination") || return 3
+    [[ $link_count == 1 ]] || {
+      lsi_provider_error "Refusing multiply-linked provider activation file: $destination"
+      return 3
+    }
+    if "$cmp_bin" -s -- "$source" "$destination"; then
+      return 0
+    fi
+    lsi_provider_error "Refusing to replace provider activation drift: $destination"
+    return 3
+  fi
+}
+
+lsi_provider_apply_config_file() {
+  local provider_id=$1 root=$2 row cell_id _os_id _version_id _arch manager _channel
+  local _repository_uri _suite _components key_file _key_fingerprints _expected_origin _metadata_signature
+  local config_dir config_file key_dir key_target key_source temporary mktemp_bin rm_bin status=0
+
+  row=${LSI_PROVIDER_PLAN_ACTIVATION[$provider_id]:-}
+  [[ -n $row ]] || {
+    lsi_provider_error "Provider apply snapshot is missing activation data: $provider_id"
+    return 3
+  }
+  IFS=$'\t' read -r cell_id _os_id _version_id _arch manager _channel _repository_uri \
+    _suite _components key_file _key_fingerprints _expected_origin _metadata_signature <<< "$row"
+  key_source="$LSI_PROVIDER_ROOT/$provider_id/$key_file"
+  case "$manager" in
+    apt-get)
+      key_dir="$root/usr/share/keyrings"
+      config_dir="$root/etc/apt/sources.list.d"
+      key_target="$key_dir/linux-software-installer-$provider_id.asc"
+      config_file="$config_dir/linux-software-installer-$provider_id.sources"
+      ;;
+    dnf)
+      key_dir="$root/etc/pki/rpm-gpg"
+      config_dir="$root/etc/yum.repos.d"
+      key_target="$key_dir/RPM-GPG-KEY-linux-software-installer-$provider_id"
+      config_file="$config_dir/linux-software-installer-$provider_id.repo"
+      ;;
+    *)
+      lsi_provider_error "Provider apply uses an unsupported package manager: $manager"
+      return 3
+      ;;
+  esac
+  mktemp_bin=$(lsi_provider_system_tool mktemp) || return
+  rm_bin=$(lsi_provider_system_tool rm) || return
+  temporary=$(umask 077; "$mktemp_bin" '/tmp/lsi-provider-config.XXXXXX') || return 3
+  if ! lsi_provider_config_render_provider "$provider_id" | /usr/bin/sed '/^#/d; /^$/d' > "$temporary"; then
+    "$rm_bin" -f -- "$temporary"
+    return 3
+  fi
+  lsi_provider_apply_check_file_destination "$key_source" "$key_target" "$key_dir" "key for $provider_id" || status=$?
+  if ((status == 0)); then
+    lsi_provider_apply_check_file_destination "$temporary" "$config_file" "$config_dir" \
+      "repository configuration for $provider_id" || status=$?
+  fi
+  if ((status == 0)); then
+    lsi_provider_apply_write_file "$key_source" "$key_target" "$key_dir" "key for $provider_id" || status=$?
+  fi
+  if ((status == 0)); then
+    lsi_provider_apply_write_file "$temporary" "$config_file" "$config_dir" \
+      "repository configuration for $provider_id" || status=$?
+  fi
+  "$rm_bin" -f -- "$temporary"
+  return "$status"
+}
+
+lsi_provider_deactivate_remove_file() {
+  local source=$1 destination=$2 directory=$3 label=$4 rm_bin
+  lsi_provider_apply_check_file_destination "$source" "$destination" "$directory" "$label" || return
+  [[ -e $destination || -L $destination ]] || return 0
+  rm_bin=$(lsi_provider_system_tool rm) || return
+  "$rm_bin" -f -- "$destination" || {
+    lsi_provider_error "Unable to remove provider repository file: $destination"
+    return 3
+  }
+  [[ ! -e $destination && ! -L $destination ]] || {
+    lsi_provider_error "Provider repository file remains after removal: $destination"
+    return 3
+  }
+}
+
+lsi_provider_deactivate_config_file() {
+  local provider_id=$1 root=$2 row cell_id _os_id _version_id _arch manager _channel
+  local _repository_uri _suite _components key_file _key_fingerprints _expected_origin _metadata_signature
+  local config_dir config_file key_dir key_target key_source temporary mktemp_bin rm_bin status=0
+
+  row=${LSI_PROVIDER_PLAN_ACTIVATION[$provider_id]:-}
+  [[ -n $row ]] || {
+    lsi_provider_error "Provider deactivation snapshot is missing activation data: $provider_id"
+    return 3
+  }
+  IFS=$'\t' read -r cell_id _os_id _version_id _arch manager _channel _repository_uri \
+    _suite _components key_file _key_fingerprints _expected_origin _metadata_signature <<< "$row"
+  key_source="$LSI_PROVIDER_ROOT/$provider_id/$key_file"
+  case "$manager" in
+    apt-get)
+      key_dir="$root/usr/share/keyrings"
+      config_dir="$root/etc/apt/sources.list.d"
+      key_target="$key_dir/linux-software-installer-$provider_id.asc"
+      config_file="$config_dir/linux-software-installer-$provider_id.sources"
+      ;;
+    dnf)
+      key_dir="$root/etc/pki/rpm-gpg"
+      config_dir="$root/etc/yum.repos.d"
+      key_target="$key_dir/RPM-GPG-KEY-linux-software-installer-$provider_id"
+      config_file="$config_dir/linux-software-installer-$provider_id.repo"
+      ;;
+    *)
+      lsi_provider_error "Provider deactivation uses an unsupported package manager: $manager"
+      return 3
+      ;;
+  esac
+  mktemp_bin=$(lsi_provider_system_tool mktemp) || return
+  rm_bin=$(lsi_provider_system_tool rm) || return
+  temporary=$(umask 077; "$mktemp_bin" '/tmp/lsi-provider-config.XXXXXX') || return 3
+  if ! lsi_provider_config_render_provider "$provider_id" | /usr/bin/sed '/^#/d; /^$/d' > "$temporary"; then
+    "$rm_bin" -f -- "$temporary"
+    return 3
+  fi
+  # Validate both destinations before deleting either. A drifted source file
+  # remains untouched, and a configuration is removed before its key so a
+  # partial failure cannot leave the repository enabled without its key.
+  lsi_provider_apply_check_file_destination "$temporary" "$config_file" "$config_dir" \
+    "repository configuration for $provider_id" || status=$?
+  if ((status == 0)); then
+    lsi_provider_apply_check_file_destination "$key_source" "$key_target" "$key_dir" \
+      "key for $provider_id" || status=$?
+  fi
+  if ((status == 0)); then
+    lsi_provider_deactivate_remove_file "$temporary" "$config_file" "$config_dir" \
+      "repository configuration for $provider_id" || status=$?
+  fi
+  if ((status == 0)); then
+    lsi_provider_deactivate_remove_file "$key_source" "$key_target" "$key_dir" \
+      "key for $provider_id" || status=$?
+  fi
+  "$rm_bin" -f -- "$temporary"
+  return "$status"
+}
+
+lsi_provider_apply_current() {
+  local provider_id=${1:-} root=${LSI_PROVIDER_APPLY_ROOT:-/} provider
+  (($# > 0)) && shift
+  lsi_provider_valid_slug "$provider_id" || {
+    lsi_provider_error 'provider-apply requires a valid provider ID.'
+    return 2
+  }
+  lsi_provider_apply_parse_args "$@" || return
+  lsi_provider_plan_prepare "$provider_id" "${LSI_PROVIDER_APPLY_ARGS[@]}" || return
+  [[ $LSI_PROVIDER_PLAN_DIGEST == "$LSI_PROVIDER_APPLY_EXPECTED_DIGEST" ]] || {
+    lsi_provider_error 'Reviewed provider plan SHA-256 does not match the current exact plan; refusing activation.'
+    return 5
+  }
+  [[ $root == /* && -d $root && ! -L $root ]] || {
+    lsi_provider_error 'Provider activation root must be an existing absolute, non-symlink directory.'
+    return 3
+  }
+  [[ ${LSI_PROVIDER_APPLY_ALLOW_NONROOT_TEST:-false} == true || $root == / ]] || {
+    lsi_provider_error 'A non-system provider activation root is test-only.'
+    return 3
+  }
+  [[ ${LSI_PROVIDER_APPLY_ALLOW_NONROOT_TEST:-false} == true ]] || lsi_require_root
+  if [[ ${LSI_PROVIDER_APPLY_ALLOW_NONROOT_TEST:-false} == true ]]; then
+    : # Test-only fake roots do not require the host's Linux flock facility.
+  else
+    lsi_acquire_lock
+  fi
+  for provider in "${LSI_PROVIDER_PLAN_ORDER[@]}"; do
+    lsi_provider_apply_config_file "$provider" "$root" || return
+  done
+  printf 'Provider repository files activated from reviewed plan SHA-256: %s\n' "$LSI_PROVIDER_PLAN_DIGEST"
+  printf '%s\n' \
+    'No repository metadata refresh or package installation was performed; run provider-deactivate to remove these files.'
+}
+
+lsi_provider_deactivate_current() {
+  local provider_id=${1:-} root=${LSI_PROVIDER_APPLY_ROOT:-/} provider index
+  (($# > 0)) && shift
+  lsi_provider_valid_slug "$provider_id" || {
+    lsi_provider_error 'provider-deactivate requires a valid provider ID.'
+    return 2
+  }
+  lsi_provider_apply_parse_args "$@" || return
+  lsi_provider_plan_prepare "$provider_id" "${LSI_PROVIDER_APPLY_ARGS[@]}" || return
+  [[ $LSI_PROVIDER_PLAN_DIGEST == "$LSI_PROVIDER_APPLY_EXPECTED_DIGEST" ]] || {
+    lsi_provider_error 'Reviewed provider plan SHA-256 does not match the current exact plan; refusing deactivation.'
+    return 5
+  }
+  [[ $root == /* && -d $root && ! -L $root ]] || {
+    lsi_provider_error 'Provider deactivation root must be an existing absolute, non-symlink directory.'
+    return 3
+  }
+  [[ ${LSI_PROVIDER_APPLY_ALLOW_NONROOT_TEST:-false} == true || $root == / ]] || {
+    lsi_provider_error 'A non-system provider deactivation root is test-only.'
+    return 3
+  }
+  [[ ${LSI_PROVIDER_APPLY_ALLOW_NONROOT_TEST:-false} == true ]] || lsi_require_root
+  [[ ${LSI_PROVIDER_APPLY_ALLOW_NONROOT_TEST:-false} == true ]] || lsi_acquire_lock
+  for ((index = ${#LSI_PROVIDER_PLAN_ORDER[@]} - 1; index >= 0; index--)); do
+    provider=${LSI_PROVIDER_PLAN_ORDER[index]}
+    lsi_provider_deactivate_config_file "$provider" "$root" || return
+  done
+  printf 'Provider repository files deactivated from reviewed plan SHA-256: %s\n' "$LSI_PROVIDER_PLAN_DIGEST"
+  printf '%s\n' 'No repository metadata refresh, package removal or package installation was performed.'
 }
 
 lsi_provider_usage() {
   cat << 'EOF'
-Provider catalog commands (read-only):
+Provider catalog commands:
   ./install.sh providers
   ./install.sh provider-info PROVIDER
   ./install.sh provider-plan PROVIDER --allow-provider PROVIDER@CATALOG_REVISION [ACK...] MODULE...
+  ./install.sh provider-config PROVIDER --allow-provider PROVIDER@CATALOG_REVISION [ACK...] MODULE...
+  sudo ./install.sh provider-apply PROVIDER --plan-sha256 PLAN_SHA256 --allow-provider PROVIDER@CATALOG_REVISION [ACK...] MODULE...
+  sudo ./install.sh provider-deactivate PROVIDER --plan-sha256 PLAN_SHA256 --allow-provider PROVIDER@CATALOG_REVISION [ACK...] MODULE...
 
 Provider-plan acknowledgements (repeat for dependencies):
   --allow-preview-provider PROVIDER
@@ -1455,6 +1851,15 @@ lsi_provider_main() {
       ;;
     provider-plan)
       lsi_provider_plan_current "$@"
+      ;;
+    provider-config)
+      lsi_provider_config_current "$@"
+      ;;
+    provider-apply)
+      lsi_provider_apply_current "$@"
+      ;;
+    provider-deactivate)
+      lsi_provider_deactivate_current "$@"
       ;;
     *)
       lsi_provider_usage >&2
