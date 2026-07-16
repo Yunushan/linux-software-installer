@@ -1553,7 +1553,10 @@ lsi_provider_apply_write_file() {
   mv_bin=$(lsi_provider_system_tool mv) || return
   rm_bin=$(lsi_provider_system_tool rm) || return
   mktemp_bin=$(lsi_provider_system_tool mktemp) || return
-  tmp=$(umask 077; "$mktemp_bin" "$directory/.linux-software-installer-provider.XXXXXX") || {
+  tmp=$(
+    umask 077
+    "$mktemp_bin" "$directory/.linux-software-installer-provider.XXXXXX"
+  ) || {
     lsi_provider_error "Unable to create provider activation temporary file in $directory"
     return 3
   }
@@ -1652,7 +1655,10 @@ lsi_provider_apply_config_file() {
   esac
   mktemp_bin=$(lsi_provider_system_tool mktemp) || return
   rm_bin=$(lsi_provider_system_tool rm) || return
-  temporary=$(umask 077; "$mktemp_bin" '/tmp/lsi-provider-config.XXXXXX') || return 3
+  temporary=$(
+    umask 077
+    "$mktemp_bin" '/tmp/lsi-provider-config.XXXXXX'
+  ) || return 3
   if ! lsi_provider_config_render_provider "$provider_id" | /usr/bin/sed '/^#/d; /^$/d' > "$temporary"; then
     "$rm_bin" -f -- "$temporary"
     return 3
@@ -1721,7 +1727,10 @@ lsi_provider_deactivate_config_file() {
   esac
   mktemp_bin=$(lsi_provider_system_tool mktemp) || return
   rm_bin=$(lsi_provider_system_tool rm) || return
-  temporary=$(umask 077; "$mktemp_bin" '/tmp/lsi-provider-config.XXXXXX') || return 3
+  temporary=$(
+    umask 077
+    "$mktemp_bin" '/tmp/lsi-provider-config.XXXXXX'
+  ) || return 3
   if ! lsi_provider_config_render_provider "$provider_id" | /usr/bin/sed '/^#/d; /^$/d' > "$temporary"; then
     "$rm_bin" -f -- "$temporary"
     return 3

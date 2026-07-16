@@ -338,11 +338,11 @@ test_provider_apply_writes_only_digest_bound_files() {
     LSI_PROVIDER_APPLY_ROOT="$root" \
     LSI_PROVIDER_APPLY_ALLOW_NONROOT_TEST=true \
     lsi_provider_apply_current demo-provider \
-      --plan-sha256 "$digest" \
-      --allow-provider demo-provider@2026-01 \
-      --allow-preview-provider demo-provider \
-      --accept-provider-license demo-provider@2026-01 \
-      demo-tool) || return 1
+    --plan-sha256 "$digest" \
+    --allow-provider demo-provider@2026-01 \
+    --allow-preview-provider demo-provider \
+    --accept-provider-license demo-provider@2026-01 \
+    demo-tool) || return 1
   cmp -s "$FIXTURE_DIR/valid/demo-provider/keys/test-only.asc" \
     "$root/usr/share/keyrings/linux-software-installer-demo-provider.asc" &&
     grep -q '^Types: deb$' "$root/etc/apt/sources.list.d/linux-software-installer-demo-provider.sources" &&
@@ -360,11 +360,11 @@ test_provider_apply_rejects_stale_digest_without_mutation() {
     LSI_PROVIDER_APPLY_ROOT="$root" \
     LSI_PROVIDER_APPLY_ALLOW_NONROOT_TEST=true \
     lsi_provider_apply_current demo-provider \
-      --plan-sha256 aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa \
-      --allow-provider demo-provider@2026-01 \
-      --allow-preview-provider demo-provider \
-      --accept-provider-license demo-provider@2026-01 \
-      demo-tool 2>&1) && return 1
+    --plan-sha256 aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa \
+    --allow-provider demo-provider@2026-01 \
+    --allow-preview-provider demo-provider \
+    --accept-provider-license demo-provider@2026-01 \
+    demo-tool 2>&1) && return 1
   grep -q 'does not match the current exact plan' <<< "$output" &&
     [[ ! -e $root/usr/share/keyrings/linux-software-installer-demo-provider.asc ]] &&
     [[ ! -e $root/etc/apt/sources.list.d/linux-software-installer-demo-provider.sources ]]
@@ -381,11 +381,11 @@ test_provider_apply_rejects_configuration_drift() {
     LSI_PROVIDER_APPLY_ROOT="$root" \
     LSI_PROVIDER_APPLY_ALLOW_NONROOT_TEST=true \
     lsi_provider_apply_current demo-provider \
-      --plan-sha256 "$digest" \
-      --allow-provider demo-provider@2026-01 \
-      --allow-preview-provider demo-provider \
-      --accept-provider-license demo-provider@2026-01 \
-      demo-tool 2>&1) && return 1
+    --plan-sha256 "$digest" \
+    --allow-provider demo-provider@2026-01 \
+    --allow-preview-provider demo-provider \
+    --accept-provider-license demo-provider@2026-01 \
+    demo-tool 2>&1) && return 1
   grep -q 'Refusing to replace provider activation drift' <<< "$output" &&
     tail -n 1 "$config" | grep -q '^# drift$' &&
     [[ ! -e $root/usr/share/keyrings/linux-software-installer-demo-provider.asc ]]
@@ -400,21 +400,21 @@ test_provider_deactivate_removes_only_reviewed_files() {
     LSI_PROVIDER_APPLY_ROOT="$root" \
     LSI_PROVIDER_APPLY_ALLOW_NONROOT_TEST=true \
     lsi_provider_apply_current demo-provider \
-      --plan-sha256 "$digest" \
-      --allow-provider demo-provider@2026-01 \
-      --allow-preview-provider demo-provider \
-      --accept-provider-license demo-provider@2026-01 \
-      demo-tool > /dev/null || return 1
+    --plan-sha256 "$digest" \
+    --allow-provider demo-provider@2026-01 \
+    --allow-preview-provider demo-provider \
+    --accept-provider-license demo-provider@2026-01 \
+    demo-tool > /dev/null || return 1
   output=$(LSI_PROVIDER_ROOT="$FIXTURE_DIR/valid" \
     LSI_OS_RELEASE_FILE="$ROOT_DIR/tests/fixtures/ubuntu.env" \
     LSI_PROVIDER_APPLY_ROOT="$root" \
     LSI_PROVIDER_APPLY_ALLOW_NONROOT_TEST=true \
     lsi_provider_deactivate_current demo-provider \
-      --plan-sha256 "$digest" \
-      --allow-provider demo-provider@2026-01 \
-      --allow-preview-provider demo-provider \
-      --accept-provider-license demo-provider@2026-01 \
-      demo-tool) || return 1
+    --plan-sha256 "$digest" \
+    --allow-provider demo-provider@2026-01 \
+    --allow-preview-provider demo-provider \
+    --accept-provider-license demo-provider@2026-01 \
+    demo-tool) || return 1
   [[ ! -e $root/usr/share/keyrings/linux-software-installer-demo-provider.asc ]] &&
     [[ ! -e $root/etc/apt/sources.list.d/linux-software-installer-demo-provider.sources ]] &&
     grep -q '^Provider repository files deactivated from reviewed plan SHA-256:' <<< "$output" &&
@@ -430,11 +430,11 @@ test_provider_deactivate_rejects_drift_without_removal() {
     LSI_PROVIDER_APPLY_ROOT="$root" \
     LSI_PROVIDER_APPLY_ALLOW_NONROOT_TEST=true \
     lsi_provider_apply_current demo-provider \
-      --plan-sha256 "$digest" \
-      --allow-provider demo-provider@2026-01 \
-      --allow-preview-provider demo-provider \
-      --accept-provider-license demo-provider@2026-01 \
-      demo-tool > /dev/null || return 1
+    --plan-sha256 "$digest" \
+    --allow-provider demo-provider@2026-01 \
+    --allow-preview-provider demo-provider \
+    --accept-provider-license demo-provider@2026-01 \
+    demo-tool > /dev/null || return 1
   config="$root/etc/apt/sources.list.d/linux-software-installer-demo-provider.sources"
   key="$root/usr/share/keyrings/linux-software-installer-demo-provider.asc"
   printf '%s\n' '# drift' >> "$config"
@@ -443,11 +443,11 @@ test_provider_deactivate_rejects_drift_without_removal() {
     LSI_PROVIDER_APPLY_ROOT="$root" \
     LSI_PROVIDER_APPLY_ALLOW_NONROOT_TEST=true \
     lsi_provider_deactivate_current demo-provider \
-      --plan-sha256 "$digest" \
-      --allow-provider demo-provider@2026-01 \
-      --allow-preview-provider demo-provider \
-      --accept-provider-license demo-provider@2026-01 \
-      demo-tool 2>&1) && return 1
+    --plan-sha256 "$digest" \
+    --allow-provider demo-provider@2026-01 \
+    --allow-preview-provider demo-provider \
+    --accept-provider-license demo-provider@2026-01 \
+    demo-tool 2>&1) && return 1
   grep -q 'Refusing to replace provider activation drift' <<< "$output" &&
     [[ -f $config && -f $key ]] && tail -n 1 "$config" | grep -q '^# drift$'
 }
@@ -780,7 +780,7 @@ test_existing_install_dispatch_is_unchanged() {
 test_help_exposes_provider_commands() {
   local output
   output=$("$ROOT_DIR/install.sh" --help) || return 1
-    grep -q '^Provider catalog commands:' <<< "$output" &&
+  grep -q '^Provider catalog commands:' <<< "$output" &&
     grep -q './install.sh provider-info PROVIDER' <<< "$output" &&
     grep -q './install.sh provider-plan PROVIDER --allow-provider PROVIDER@CATALOG_REVISION' <<< "$output" &&
     grep -q './install.sh provider-config PROVIDER --allow-provider PROVIDER@CATALOG_REVISION' <<< "$output" &&
