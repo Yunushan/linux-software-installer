@@ -183,6 +183,32 @@ def main() -> int:
         assert batch.returncode == 0, batch.stderr
         assert json.loads((batch_dir / "debian-demo.json").read_text(encoding="utf-8"))["module"] == "demo"
 
+        rejected_dir = root / "rejected-batch"
+        rejected = subprocess.run(
+            [
+                sys.executable,
+                str(VERIFIER),
+                "--artifact-zip",
+                str(good_path),
+                "--artifact-digest",
+                "sha256:" + sha(good),
+                "--commit",
+                COMMIT,
+                "--run-url",
+                RUN_URL,
+                "--evidence-key",
+                "rhel/demo",
+                "--output-dir",
+                str(rejected_dir),
+            ],
+            check=False,
+            capture_output=True,
+            text=True,
+            encoding="utf-8",
+        )
+        assert rejected.returncode != 0
+        assert not rejected_dir.exists()
+
         stale_digest = invoke(good_path, "0" * 64, root / "stale.json")
         assert stale_digest.returncode != 0
         assert "does not match the published artifact digest" in stale_digest.stderr

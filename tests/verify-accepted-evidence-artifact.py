@@ -343,7 +343,7 @@ def main() -> int:
             keys = sorted(set(args.evidence_key))
             if len(keys) != len(args.evidence_key):
                 raise EvidenceError("batch evidence keys are duplicated")
-            args.output_dir.mkdir(parents=True, exist_ok=False)
+            reports: list[tuple[str, dict[str, Any]]] = []
             for key in keys:
                 family, separator, module = key.partition("/")
                 if separator != "/" or family not in {"debian", "rhel"} or not SLUG.fullmatch(module):
@@ -356,7 +356,10 @@ def main() -> int:
                 report = make_report(
                     artifact_digest, index_digest, index, args.commit, args.run_url, module, targets
                 )
-                (args.output_dir / f"{family}-{module}.json").write_text(
+                reports.append((f"{family}-{module}.json", report))
+            args.output_dir.mkdir(parents=True, exist_ok=False)
+            for filename, report in reports:
+                (args.output_dir / filename).write_text(
                     json.dumps(report, indent=2, sort_keys=True) + "\n", encoding="utf-8"
                 )
             report = {"expected_cells": index["expected_cells"]}
