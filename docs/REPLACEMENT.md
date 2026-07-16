@@ -135,8 +135,10 @@ legacy feature replacement yet.
 ### Planned-row promotion readiness
 
 [`legacy-promotion-readiness.tsv`](legacy-promotion-readiness.tsv) is the
-derived, machine-checked promotion ledger for the 142 `planned` rows. Validate
-it against the live inventory, target matrix and module contracts with:
+derived, machine-checked promotion ledger for active replacement rows. All 142
+are currently `planned`; an admitted row remains in the ledger after moving to
+`implemented` or `superseded`. Validate it against the live inventory, target
+matrix and module contracts with:
 
 ```bash
 bash tests/validate-legacy-promotion-readiness.sh
@@ -195,9 +197,19 @@ one record per module-family evidence key
 must bind the current commit to its GitHub Actions run, artifact URL and digest,
 aggregate-index hash, exact target cells and a parity review. Service contracts
 also require externally hosted systemd-run and artifact attestations with a
-digest. The readiness validator derives `accepted` and `promotion_ready` only
-from records that satisfy those exact checks; adding a registry row never
-changes inventory status by itself.
+digest. It must also reference a checked-in verification report that binds the
+downloaded artifact to the exact module and target-cell IDs. The readiness
+validator derives `accepted` and `promotion_ready` only from records that
+satisfy those exact checks; adding a registry row never changes inventory
+status by itself.
+
+To promote a row, the same review must change its inventory disposition to
+`implemented` or `superseded` and set its `evidence` field to the exact
+admitted run URL and artifact-digest reference. The migration reader invokes
+the readiness validator whenever an active terminal replacement exists and
+rejects a missing admission, stale derived ledger, mismatched module-family
+contract, or differing inventory evidence reference. This is deliberately a
+two-part action: a valid admission makes promotion possible, not automatic.
 
 The downloaded artifact ZIP must match the GitHub Actions `artifact-digest`
 displayed by the aggregate job. Revalidate it before considering a registry
@@ -209,14 +221,36 @@ python3 tests/verify-accepted-evidence-artifact.py \
   --artifact-digest sha256:FROM_GITHUB_ARTIFACT_DIGEST \
   --commit TESTED_COMMIT_SHA \
   --run-url https://github.com/Yunushan/linux-software-installer/actions/runs/RUN_ID \
+  --module MODULE \
+  --target-cell TARGET_ID \
+  --target-cell TARGET_ID \
   --output verified-evidence-artifact.json
 ```
 
 The verifier rejects a mismatched ZIP digest, unsafe ZIP/TAR entries, checksum
 drift, an aggregate that is not a clean pass, source/run/commit disagreement,
-and coverage or summary disagreement. A successful report is still not an
-admission: parity review, any service attestation and a reviewed registry row
-remain separate requirements.
+coverage or summary disagreement, or a requested module whose target cells are
+not exactly present in the artifact. It also verifies every indexed result hash
+against that cell's actual `result.json` in the imported bundle. A successful
+report is still not an admission: parity review, any service attestation and a
+reviewed registry row remain separate requirements.
+
+For a full-catalog artifact, batch mode validates the archive once and writes
+one report for each requested `family/module` key to a new output directory:
+
+```bash
+python3 tests/verify-accepted-evidence-artifact.py \
+  --artifact-zip module-evidence-aggregate.zip \
+  --artifact-digest sha256:FROM_GITHUB_ARTIFACT_DIGEST \
+  --commit TESTED_COMMIT_SHA \
+  --run-url https://github.com/Yunushan/linux-software-installer/actions/runs/RUN_ID \
+  --evidence-key debian/nginx \
+  --evidence-key rhel/nginx \
+  --output-dir docs/evidence-verification
+```
+
+The output directory must not already exist. This only creates verification
+reports; it never writes an admission registry row or promotes inventory.
 
 The smallest safe path to close these 142 rows is:
 

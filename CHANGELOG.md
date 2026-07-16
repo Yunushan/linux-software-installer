@@ -77,6 +77,12 @@ All notable changes to this project are documented here. The format follows
   reviewed, machine-readable accepted-evidence admission process.
 - Make accepted-evidence registry input single-link, size-bounded, NUL-free and
   newline-terminated before it is parsed.
+- Require any `implemented` or `superseded` inventory claim to match its
+  accepted-evidence admission and the current derived promotion ledger.
+- Bind each accepted-evidence admission to a checked-in verification report
+  that proves the downloaded aggregate contains its exact module/target cells.
+- Verify that every aggregate result digest matches the corresponding bundled
+  per-cell result payload before an artifact can produce that report.
 - Make concurrent-run locking fail closed, create installer logs with
   no-clobber ownership/link/mode checks, and redact sensitive command
   arguments before display or logging.

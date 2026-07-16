@@ -4,6 +4,7 @@
 from __future__ import annotations
 
 import importlib.util
+import json
 import tempfile
 from pathlib import Path
 
@@ -32,6 +33,26 @@ def make_root() -> Path:
     root = Path(tempfile.mkdtemp(prefix="lsi-accepted-evidence-"))
     write(root / "docs" / "parity.md", "# reviewed parity\n")
     write(
+        root / "docs" / "verified-nginx.json",
+        json.dumps(
+            {
+                "schema": READINESS.VERIFICATION_SCHEMA,
+                "artifact_sha256": SHA,
+                "index_sha256": INDEX_SHA,
+                "commit_sha": COMMIT,
+                "run_url": RUN_URL,
+                "expected_cells": 2,
+                "module": "nginx",
+                "target_cells": ["debian-12", "ubuntu-24-04"],
+                "cell_ids": ["debian-12/nginx", "ubuntu-24-04/nginx"],
+                "result": "verified-awaiting-parity-review-and-systemd-attestation",
+            },
+            indent=2,
+            sort_keys=True,
+        )
+        + "\n",
+    )
+    write(
         root / "tests" / "evidence-targets.tsv",
         "\t".join(READINESS.TARGET_HEADER)
         + "\n"
@@ -47,6 +68,7 @@ def expected_row(service: str = "no") -> dict[str, str]:
     return {
         "evidence_key": "debian/nginx",
         "target_family": "debian",
+        "replacement": "nginx",
         "service_contract": service,
     }
 
@@ -64,6 +86,7 @@ def record(service: bool = False) -> dict[str, str]:
         "systemd_run_url": "https://evidence.example.invalid/systemd/1" if service else "-",
         "systemd_artifact_url": "https://evidence.example.invalid/systemd/1/artifact" if service else "-",
         "systemd_artifact_digest": "sha256:" + SHA if service else "-",
+        "verification_report": "docs/verified-nginx.json",
     }
 
 
@@ -97,6 +120,10 @@ def main() -> int:
     wrong_url = record()
     wrong_url["artifact_url"] = "https://github.com/Yunushan/linux-software-installer/actions/runs/999/artifacts/456"
     assert expect_failure(root, [wrong_url])
+
+    wrong_report = record()
+    wrong_report["verification_report"] = "docs/parity.md"
+    assert expect_failure(root, [wrong_report])
 
     duplicate = record()
     assert expect_failure(root, [valid, duplicate])

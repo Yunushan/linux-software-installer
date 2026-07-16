@@ -1,1 +1,1 @@
-evidence_key	commit_sha	run_url	artifact_url	artifact_digest	index_sha256	target_cells	parity_report	systemd_run_url	systemd_artifact_url	systemd_artifact_digest
+evidence_key	commit_sha	run_url	artifact_url	artifact_digest	index_sha256	target_cells	parity_report	systemd_run_url	systemd_artifact_url	systemd_artifact_digest	verification_report

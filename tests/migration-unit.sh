@@ -49,6 +49,9 @@ prepare_case() {
 use_case() {
   LSI_MIGRATION_INVENTORY=$1/legacy-inventory.tsv
   LSI_MIGRATION_BACKLOG=$1/provider-backlog.tsv
+  LSI_MIGRATION_ACCEPTED_EVIDENCE=${2:-$ROOT_DIR/docs/accepted-evidence.tsv}
+  LSI_MIGRATION_READINESS=${3:-$ROOT_DIR/docs/legacy-promotion-readiness.tsv}
+  LSI_MIGRATION_ADMISSION_REPORT_ROOT=${4:-$ROOT_DIR}
   lsi_migration_reset
 }
 
@@ -214,6 +217,61 @@ test_unvalidated_terminal_replacement_fails_closed() (
   ! lsi_migration_load > /dev/null 2>&1
 )
 
+test_admitted_terminal_replacement_loads() (
+  local case_dir commit artifact_digest index_digest systemd_digest reference output
+  case_dir=$(prepare_case)
+  commit=$(printf 'a%.0s' {1..40})
+  export LSI_TESTED_COMMIT=$commit
+  artifact_digest=$(printf 'b%.0s' {1..64})
+  index_digest=$(printf 'c%.0s' {1..64})
+  systemd_digest=$(printf 'd%.0s' {1..64})
+  reference="https://github.com/Yunushan/linux-software-installer/actions/runs/123#artifact-digest=$artifact_digest"
+  sed -i $'3s|\tplanned\tnginx\tintent\t-\t|\timplemented\tnginx\tintent\t'"$reference"$'\t|' \
+    "$case_dir/legacy-inventory.tsv"
+  printf '%s\n' \
+    $'evidence_key\tcommit_sha\trun_url\tartifact_url\tartifact_digest\tindex_sha256\ttarget_cells\tparity_report\tsystemd_run_url\tsystemd_artifact_url\tsystemd_artifact_digest\tverification_report' \
+    > "$case_dir/accepted-evidence.tsv"
+  mkdir -p "$case_dir/docs"
+  printf '%s\n' \
+    '{' \
+    "  \"artifact_sha256\": \"$artifact_digest\"," \
+    "  \"cell_ids\": [\"debian-12/nginx\", \"ubuntu-24-04/nginx\"]," \
+    "  \"commit_sha\": \"$commit\"," \
+    "  \"expected_cells\": 2," \
+    "  \"index_sha256\": \"$index_digest\"," \
+    "  \"module\": \"nginx\"," \
+    "  \"result\": \"verified-awaiting-parity-review-and-systemd-attestation\"," \
+    "  \"run_url\": \"https://github.com/Yunushan/linux-software-installer/actions/runs/123\"," \
+    "  \"schema\": \"linux-software-installer/accepted-evidence-verification/v2\"," \
+    '  "target_cells": ["debian-12", "ubuntu-24-04"]' \
+    '}' > "$case_dir/docs/verified-nginx.json"
+  printf '%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\n' \
+    debian/nginx "$commit" \
+    https://github.com/Yunushan/linux-software-installer/actions/runs/123 \
+    https://github.com/Yunushan/linux-software-installer/actions/runs/123/artifacts/456 \
+    "sha256:$artifact_digest" "$index_digest" debian-12,ubuntu-24-04 docs/MIGRATION.md \
+    https://evidence.example.invalid/systemd/123 \
+    https://evidence.example.invalid/systemd/123/artifacts/456 "sha256:$systemd_digest" \
+    docs/verified-nginx.json \
+    >> "$case_dir/accepted-evidence.tsv"
+  bash "$ROOT_DIR/tests/validate-legacy-promotion-readiness.sh" \
+    --inventory "$case_dir/legacy-inventory.tsv" \
+    --admissions "$case_dir/accepted-evidence.tsv" \
+    --report-root "$case_dir" \
+    --emit > "$case_dir/legacy-promotion-readiness.tsv" || return 1
+  use_case "$case_dir" "$case_dir/accepted-evidence.tsv" "$case_dir/legacy-promotion-readiness.tsv" "$case_dir"
+  lsi_migration_load || return 1
+  output=$(lsi_migration_show ubuntu-002) || return 1
+  [[ $LSI_MIGRATION_TERMINAL -eq 85 && $LSI_MIGRATION_PLANNED -eq 141 ]] &&
+    grep -q '^Disposition   : implemented$' <<< "$output" &&
+    grep -q "^Evidence      : $reference$" <<< "$output" &&
+    grep -q 'terminal replacement recorded with assessed parity and evidence' <<< "$output" || return 1
+  sed -i $'3s|artifact-digest='"$artifact_digest"$'|artifact-digest='"$systemd_digest"$'|' \
+    "$case_dir/legacy-inventory.tsv"
+  lsi_migration_reset
+  ! lsi_migration_load > /dev/null 2>&1
+)
+
 test_binary_or_unterminated_input_fails_closed() (
   local case_dir
   case_dir=$(prepare_case)
@@ -309,6 +367,7 @@ run_test 'unsafe source locators fail closed' test_unsafe_source_path_fails_clos
 run_test 'unsafe evidence references fail closed' test_unsafe_evidence_references_fail_closed
 run_test 'linked module manifests fail closed' test_linked_module_manifests_fail_closed
 run_test 'unvalidated terminal replacements fail closed' test_unvalidated_terminal_replacement_fails_closed
+run_test 'accepted evidence permits an exact terminal replacement claim' test_admitted_terminal_replacement_loads
 run_test 'binary or unterminated input fails closed' test_binary_or_unterminated_input_fails_closed
 run_test 'backlog coverage and action mapping fail closed' test_backlog_join_and_action_fail_closed
 run_test 'symlinked and hardlinked ledgers fail closed' test_symlink_and_hardlink_ledgers_fail_closed

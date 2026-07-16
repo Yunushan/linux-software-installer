@@ -24,6 +24,7 @@ from typing import Any
 
 
 SCHEMA = "linux-software-installer/module-install-evidence-index/v1"
+VERIFICATION_SCHEMA = "linux-software-installer/accepted-evidence-verification/v2"
 REPOSITORY = "Yunushan/linux-software-installer"
 SHA256 = re.compile(r"^[0-9a-f]{64}$")
 COMMIT = re.compile(r"^[0-9a-f]{40}$")
@@ -48,6 +49,18 @@ SUMMARY_HEADER = [
     "failure_stage",
     "validation_errors",
 ]
+EXPECTED_CELLS_HEADER = [
+    "cell_id",
+    "target_id",
+    "family",
+    "module",
+    "image",
+    "platform",
+    "expected_os_id",
+    "expected_version_id",
+    "expected_arch",
+]
+SLUG = re.compile(r"^[a-z0-9]+(?:-[a-z0-9]+)*$")
 
 
 class EvidenceError(ValueError):
@@ -174,29 +187,84 @@ def verify_summary(payload: bytes, index: dict[str, Any]) -> None:
             raise EvidenceError(f"summary TSV disagrees with aggregate index for {cell['cell_id']}")
 
 
-def verify_bundle(payload: bytes, commit: str) -> None:
+def parse_expected_cells(payload: bytes, index: dict[str, Any]) -> list[dict[str, str]]:
+    try:
+        reader = csv.DictReader(io.StringIO(payload.decode("utf-8", errors="strict")), delimiter="\t")
+        rows = list(reader)
+    except UnicodeDecodeError as error:
+        raise EvidenceError(f"expected-cells TSV is not UTF-8: {error}") from None
+    if reader.fieldnames != EXPECTED_CELLS_HEADER or len(rows) != len(index["cells"]):
+        raise EvidenceError("expected-cells TSV has an unexpected schema or row count")
+    by_id = {row.get("cell_id", ""): row for row in rows}
+    if len(by_id) != len(rows) or any(set(row) != set(EXPECTED_CELLS_HEADER) for row in rows):
+        raise EvidenceError("expected-cells TSV has invalid or duplicate rows")
+    for cell in index["cells"]:
+        row = by_id.get(cell["cell_id"])
+        if row is None or any(row[key] != str(cell[key]) for key in ("target_id", "family", "module")):
+            raise EvidenceError(f"expected-cells TSV disagrees with aggregate index for {cell['cell_id']}")
+    return rows
+
+
+def verify_requested_module_cells(
+    rows: list[dict[str, str]], module: str, requested_targets: list[str]
+) -> list[str]:
+    if not SLUG.fullmatch(module):
+        raise EvidenceError("requested module is invalid")
+    if not requested_targets or len(requested_targets) != len(set(requested_targets)) or any(
+        not SLUG.fullmatch(target) for target in requested_targets
+    ):
+        raise EvidenceError("requested target cells are invalid or duplicated")
+    expected_targets = sorted(row["target_id"] for row in rows if row["module"] == module)
+    if expected_targets != sorted(requested_targets):
+        raise EvidenceError("artifact does not contain exactly the requested module target cells")
+    return [f"{target}/{module}" for target in sorted(requested_targets)]
+
+
+def verify_bundle(payload: bytes, commit: str, index: dict[str, Any]) -> None:
     try:
         archive = tarfile.open(fileobj=io.BytesIO(payload), mode="r:gz")
     except (OSError, tarfile.TarError) as error:
         raise EvidenceError(f"evidence bundle is not a valid gzip tar archive: {error}") from None
     tested_commit: bytes | None = None
     seen_regular = 0
+    seen_names: set[str] = set()
+    expected_results = {
+        f"module-cells/cells/{cell['target_id']}/{cell['module']}/result.json": cell[
+            "result_sha256"
+        ]
+        for cell in index["cells"]
+    }
+    found_results: set[str] = set()
     for member in archive.getmembers():
         safe_relative(member.name)
         if member.issym() or member.islnk() or member.isdev() or member.isfifo():
             raise EvidenceError(f"evidence bundle contains an unsafe entry: {member.name}")
         if member.isfile():
+            if member.name in seen_names:
+                raise EvidenceError(f"evidence bundle repeats an entry: {member.name}")
+            seen_names.add(member.name)
             seen_regular += 1
             if member.size > 128 * 1024 * 1024:
                 raise EvidenceError(f"evidence bundle entry is too large: {member.name}")
             if member.name == "module-evidence-plan/tested-commit.txt":
                 handle = archive.extractfile(member)
                 tested_commit = handle.read() if handle is not None else None
+            expected_digest = expected_results.get(member.name)
+            if expected_digest is not None:
+                handle = archive.extractfile(member)
+                content = handle.read() if handle is not None else None
+                if content is None or digest_bytes(content) != expected_digest:
+                    raise EvidenceError(
+                        f"evidence bundle result does not match aggregate digest: {member.name}"
+                    )
+                found_results.add(member.name)
     if not seen_regular or tested_commit != (commit + "\n").encode("ascii"):
         raise EvidenceError("evidence bundle lacks the exact tested-commit marker")
+    if found_results != set(expected_results):
+        raise EvidenceError("evidence bundle lacks an indexed cell result")
 
 
-def verify(args: argparse.Namespace) -> dict[str, Any]:
+def verify_artifact(args: argparse.Namespace) -> tuple[str, str, dict[str, Any], list[dict[str, str]]]:
     expected_digest = args.artifact_digest.removeprefix("sha256:")
     if not SHA256.fullmatch(expected_digest) or not COMMIT.fullmatch(args.commit) or RUN_URL.fullmatch(args.run_url) is None:
         raise EvidenceError("commit, run URL, or artifact digest has an invalid format")
@@ -214,14 +282,33 @@ def verify(args: argparse.Namespace) -> dict[str, Any]:
         raise EvidenceError("evidence bundle checksum does not match its payload")
     index = parse_index(entries["index.json"], args.commit, args.run_url)
     verify_summary(entries["summary.tsv"], index)
-    verify_bundle(entries["module-evidence-cells.tar.gz"], args.commit)
+    expected_rows = parse_expected_cells(entries["expected-cells.tsv"], index)
+    verify_bundle(entries["module-evidence-cells.tar.gz"], args.commit, index)
+    return observed_digest, index_digest, index, expected_rows
+
+
+def make_report(
+    artifact_digest: str,
+    index_digest: str,
+    index: dict[str, Any],
+    commit: str,
+    run_url: str,
+    module: str,
+    target_cells: list[str],
+) -> dict[str, Any]:
+    cell_ids = verify_requested_module_cells(
+        [row for row in index["expected_rows"]], module, target_cells
+    )
     return {
-        "schema": "linux-software-installer/accepted-evidence-verification/v1",
-        "artifact_sha256": observed_digest,
+        "schema": VERIFICATION_SCHEMA,
+        "artifact_sha256": artifact_digest,
         "index_sha256": index_digest,
-        "commit_sha": args.commit,
-        "run_url": args.run_url,
+        "commit_sha": commit,
+        "run_url": run_url,
         "expected_cells": index["expected_cells"],
+        "module": module,
+        "target_cells": sorted(target_cells),
+        "cell_ids": cell_ids,
         "result": "verified-awaiting-parity-review-and-systemd-attestation",
     }
 
@@ -232,12 +319,47 @@ def main() -> int:
     parser.add_argument("--artifact-digest", required=True)
     parser.add_argument("--commit", required=True)
     parser.add_argument("--run-url", required=True)
-    parser.add_argument("--output", required=True)
+    parser.add_argument("--module")
+    parser.add_argument("--target-cell", action="append", default=[])
+    parser.add_argument("--evidence-key", action="append", default=[])
+    parser.add_argument("--output")
+    parser.add_argument("--output-dir", type=Path)
     args = parser.parse_args()
     try:
-        report = verify(args)
-        output = Path(args.output)
-        output.write_text(json.dumps(report, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+        artifact_digest, index_digest, index, expected_rows = verify_artifact(args)
+        index["expected_rows"] = expected_rows
+        if args.module:
+            if args.evidence_key or args.output is None or args.output_dir is not None:
+                raise EvidenceError("single-module mode requires --output and no --evidence-key or --output-dir")
+            report = make_report(
+                artifact_digest, index_digest, index, args.commit, args.run_url, args.module, args.target_cell
+            )
+            Path(args.output).write_text(
+                json.dumps(report, indent=2, sort_keys=True) + "\n", encoding="utf-8"
+            )
+        else:
+            if not args.evidence_key or args.output_dir is None or args.output is not None or args.target_cell:
+                raise EvidenceError("batch mode requires --evidence-key and --output-dir only")
+            keys = sorted(set(args.evidence_key))
+            if len(keys) != len(args.evidence_key):
+                raise EvidenceError("batch evidence keys are duplicated")
+            args.output_dir.mkdir(parents=True, exist_ok=False)
+            for key in keys:
+                family, separator, module = key.partition("/")
+                if separator != "/" or family not in {"debian", "rhel"} or not SLUG.fullmatch(module):
+                    raise EvidenceError("batch evidence key is invalid")
+                targets = sorted(
+                    row["target_id"]
+                    for row in expected_rows
+                    if row["family"] == family and row["module"] == module
+                )
+                report = make_report(
+                    artifact_digest, index_digest, index, args.commit, args.run_url, module, targets
+                )
+                (args.output_dir / f"{family}-{module}.json").write_text(
+                    json.dumps(report, indent=2, sort_keys=True) + "\n", encoding="utf-8"
+                )
+            report = {"expected_cells": index["expected_cells"]}
     except (EvidenceError, OSError) as error:
         print(f"accepted-evidence artifact verification failed: {error}", file=sys.stderr)
         return 1

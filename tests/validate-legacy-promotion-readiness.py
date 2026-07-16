@@ -6,6 +6,7 @@ from __future__ import annotations
 import argparse
 import csv
 import io
+import json
 import os
 import re
 import stat
@@ -54,6 +55,7 @@ ADMISSION_HEADER = [
     "systemd_run_url",
     "systemd_artifact_url",
     "systemd_artifact_digest",
+    "verification_report",
 ]
 COMMIT_PATTERN = re.compile(r"^[0-9a-f]{40}$")
 SHA256_PATTERN = re.compile(r"^[0-9a-f]{64}$")
@@ -61,6 +63,7 @@ GITHUB_RUN_URL_PATTERN = re.compile(
     r"^https://github\.com/Yunushan/linux-software-installer/actions/runs/[1-9][0-9]*$"
 )
 HTTPS_URL_PATTERN = re.compile(r"^https://[^\s]+$")
+VERIFICATION_SCHEMA = "linux-software-installer/accepted-evidence-verification/v2"
 BASE_MISSING = (
     "G3-repository-resolution+G4-standalone-install+"
     "row-parity-review+durable-trust-anchor"
@@ -70,7 +73,7 @@ SERVICE_MISSING = (
     "row-parity-review+durable-trust-anchor"
 )
 EXPECTED_BASELINE = {
-    "planned_rows": 142,
+    "active_rows": 142,
     "debian_rows": 70,
     "rhel_rows": 72,
     "implemented_candidates": 134,
@@ -190,10 +193,79 @@ def comma_tokens(value: str) -> tuple[str, ...] | None:
     return values if len(values) == len(set(values)) else None
 
 
+def local_docs_file(root: Path, reference: str, label: str) -> Path:
+    if "#" in reference or not reference.startswith("docs/"):
+        raise ReadinessError(f"{label} must be a repository-local docs/ file")
+    pure = PurePosixPath(reference)
+    if pure.is_absolute() or ".." in pure.parts or reference != pure.as_posix():
+        raise ReadinessError(f"{label} has an unsafe path")
+    path = root / reference
+    try:
+        metadata = path.lstat()
+    except OSError as error:
+        raise ReadinessError(f"cannot inspect {label}: {error}") from None
+    if not stat.S_ISREG(metadata.st_mode) or metadata.st_nlink != 1:
+        raise ReadinessError(f"{label} must be a single-link regular file")
+    return path
+
+
+def validate_verification_report(
+    report_root: Path,
+    report_reference: str,
+    admission: dict[str, str],
+    module: str,
+    target_cells: tuple[str, ...],
+) -> None:
+    path = local_docs_file(report_root, report_reference, "verification report")
+    try:
+        raw = path.read_bytes()
+    except OSError as error:
+        raise ReadinessError(f"cannot read verification report: {error}") from None
+    if not raw or len(raw) > 1024 * 1024 or b"\0" in raw or not raw.endswith(b"\n"):
+        raise ReadinessError("verification report has unsafe bytes or size")
+    try:
+        report = json.loads(raw.decode("utf-8", errors="strict"))
+    except (UnicodeDecodeError, json.JSONDecodeError) as error:
+        raise ReadinessError(f"verification report is not strict JSON: {error}") from None
+    expected_keys = {
+        "schema",
+        "artifact_sha256",
+        "index_sha256",
+        "commit_sha",
+        "run_url",
+        "expected_cells",
+        "module",
+        "target_cells",
+        "cell_ids",
+        "result",
+    }
+    if not isinstance(report, dict) or set(report) != expected_keys:
+        raise ReadinessError("verification report has an unexpected schema")
+    expected_cell_ids = [f"{target}/{module}" for target in target_cells]
+    if (
+        report["schema"] != VERIFICATION_SCHEMA
+        or report["artifact_sha256"] != admission["artifact_digest"].removeprefix("sha256:")
+        or report["index_sha256"] != admission["index_sha256"]
+        or report["commit_sha"] != admission["commit_sha"]
+        or report["run_url"] != admission["run_url"]
+        or report["module"] != module
+        or report["target_cells"] != list(target_cells)
+        or report["cell_ids"] != expected_cell_ids
+        or type(report["expected_cells"]) is not int
+        or report["expected_cells"] <= 0
+        or report["result"] != "verified-awaiting-parity-review-and-systemd-attestation"
+    ):
+        raise ReadinessError("verification report does not match its accepted-evidence admission")
+
+
 def load_accepted_admissions(
-    root: Path, expected: list[dict[str, str]], commit: str | None = None
+    root: Path,
+    expected: list[dict[str, str]],
+    commit: str | None = None,
+    registry_path: Path | None = None,
+    report_root: Path | None = None,
 ) -> dict[str, dict[str, str]]:
-    registry_path = root / "docs" / "accepted-evidence.tsv"
+    registry_path = registry_path or root / "docs" / "accepted-evidence.tsv"
     validate_admission_registry_file(registry_path)
     rows = read_tsv(
         registry_path,
@@ -215,6 +287,7 @@ def load_accepted_admissions(
         family: tuple(sorted(row["target_id"] for row in targets if row["family"] == family))
         for family in {"debian", "rhel"}
     }
+    report_root = report_root or root
     expected_by_key = {row["evidence_key"]: row for row in expected}
     admissions: dict[str, dict[str, str]] = {}
 
@@ -253,6 +326,13 @@ def load_accepted_admissions(
             )
         if not valid_reference(root, row["parity_report"]):
             raise ReadinessError(f"{evidence_key} has an invalid parity review reference")
+        validate_verification_report(
+            report_root,
+            row["verification_report"],
+            row,
+            derived["replacement"],
+            expected_cells,
+        )
 
         systemd_fields = (
             row["systemd_run_url"],
@@ -328,8 +408,13 @@ def derive_contract(root: Path, module: str, family: str) -> tuple[str, ...]:
     return tuple(row["value"] for row in rows if row["type"] == "service")
 
 
-def expected_rows_and_summary(root: Path) -> tuple[list[dict[str, str]], dict[str, int]]:
-    inventory_path = root / "docs" / "legacy-inventory.tsv"
+def expected_rows_and_summary(
+    root: Path,
+    inventory_path: Path | None = None,
+    admission_path: Path | None = None,
+    report_root: Path | None = None,
+) -> tuple[list[dict[str, str]], dict[str, int]]:
+    inventory_path = inventory_path or root / "docs" / "legacy-inventory.tsv"
     try:
         with inventory_path.open("r", encoding="utf-8", newline="") as stream:
             inventory = list(csv.DictReader(stream, delimiter="\t"))
@@ -351,9 +436,15 @@ def expected_rows_and_summary(root: Path) -> tuple[list[dict[str, str]], dict[st
     ]
     if not inventory or list(inventory[0]) != expected_inventory_header:
         raise ReadinessError("legacy inventory has an unexpected header or no rows")
-    planned = [row for row in inventory if row["disposition"] == "planned"]
+    active = [
+        row
+        for row in inventory
+        if row["disposition"] in {"planned", "implemented", "superseded"}
+    ]
     claimed_inventory_evidence = [
-        row["legacy_id"] for row in planned if row["evidence"] != "-"
+        row["legacy_id"]
+        for row in active
+        if row["disposition"] == "planned" and row["evidence"] != "-"
     ]
     if claimed_inventory_evidence:
         raise ReadinessError(
@@ -374,13 +465,13 @@ def expected_rows_and_summary(root: Path) -> tuple[list[dict[str, str]], dict[st
             f"evidence target family counts drifted: {dict(sorted(target_counts.items()))}"
         )
 
-    pairs = sorted({(row["replacement"], row["target_family"]) for row in planned})
+    pairs = sorted({(row["replacement"], row["target_family"]) for row in active})
     services = {
         (module, family): derive_contract(root, module, family)
         for module, family in pairs
     }
     expected: list[dict[str, str]] = []
-    for row in planned:
+    for row in active:
         module = row["replacement"]
         family = row["target_family"]
         key = (module, family)
@@ -405,21 +496,36 @@ def expected_rows_and_summary(root: Path) -> tuple[list[dict[str, str]], dict[st
             }
         )
 
-    admissions = load_accepted_admissions(root, expected)
-    for row in expected:
+    admissions = load_accepted_admissions(
+        root, expected, registry_path=admission_path, report_root=report_root
+    )
+    for row, inventory_row in zip(expected, active):
         admission = admissions.get(row["evidence_key"])
         if admission is None:
+            if inventory_row["disposition"] in {"implemented", "superseded"}:
+                raise ReadinessError(
+                    f"{inventory_row['legacy_id']} is terminal without accepted evidence for "
+                    f"{row['evidence_key']}"
+                )
             continue
         row["evidence_class"] = "accepted"
         row["evidence_reference"] = admission_reference(admission)
         row["promotion_ready"] = "yes"
         row["missing_acceptance"] = "-"
+        if inventory_row["disposition"] in {"implemented", "superseded"} and (
+            inventory_row["evidence"] != row["evidence_reference"]
+        ):
+            raise ReadinessError(
+                f"{inventory_row['legacy_id']} terminal evidence does not match its "
+                "accepted-evidence admission"
+            )
 
     service_pairs = {key for key, values in services.items() if values}
     routes = Counter(row["review_route"] for row in expected)
     families = Counter(row["target_family"] for row in expected)
     summary = {
-        "planned_rows": len(expected),
+        "active_rows": len(expected),
+        "planned_rows": sum(row["disposition"] == "planned" for row in active),
         "debian_rows": families["debian"],
         "rhel_rows": families["rhel"],
         "implemented_candidates": routes["implemented-candidate"],
@@ -429,7 +535,7 @@ def expected_rows_and_summary(root: Path) -> tuple[list[dict[str, str]], dict[st
         "standalone_cells": sum(target_counts[family] for _, family in pairs),
         "service_rows": sum(
             (row["replacement"], row["target_family"]) in service_pairs
-            for row in planned
+            for row in active
         ),
         "service_modules": len({module for module, _ in service_pairs}),
         "service_pairs": len(service_pairs),
@@ -447,7 +553,7 @@ def validate_readiness(
         row["legacy_id"] for row in expected
     ]:
         raise ReadinessError(
-            "readiness rows must cover planned inventory IDs exactly in inventory order"
+            "readiness rows must cover active replacement inventory IDs exactly in inventory order"
         )
     evidence_classes: Counter[str] = Counter()
     # Keep this validator runnable on the Python 3.9 system interpreter shipped
@@ -513,20 +619,27 @@ def main() -> int:
         "--root", type=Path, default=Path(__file__).resolve().parents[1]
     )
     parser.add_argument("--emit", action="store_true")
+    parser.add_argument("--inventory", type=Path)
+    parser.add_argument("--readiness", type=Path)
+    parser.add_argument("--admissions", type=Path)
+    parser.add_argument("--report-root", type=Path)
     args = parser.parse_args()
     root = args.root.resolve()
     try:
-        expected, summary = expected_rows_and_summary(root)
-        if summary != EXPECTED_BASELINE:
+        expected, summary = expected_rows_and_summary(
+            root, args.inventory, args.admissions, args.report_root
+        )
+        baseline_summary = {key: summary[key] for key in EXPECTED_BASELINE}
+        if baseline_summary != EXPECTED_BASELINE:
             raise ReadinessError(
                 f"promotion-readiness baseline drifted: expected {EXPECTED_BASELINE}, "
-                f"found {summary}"
+                f"found {baseline_summary}"
             )
         if args.emit:
             emit_rows(expected)
             return 0
         report_rows = read_tsv(
-            root / "docs" / "legacy-promotion-readiness.tsv",
+            args.readiness or root / "docs" / "legacy-promotion-readiness.tsv",
             READINESS_HEADER,
             "legacy promotion readiness report",
         )
@@ -537,7 +650,8 @@ def main() -> int:
 
     print(
         "Legacy promotion readiness valid: "
-        f"{summary['planned_rows']} rows -> {summary['modules']} modules / "
+        f"{summary['active_rows']} active rows ({summary['planned_rows']} planned) -> "
+        f"{summary['modules']} modules / "
         f"{summary['module_family_pairs']} family contracts / "
         f"{summary['standalone_cells']} standalone cells."
     )
@@ -557,7 +671,7 @@ def main() -> int:
         f"{evidence_classes['none']} none, "
         f"{evidence_classes['provisional']} provisional, "
         f"{evidence_classes['accepted']} accepted; "
-        f"{sum(row['promotion_ready'] == 'yes' for row in expected)} planned rows promotion-ready."
+        f"{sum(row['promotion_ready'] == 'yes' for row in expected)} active rows promotion-ready."
     )
     return 0
 

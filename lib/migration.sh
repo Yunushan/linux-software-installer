@@ -3,10 +3,12 @@
 LSI_MIGRATION_INVENTORY="$LSI_PROJECT_ROOT/docs/legacy-inventory.tsv"
 LSI_MIGRATION_BACKLOG="$LSI_PROJECT_ROOT/docs/provider-backlog.tsv"
 LSI_MIGRATION_ACCEPTED_EVIDENCE="$LSI_PROJECT_ROOT/docs/accepted-evidence.tsv"
+LSI_MIGRATION_READINESS="$LSI_PROJECT_ROOT/docs/legacy-promotion-readiness.tsv"
+LSI_MIGRATION_ADMISSION_REPORT_ROOT="$LSI_PROJECT_ROOT"
 LSI_MIGRATION_PROVIDER_REGISTRY="$LSI_PROJECT_ROOT/providers/registry.tsv"
 LSI_MIGRATION_INVENTORY_HEADER=$'legacy_id\tsource_set\tsource_path\tsource_item\tdisplay_name\tnormalized_capability\ttarget_family\tdisposition\treplacement\tparity_level\tevidence\trationale'
 LSI_MIGRATION_BACKLOG_HEADER=$'legacy_id\tnormalized_capability\tstrategy\trecommended_action\treplacement_outcome\trationale'
-LSI_MIGRATION_ACCEPTED_EVIDENCE_HEADER=$'evidence_key\tcommit_sha\trun_url\tartifact_url\tartifact_digest\tindex_sha256\ttarget_cells\tparity_report\tsystemd_run_url\tsystemd_artifact_url\tsystemd_artifact_digest'
+LSI_MIGRATION_ACCEPTED_EVIDENCE_HEADER=$'evidence_key\tcommit_sha\trun_url\tartifact_url\tartifact_digest\tindex_sha256\ttarget_cells\tparity_report\tsystemd_run_url\tsystemd_artifact_url\tsystemd_artifact_digest\tverification_report'
 LSI_MIGRATION_PROVIDER_REGISTRY_HEADER=$'provider_id\tcatalog_revision\tcatalog_sha256'
 
 declare -ga LSI_MIGRATION_IDS=()
@@ -16,6 +18,7 @@ declare -g LSI_MIGRATION_TOTAL=0
 declare -g LSI_MIGRATION_PLANNED=0
 declare -g LSI_MIGRATION_BLOCKED=0
 declare -g LSI_MIGRATION_TERMINAL=0
+declare -g LSI_MIGRATION_ACTIVE_TERMINAL=0
 declare -g LSI_MIGRATION_ACCEPTED_EVIDENCE_COUNT=0
 declare -g LSI_MIGRATION_REGISTERED_PROVIDER_COUNT=0
 declare -g LSI_MIGRATION_LOADED=false
@@ -33,6 +36,7 @@ lsi_migration_reset() {
   LSI_MIGRATION_PLANNED=0
   LSI_MIGRATION_BLOCKED=0
   LSI_MIGRATION_TERMINAL=0
+  LSI_MIGRATION_ACTIVE_TERMINAL=0
   LSI_MIGRATION_ACCEPTED_EVIDENCE_COUNT=0
   LSI_MIGRATION_REGISTERED_PROVIDER_COUNT=0
   LSI_MIGRATION_LOADED=false
@@ -341,9 +345,13 @@ lsi_migration_load_inventory() {
           LSI_MIGRATION_BLOCKED=$((LSI_MIGRATION_BLOCKED + 1))
           ;;
         implemented | superseded)
-          lsi_migration_error \
-            "$legacy_id cannot claim $disposition until an accepted-evidence admission record is validated."
-          return 1
+          [[ $replacement != '-' && $parity != unassessed && $evidence != '-' ]] || {
+            lsi_migration_error \
+              "$legacy_id requires an assessed replacement and durable evidence for $disposition."
+            return 1
+          }
+          LSI_MIGRATION_TERMINAL=$((LSI_MIGRATION_TERMINAL + 1))
+          LSI_MIGRATION_ACTIVE_TERMINAL=$((LSI_MIGRATION_ACTIVE_TERMINAL + 1))
           ;;
         retired | blocked-safety | out-of-scope)
           LSI_MIGRATION_TERMINAL=$((LSI_MIGRATION_TERMINAL + 1))
@@ -519,6 +527,29 @@ lsi_migration_load_backlog() {
   done
 }
 
+lsi_migration_validate_terminal_admissions() {
+  local validator="$LSI_PROJECT_ROOT/tests/validate-legacy-promotion-readiness.sh"
+
+  # The active readiness validator is the single machine-checked join between a
+  # terminal inventory claim, its exact module/family contract and the reviewed
+  # accepted-evidence registry. Do not accept a terminal inventory row if that
+  # verifier is unavailable or its derived ledger is stale.
+  ((LSI_MIGRATION_ACTIVE_TERMINAL > 0)) || return 0
+  [[ -f $validator ]] || {
+    lsi_migration_error 'terminal replacement claims require the readiness validator.'
+    return 1
+  }
+  "$validator" \
+    --inventory "$LSI_MIGRATION_INVENTORY" \
+    --readiness "$LSI_MIGRATION_READINESS" \
+    --admissions "$LSI_MIGRATION_ACCEPTED_EVIDENCE" \
+    --report-root "$LSI_MIGRATION_ADMISSION_REPORT_ROOT" > /dev/null || {
+      lsi_migration_error \
+        'terminal replacement claims do not match the accepted-evidence admission ledger.'
+      return 1
+    }
+}
+
 lsi_migration_load() {
   [[ $LSI_MIGRATION_LOADED == false ]] || return 0
   lsi_migration_reset
@@ -527,6 +558,10 @@ lsi_migration_load() {
     return 1
   }
   lsi_migration_load_backlog || {
+    lsi_migration_reset
+    return 1
+  }
+  lsi_migration_validate_terminal_admissions || {
     lsi_migration_reset
     return 1
   }
@@ -575,7 +610,7 @@ lsi_migration_retirement_status() {
   lsi_migration_load || return 1
   lsi_migration_count_exact_tsv_rows \
     "$LSI_MIGRATION_ACCEPTED_EVIDENCE" 'accepted-evidence admission registry' \
-    "$LSI_MIGRATION_ACCEPTED_EVIDENCE_HEADER" 11 1048576 \
+    "$LSI_MIGRATION_ACCEPTED_EVIDENCE_HEADER" 12 1048576 \
     LSI_MIGRATION_ACCEPTED_EVIDENCE_COUNT || return 1
   lsi_migration_count_exact_tsv_rows \
     "$LSI_MIGRATION_PROVIDER_REGISTRY" 'provider admission registry' \

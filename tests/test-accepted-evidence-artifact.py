@@ -28,21 +28,21 @@ def checksum(name: str, value: bytes) -> bytes:
     return f"{sha(value)}  {name}\n".encode("ascii")
 
 
-def bundle() -> bytes:
+def bundle(result_payload: bytes) -> bytes:
     raw = io.BytesIO()
     with tarfile.open(fileobj=raw, mode="w:gz") as archive:
         payload = (COMMIT + "\n").encode("ascii")
         info = tarfile.TarInfo("module-evidence-plan/tested-commit.txt")
         info.size = len(payload)
         archive.addfile(info, io.BytesIO(payload))
-        payload = b"{}\n"
-        info = tarfile.TarInfo("module-cells/demo/result.json")
-        info.size = len(payload)
-        archive.addfile(info, io.BytesIO(payload))
+        info = tarfile.TarInfo("module-cells/cells/ubuntu-24-04/demo/result.json")
+        info.size = len(result_payload)
+        archive.addfile(info, io.BytesIO(result_payload))
     return raw.getvalue()
 
 
-def artifact(validation_passed: bool = True) -> bytes:
+def artifact(validation_passed: bool = True, result_sha: str | None = None) -> bytes:
+    result_payload = b"{}\n"
     index = {
         "schema": "linux-software-installer/module-install-evidence-index/v1",
         "tested_commit": COMMIT,
@@ -67,7 +67,7 @@ def artifact(validation_passed: bool = True) -> bytes:
                 "result": "passed",
                 "failure_stage": "-",
                 "validation_errors": 0,
-                "result_sha256": "b" * 64,
+                "result_sha256": result_sha or sha(result_payload),
             }
         ],
     }
@@ -76,14 +76,22 @@ def artifact(validation_passed: bool = True) -> bytes:
         "cell_id\ttarget_id\tfamily\tmodule\tresult\tfailure_stage\tvalidation_errors\n"
         "demo-cell\tubuntu-24-04\tdebian\tdemo\tpassed\t-\t0\n"
     ).encode("utf-8")
-    archive = bundle()
+    archive = bundle(result_payload)
     raw = io.BytesIO()
     with zipfile.ZipFile(raw, "w", compression=zipfile.ZIP_DEFLATED) as output:
         prefix = "module-evidence-aggregate/"
         output.writestr(prefix + "index.json", index_bytes)
         output.writestr(prefix + "index.json.sha256", checksum("index.json", index_bytes))
         output.writestr(prefix + "summary.tsv", summary)
-        output.writestr(prefix + "expected-cells.tsv", b"cell_id\n")
+        output.writestr(
+            prefix + "expected-cells.tsv",
+            (
+                "cell_id\ttarget_id\tfamily\tmodule\timage\tplatform\t"
+                "expected_os_id\texpected_version_id\texpected_arch\n"
+                "demo-cell\tubuntu-24-04\tdebian\tdemo\tubuntu:24.04\t"
+                "linux/amd64\tubuntu\t24.04\tx86_64\n"
+            ).encode("utf-8"),
+        )
         output.writestr(prefix + "resolved-targets.tsv", b"target_id\n")
         output.writestr(prefix + "module-evidence-cells.tar.gz", archive)
         output.writestr(
@@ -104,7 +112,9 @@ def append_zip_entry(payload: bytes, name: str, value: bytes) -> bytes:
     return raw.getvalue()
 
 
-def invoke(path: Path, digest: str, output: Path) -> subprocess.CompletedProcess[str]:
+def invoke(
+    path: Path, digest: str, output: Path, module: str = "demo", target: str = "ubuntu-24-04"
+) -> subprocess.CompletedProcess[str]:
     return subprocess.run(
         [
             sys.executable,
@@ -117,6 +127,10 @@ def invoke(path: Path, digest: str, output: Path) -> subprocess.CompletedProcess
             COMMIT,
             "--run-url",
             RUN_URL,
+            "--module",
+            module,
+            "--target-cell",
+            target,
             "--output",
             str(output),
         ],
@@ -140,6 +154,34 @@ def main() -> int:
         assert observed["index_sha256"] == sha(
             zipfile.ZipFile(io.BytesIO(good)).read("module-evidence-aggregate/index.json")
         )
+        assert observed["module"] == "demo"
+        assert observed["cell_ids"] == ["ubuntu-24-04/demo"]
+
+        batch_dir = root / "batch"
+        batch = subprocess.run(
+            [
+                sys.executable,
+                str(VERIFIER),
+                "--artifact-zip",
+                str(good_path),
+                "--artifact-digest",
+                "sha256:" + sha(good),
+                "--commit",
+                COMMIT,
+                "--run-url",
+                RUN_URL,
+                "--evidence-key",
+                "debian/demo",
+                "--output-dir",
+                str(batch_dir),
+            ],
+            check=False,
+            capture_output=True,
+            text=True,
+            encoding="utf-8",
+        )
+        assert batch.returncode == 0, batch.stderr
+        assert json.loads((batch_dir / "debian-demo.json").read_text(encoding="utf-8"))["module"] == "demo"
 
         stale_digest = invoke(good_path, "0" * 64, root / "stale.json")
         assert stale_digest.returncode != 0
@@ -151,6 +193,17 @@ def main() -> int:
         rejected = invoke(failed_path, sha(failed), root / "failed.json")
         assert rejected.returncode != 0
         assert "does not report a successful validation" in rejected.stderr
+
+        mismatched_result = artifact(result_sha="0" * 64)
+        mismatched_result_path = root / "mismatched-result.zip"
+        mismatched_result_path.write_bytes(mismatched_result)
+        rejected = invoke(mismatched_result_path, sha(mismatched_result), root / "mismatch.json")
+        assert rejected.returncode != 0
+        assert "does not match aggregate digest" in rejected.stderr
+
+        wrong_module = invoke(good_path, sha(good), root / "wrong-module.json", module="other")
+        assert wrong_module.returncode != 0
+        assert "does not contain exactly the requested module target cells" in wrong_module.stderr
 
         traversal = append_zip_entry(good, "../outside", b"unsafe\n")
         traversal_path = root / "traversal.zip"

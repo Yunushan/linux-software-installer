@@ -68,5 +68,8 @@ The runtime parser currently rejects every `implemented` or `superseded` row
 until its promotion can join the reviewed acceptance process. The header-only
 [`accepted-evidence.tsv`](accepted-evidence.tsv) registry records the required
 external-artifact admission data for planned rows, but it does not change the
-inventory. Pointing a row at an arbitrary document cannot create a terminal
-replacement.
+inventory. A terminal row must instead carry the exact admitted run URL and
+artifact-digest reference, and the derived readiness ledger must still match
+its module-family contract. Its admission also requires a checked-in artifact
+verification report for the exact module and target cells. Pointing a row at an
+arbitrary document cannot create a terminal replacement.
