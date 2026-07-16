@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# shellcheck disable=SC2329 # Hostile functions are invoked only if isolation fails.
+# shellcheck disable=SC2317,SC2329 # Hostile functions are exported for the isolated child process.
 set -Eeuo pipefail
 
 ROOT_DIR="$(CDPATH='' cd -- "$(dirname -- "${BASH_SOURCE[0]}")/.." && pwd -P)"

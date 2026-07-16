@@ -1541,11 +1541,11 @@ lsi_provider_apply_check_directory() {
 }
 
 lsi_provider_apply_write_file() {
-  local source=$1 destination=$2 directory=$3 label=$4
+  local source=$1 target_path=$2 directory=$3 label=$4
   local stat_bin mktemp_bin chmod_bin cmp_bin mv_bin rm_bin tmp link_count
 
-  lsi_provider_apply_check_file_destination "$source" "$destination" "$directory" "$label" || return
-  [[ ! -e $destination && ! -L $destination ]] || return 0
+  lsi_provider_apply_check_file_destination "$source" "$target_path" "$directory" "$label" || return
+  [[ ! -e $target_path && ! -L $target_path ]] || return 0
 
   stat_bin=$(lsi_provider_system_tool stat) || return
   chmod_bin=$(lsi_provider_system_tool chmod) || return
@@ -1563,35 +1563,35 @@ lsi_provider_apply_write_file() {
   }
   if ! /bin/cat -- "$source" > "$tmp" || ! "$chmod_bin" 0644 -- "$tmp"; then
     "$rm_bin" -f -- "$tmp"
-    lsi_provider_error "Unable to prepare provider activation file: $destination"
+    lsi_provider_error "Unable to prepare provider activation file: $target_path"
     return 3
   fi
-  if ! "$cmp_bin" -s -- "$source" "$tmp" || ! "$mv_bin" -n -- "$tmp" "$destination"; then
+  if ! "$cmp_bin" -s -- "$source" "$tmp" || ! "$mv_bin" -n -- "$tmp" "$target_path"; then
     "$rm_bin" -f -- "$tmp"
-    lsi_provider_error "Unable to install provider activation file safely: $destination"
+    lsi_provider_error "Unable to install provider activation file safely: $target_path"
     return 3
   fi
-  [[ -f $destination && ! -L $destination ]] || {
+  [[ -f $target_path && ! -L $target_path ]] || {
     "$rm_bin" -f -- "$tmp"
-    lsi_provider_error "Provider activation output is unsafe: $destination"
+    lsi_provider_error "Provider activation output is unsafe: $target_path"
     return 3
   }
-  link_count=$("$stat_bin" -c '%h' -- "$destination") || return 3
+  link_count=$("$stat_bin" -c '%h' -- "$target_path") || return 3
   [[ $link_count == 1 ]] || {
     "$rm_bin" -f -- "$tmp"
-    lsi_provider_error "Provider activation output has unsafe links: $destination"
+    lsi_provider_error "Provider activation output has unsafe links: $target_path"
     return 3
   }
-  if ! "$cmp_bin" -s -- "$source" "$destination"; then
+  if ! "$cmp_bin" -s -- "$source" "$target_path"; then
     "$rm_bin" -f -- "$tmp"
-    lsi_provider_error "Provider activation output changed during installation: $destination"
+    lsi_provider_error "Provider activation output changed during installation: $target_path"
     return 3
   fi
   "$rm_bin" -f -- "$tmp"
 }
 
 lsi_provider_apply_check_file_destination() {
-  local source=$1 destination=$2 directory=$3 label=$4
+  local source=$1 target_path=$2 directory=$3 label=$4
   local stat_bin cmp_bin link_count
 
   [[ -f $source && ! -L $source ]] || {
@@ -1601,20 +1601,20 @@ lsi_provider_apply_check_file_destination() {
   lsi_provider_apply_check_directory "$directory" || return
   stat_bin=$(lsi_provider_system_tool stat) || return
   cmp_bin=$(lsi_provider_system_tool cmp) || return
-  if [[ -e $destination || -L $destination ]]; then
-    [[ -f $destination && ! -L $destination ]] || {
-      lsi_provider_error "Refusing unsafe existing provider activation file: $destination"
+  if [[ -e $target_path || -L $target_path ]]; then
+    [[ -f $target_path && ! -L $target_path ]] || {
+      lsi_provider_error "Refusing unsafe existing provider activation file: $target_path"
       return 3
     }
-    link_count=$("$stat_bin" -c '%h' -- "$destination") || return 3
+    link_count=$("$stat_bin" -c '%h' -- "$target_path") || return 3
     [[ $link_count == 1 ]] || {
-      lsi_provider_error "Refusing multiply-linked provider activation file: $destination"
+      lsi_provider_error "Refusing multiply-linked provider activation file: $target_path"
       return 3
     }
-    if "$cmp_bin" -s -- "$source" "$destination"; then
+    if "$cmp_bin" -s -- "$source" "$target_path"; then
       return 0
     fi
-    lsi_provider_error "Refusing to replace provider activation drift: $destination"
+    lsi_provider_error "Refusing to replace provider activation drift: $target_path"
     return 3
   fi
 }
@@ -1674,16 +1674,16 @@ lsi_provider_apply_config_file() {
 }
 
 lsi_provider_deactivate_remove_file() {
-  local source=$1 destination=$2 directory=$3 label=$4 rm_bin
-  lsi_provider_apply_check_file_destination "$source" "$destination" "$directory" "$label" || return
-  [[ -e $destination || -L $destination ]] || return 0
+  local source=$1 target_path=$2 directory=$3 label=$4 rm_bin
+  lsi_provider_apply_check_file_destination "$source" "$target_path" "$directory" "$label" || return
+  [[ -e $target_path || -L $target_path ]] || return 0
   rm_bin=$(lsi_provider_system_tool rm) || return
-  "$rm_bin" -f -- "$destination" || {
-    lsi_provider_error "Unable to remove provider repository file: $destination"
+  "$rm_bin" -f -- "$target_path" || {
+    lsi_provider_error "Unable to remove provider repository file: $target_path"
     return 3
   }
-  [[ ! -e $destination && ! -L $destination ]] || {
-    lsi_provider_error "Provider repository file remains after removal: $destination"
+  [[ ! -e $target_path && ! -L $target_path ]] || {
+    lsi_provider_error "Provider repository file remains after removal: $target_path"
     return 3
   }
 }
