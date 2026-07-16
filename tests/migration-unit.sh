@@ -220,7 +220,7 @@ test_unvalidated_terminal_replacement_fails_closed() (
 test_admitted_terminal_replacement_loads() (
   local case_dir commit artifact_digest index_digest systemd_digest reference output
   case_dir=$(prepare_case)
-  commit=$(printf 'a%.0s' {1..40})
+  commit=$(git -C "$ROOT_DIR" rev-parse HEAD 2> /dev/null || printf 'a%.0s' {1..40})
   export LSI_TESTED_COMMIT=$commit
   artifact_digest=$(printf 'b%.0s' {1..64})
   index_digest=$(printf 'c%.0s' {1..64})
