@@ -80,11 +80,11 @@ EXPECTED_BASELINE = {
     "superseded_candidates": 8,
     "modules": 80,
     "module_family_pairs": 90,
-    "standalone_cells": 180,
+    "standalone_cells": 247,
     "service_rows": 32,
     "service_modules": 9,
     "service_pairs": 11,
-    "systemd_executions": 44,
+    "systemd_executions": 50,
 }
 
 
@@ -460,7 +460,7 @@ def expected_rows_and_summary(
     if len(target_ids) != len(set(target_ids)):
         raise ReadinessError("evidence target table contains duplicate target IDs")
     target_counts = Counter(row["family"] for row in targets)
-    if target_counts != {"debian": 2, "rhel": 2}:
+    if target_counts != {"debian": 3, "rhel": 2}:
         raise ReadinessError(
             f"evidence target family counts drifted: {dict(sorted(target_counts.items()))}"
         )

@@ -118,7 +118,7 @@ validate_target_row() {
   [[ $ref_env =~ ^[A-Z][A-Z0-9_]*$ ]] || return 1
   [[ -n $display_name && ! $display_name =~ [[:cntrl:]] ]] || return 1
   [[ $family == debian || $family == rhel ]] || return 1
-  [[ $image =~ ^[A-Za-z0-9][A-Za-z0-9./:_-]*$ && $image != *..* ]] || return 1
+  [[ $image =~ ^[A-Za-z0-9][A-Za-z0-9./:_-]*(@sha256:[0-9a-f]{64})?$ && $image != *..* ]] || return 1
   [[ $platform == linux/amd64 ]] || return 1
   lsi_valid_slug "$expected_os_id" || return 1
   [[ $expected_version_id =~ ^[0-9][A-Za-z0-9._-]*$ ]] || return 1
@@ -154,8 +154,7 @@ while IFS= read -r target_row || [[ -n $target_row ]]; do
 
   cell_dir="$OUTPUT_DIR/cells/$target_id/$MODULE"
   raw_cell_dir="$RAW_ROOT/$target_id/$MODULE"
-  raw_logs_dir="$raw_cell_dir/installer-logs"
-  mkdir -p "$cell_dir" "$raw_logs_dir"
+  mkdir -p "$cell_dir" "$raw_cell_dir"
   bash "$ROOT_DIR/tests/evidence-contract.sh" "$ROOT_DIR" "$MODULE" "$family" \
     "$expected_os_id" "$expected_version_id" "$expected_arch" \
     > "$cell_dir/expected-module-contract.tsv"
@@ -192,7 +191,6 @@ while IFS= read -r target_row || [[ -n $target_row ]]; do
           docker run --name "$container_name" --platform "$platform" \
           -v "$ROOT_DIR:/workspace:ro" \
           -v "$raw_cell_dir:/evidence" \
-          -v "$raw_logs_dir:/var/log/linux-software-installer" \
           -e LSI_EVIDENCE_DIR=/evidence \
           -e LSI_TESTED_COMMIT="$commit" \
           -e LSI_TARGET_ID="$target_id" \
@@ -200,6 +198,7 @@ while IFS= read -r target_row || [[ -n $target_row ]]; do
           -e LSI_IMAGE_ID="$image_id" \
           -e LSI_RUN_URL="$run_url" \
           "$image_ref" \
+          bash /workspace/tests/capture-installer-logs.sh /evidence \
           bash /workspace/tests/module-evidence.sh /workspace "$MODULE" 2>&1 |
           tee "$cell_dir/container.log"
         container_status=${PIPESTATUS[0]}

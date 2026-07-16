@@ -16,6 +16,7 @@ The current candidate Tier-1 matrix is:
 | Image | Family | Architecture | CI behavior |
 |---|---|---|---|
 | Ubuntu 24.04 | Debian | x86_64 | Configured for detection, catalog, base-tools/Git plan and dependency-solver checks |
+| Ubuntu 26.04 | Debian | x86_64 | Configured for detection, catalog, base-tools/Git plan and dependency-solver checks |
 | Debian 12 | Debian | x86_64 | Configured for detection, catalog, base-tools/Git plan and dependency-solver checks |
 | Rocky Linux 9.8 | RHEL | x86_64 | Configured for detection, catalog, base-tools/Git plan and dependency-solver checks |
 | AlmaLinux 9.8 | RHEL | x86_64 | Configured for detection, catalog, base-tools/Git plan and dependency-solver checks |
@@ -40,7 +41,7 @@ digests must have green runs, standalone parity remains a separate claim, and
 service-state claims still require systemd VM evidence.
 
 The manual `Standalone module evidence` workflow is separately configured for
-all 273 declared module-image cells. Its 103-module matrix stays below the
+all 370 declared module-image cells. Its 103-module matrix stays below the
 GitHub workflow limit; each module job sequentially starts one clean container
 for every applicable target. It records pre-install, post-install and
 post-repeat state, the commit and immutable image reference, declared binaries,
@@ -53,7 +54,7 @@ an external GitHub artifact digest, signed release hash or attestation.
 
 The 100 family-wide modules contribute 270 cells. PlayOnLinux and Tor Browser
 Launcher are restricted to Ubuntu 24.04 x86_64, while Telegram Desktop is
-restricted to Debian 12 x86_64, for a current total of 273. Exact
+restricted to Debian 12 x86_64, for a current total of 370. Exact
 `ID:VERSION_ID:architecture` restrictions are shown by `list` and `info`,
 enforced for plan/install, and removed from unsupported evidence cells; matrix
 totals are therefore derived rather than assumed from family counts.
@@ -70,7 +71,7 @@ uploadable.
 Without `--enable-services`, the installer does not explicitly invoke
 `systemctl` to activate module services. Package-manager maintainer scripts are
 outside that boundary and can start a service during package installation.
-The 44-row disposable-VM contract and its current provisional-only trust
+The 50-row disposable-VM contract and its current provisional-only trust
 boundary are documented in [`SYSTEMD_EVIDENCE.md`](SYSTEMD_EVIDENCE.md). The
 repository has no accepted systemd VM run and therefore makes no release-level
 service-state claim.

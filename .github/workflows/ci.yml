@@ -53,6 +53,8 @@ jobs:
         include:
           - name: Ubuntu 24.04
             image: ubuntu:24.04
+          - name: Ubuntu 26.04
+            image: ubuntu:26.04
           - name: Debian 12
             image: debian:12
           - name: Rocky Linux 9.8
@@ -90,6 +92,8 @@ jobs:
         include:
           - name: Ubuntu 24.04
             image: ubuntu:24.04
+          - name: Ubuntu 26.04
+            image: ubuntu:26.04
           - name: Debian 12
             image: debian:12
           - name: Rocky Linux 9.8

@@ -168,12 +168,14 @@ test_evidence_filtering() {
     "$fixture_repo" cells all) || fail 'fixture evidence cells failed'
   [[ $(head -n 1 <<< "$cells") == $'cell_id\ttarget_id\tfamily\tmodule\timage\tplatform\texpected_os_id\texpected_version_id\texpected_arch' ]] ||
     fail 'evidence cells do not expose the exact version-ID contract'
-  [[ $(tail -n +2 <<< "$cells" | wc -l) -eq 5 ]] ||
-    fail 'evidence cells did not equal four family-wide plus one restricted cell'
+  [[ $(tail -n +2 <<< "$cells" | wc -l) -eq 6 ]] ||
+    fail 'evidence cells did not equal five family-wide plus one restricted cell'
   grep -q $'^ubuntu-24-04/restricted\t' <<< "$cells" ||
     fail 'declared Ubuntu evidence cell was omitted'
   ! grep -q $'^debian-12/restricted\t' <<< "$cells" ||
     fail 'unsupported Debian evidence cell was generated'
+  ! grep -q $'^ubuntu-26-04/restricted\t' <<< "$cells" ||
+    fail 'unsupported Ubuntu 26.04 evidence cell was generated'
   ! grep -q $'/unlisted\t' <<< "$cells" ||
     fail 'unconfigured exact target generated an evidence cell'
   grep -q $'^rocky-9-8/family-wide\trocky-9-8\trhel\tfamily-wide\t.*\tlinux/amd64\trocky\t9\.8\tx86_64$' \

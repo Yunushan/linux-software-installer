@@ -152,14 +152,15 @@ import sys
 
 with open(sys.argv[1], encoding="utf-8", newline="") as stream:
     rows = list(csv.DictReader(stream, delimiter="\t"))
-assert len(rows) == 44
-assert len({row["execution_id"] for row in rows}) == 44
+assert len(rows) == 50
+assert len({row["execution_id"] for row in rows}) == 50
 assert len({(row["family"], row["module"]) for row in rows}) == 11
 assert len({row["module"] for row in rows}) == 9
 assert {row["mode"] for row in rows} == {"default", "enable-services"}
-assert sum(row["mode"] == "default" for row in rows) == 22
+assert sum(row["mode"] == "default" for row in rows) == 25
 assert {row["target_id"] for row in rows} == {
     "ubuntu-24-04",
+    "ubuntu-26-04",
     "debian-12",
     "rocky-9-8",
     "alma-9-8",

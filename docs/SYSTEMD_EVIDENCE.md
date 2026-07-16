@@ -13,7 +13,7 @@ The plan is derived from three reviewed sources: the service-bearing rows in
 [`legacy-promotion-readiness.tsv`](legacy-promotion-readiness.tsv), each live
 module contract and [`evidence-targets.tsv`](../tests/evidence-targets.tsv).
 It fails if that derivation no longer yields 11 module-family contracts across
-nine modules and exactly 44 unique executions:
+nine modules and exactly 50 unique executions:
 
 ```bash
 bash tests/systemd-evidence-matrix.sh "$PWD" plan
@@ -107,7 +107,7 @@ That command validates a real observation structurally; it does not accept it
 for promotion. `--require-accepted` intentionally refuses every current local
 bundle because no external provisioning-attestation verifier or durable trust
 anchor is implemented. Acceptance requires a future reviewed system to bind
-the 44 single-use runs to provider-authenticated instance creation and
+the 50 single-use runs to provider-authenticated instance creation and
 destruction, an allowlisted immutable VM image digest, the tested commit and a
 durable signed artifact digest. Until then the promotion ledger remains
 `evidence_class=none` and `promotion_ready=no`.

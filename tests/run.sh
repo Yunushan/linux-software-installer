@@ -106,6 +106,7 @@ test_all_declared_module_plans() (
           "$expected_version" "$expected_arch" || continue
         case "$target_id" in
           ubuntu-24-04) fixture="$ROOT_DIR/tests/fixtures/ubuntu.env" ;;
+          ubuntu-26-04) fixture="$ROOT_DIR/tests/fixtures/ubuntu26.env" ;;
           debian-12) fixture="$ROOT_DIR/tests/fixtures/debian.env" ;;
           rocky-9-8) fixture="$ROOT_DIR/tests/fixtures/rocky.env" ;;
           alma-9-8) fixture="$ROOT_DIR/tests/fixtures/almalinux.env" ;;
@@ -305,9 +306,9 @@ test_standalone_evidence_matrices() {
   done < <(tail -n +2 <<< "$all_cells")
   [[ ${#checked_contracts[@]} -eq 138 ]] &&
     [[ $all_count -eq 103 && $debian_count -eq 100 && $rhel_count -eq 38 ]] &&
-    [[ $filtered_count -eq 1 && $all_cell_count -eq 273 ]] &&
-    [[ $debian_cell_count -eq 197 && $rhel_cell_count -eq 76 ]] &&
-    [[ $unique_cell_count -eq 273 ]] &&
+    [[ $filtered_count -eq 1 && $all_cell_count -eq 370 ]] &&
+    [[ $debian_cell_count -eq 294 && $rhel_cell_count -eq 76 ]] &&
+    [[ $unique_cell_count -eq 370 ]] &&
     ! bash "$ROOT_DIR/tests/evidence-matrix.sh" \
       "$ROOT_DIR" matrix debian firewalld > /dev/null 2>&1
 }
@@ -327,6 +328,10 @@ test_workflow_security_contract() {
 
 test_evidence_container_cleanup_contract() {
   bash "$ROOT_DIR/tests/test-container-cleanup.sh"
+}
+
+test_evidence_log_capture_contract() {
+  bash "$ROOT_DIR/tests/test-evidence-log-capture.sh"
 }
 
 test_legacy_inventory_contract() {
@@ -518,6 +523,7 @@ run_test 'standalone evidence records detect payload tampering' test_evidence_re
 run_test 'Python runtime resolver rejects broken command aliases' test_python_runtime_resolver
 run_test 'container workflows preserve the evidence trust boundary' test_workflow_security_contract
 run_test 'evidence cleanup verifies exact container absence' test_evidence_container_cleanup_contract
+run_test 'evidence log capture preserves installer ownership checks' test_evidence_log_capture_contract
 run_test 'CentOS 7 is blocked from the active installer' test_centos7_guard
 run_test 'legacy-version bypass must be explicit' test_centos7_explicit_override
 run_test 'Ubuntu 16.04 is blocked from the active installer' test_ubuntu16_guard

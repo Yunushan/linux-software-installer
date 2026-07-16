@@ -170,6 +170,7 @@ printf '%s\n' \
 printf '%s\n' \
   $'target_id\tref_env\tdisplay_name\tfamily\timage\tplatform\texpected_os_id\texpected_version_id\texpected_arch\timage_ref' \
   "ubuntu-24-04"$'\t'"UBUNTU_24_04_IMAGE_REF"$'\t'"Ubuntu 24.04"$'\t'"debian"$'\t'"ubuntu:24.04"$'\t'"linux/amd64"$'\t'"ubuntu"$'\t'"24.04"$'\t'"x86_64"$'\t'"$IMAGE_REF" \
+  "ubuntu-26-04"$'\t'"UBUNTU_26_04_IMAGE_REF"$'\t'"Ubuntu 26.04"$'\t'"debian"$'\t'"ubuntu:26.04"$'\t'"linux/amd64"$'\t'"ubuntu"$'\t'"26.04"$'\t'"x86_64"$'\t'"ubuntu@sha256:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb" \
   "debian-12"$'\t'"DEBIAN_12_IMAGE_REF"$'\t'"Debian 12"$'\t'"debian"$'\t'"debian:12"$'\t'"linux/amd64"$'\t'"debian"$'\t'"12"$'\t'"x86_64"$'\t'"debian@sha256:cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc" \
   "rocky-9-8"$'\t'"ROCKY_9_8_IMAGE_REF"$'\t'"Rocky Linux 9.8"$'\t'"rhel"$'\t'"rockylinux/rockylinux:9.8@sha256:8101994123cf3d0a8fee517bee7f39e555c7d92bd2d9eb3303cc988a0eeed00f"$'\t'"linux/amd64"$'\t'"rocky"$'\t'"9.8"$'\t'"x86_64"$'\t'"rockylinux@sha256:dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd" \
   "alma-9-8"$'\t'"ALMA_9_8_IMAGE_REF"$'\t'"AlmaLinux 9.8"$'\t'"rhel"$'\t'"almalinux:9.8@sha256:d2515c769e7b73f95c4fde38c0a505336ff38f14990c0b7253b77060a049a743"$'\t'"linux/amd64"$'\t'"almalinux"$'\t'"9.8"$'\t'"x86_64"$'\t'"almalinux@sha256:eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee" \

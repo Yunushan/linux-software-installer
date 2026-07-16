@@ -32,6 +32,16 @@ jobs:
             image: ubuntu:24.04
             batch: conflict-safe catalog batch 1
             modules: --catalog-batch 1
+          - name: Ubuntu 26.04
+            key: ubuntu-26-main
+            image: ubuntu:26.04
+            batch: conflict-safe catalog batch 0
+            modules: --catalog-batch 0
+          - name: Ubuntu 26.04
+            key: ubuntu-26-conflicts
+            image: ubuntu:26.04
+            batch: conflict-safe catalog batch 1
+            modules: --catalog-batch 1
           - name: Debian 12
             key: debian-main
             image: debian:12
@@ -90,16 +100,15 @@ jobs:
         run: |
           set -o pipefail
           mkdir -p "${RUNNER_TEMP}/raw-evidence" \
-            "${RUNNER_TEMP}/raw-installer-logs" \
             "${RUNNER_TEMP}/runner-evidence"
           set +e
           timeout --signal=TERM --kill-after=30s 45m \
             docker run --name "lsi-${{ matrix.key }}" \
             -v "${RUNNER_TEMP}/source:/workspace:ro" \
             -v "${RUNNER_TEMP}/raw-evidence:/evidence" \
-            -v "${RUNNER_TEMP}/raw-installer-logs:/var/log/linux-software-installer" \
             -e LSI_EVIDENCE_DIR=/evidence \
             "${{ steps.image.outputs.image_ref }}" \
+            bash /workspace/tests/capture-installer-logs.sh /evidence \
             bash /workspace/tests/install-smoke.sh \
             /workspace ${{ matrix.modules }} 2>&1 | \
               tee "${RUNNER_TEMP}/runner-evidence/container.log"
@@ -127,14 +136,8 @@ jobs:
             --owner-uid "$(id -u)" \
             --owner-gid "$(id -g)"
           evidence_status=$?
-          sudo --non-interactive python3 tests/evidence-record.py sanitize-tree \
-            --source "$RUNNER_TEMP/raw-installer-logs" \
-            --destination "$RUNNER_TEMP/safe-evidence/installer-logs" \
-            --owner-uid "$(id -u)" \
-            --owner-gid "$(id -g)"
-          logs_status=$?
           set -e
-          ((evidence_status == 0 && logs_status == 0))
+          ((evidence_status == 0))
 
       - name: Upload install evidence
         if: always()

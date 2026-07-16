@@ -33,6 +33,7 @@ jobs:
       matrix_count: ${{ steps.plan.outputs.matrix_count }}
       expected_cell_count: ${{ steps.plan.outputs.expected_cell_count }}
       ubuntu_ref: ${{ steps.plan.outputs.ubuntu_ref }}
+      ubuntu_26_04_ref: ${{ steps.plan.outputs.ubuntu_26_04_ref }}
       debian_ref: ${{ steps.plan.outputs.debian_ref }}
       rocky_9_8_ref: ${{ steps.plan.outputs.rocky_9_8_ref }}
       alma_9_8_ref: ${{ steps.plan.outputs.alma_9_8_ref }}
@@ -88,6 +89,7 @@ jobs:
               "$expected_arch" "$image_ref" >> "$plan_dir/resolved-targets.tsv"
             case "$target_id" in
               ubuntu-24-04) printf 'ubuntu_ref=%s\n' "$image_ref" >> "$GITHUB_OUTPUT" ;;
+              ubuntu-26-04) printf 'ubuntu_26_04_ref=%s\n' "$image_ref" >> "$GITHUB_OUTPUT" ;;
               debian-12) printf 'debian_ref=%s\n' "$image_ref" >> "$GITHUB_OUTPUT" ;;
               rocky-9-8) printf 'rocky_9_8_ref=%s\n' "$image_ref" >> "$GITHUB_OUTPUT" ;;
               alma-9-8) printf 'alma_9_8_ref=%s\n' "$image_ref" >> "$GITHUB_OUTPUT" ;;
@@ -99,8 +101,8 @@ jobs:
           ((expected_cell_count > 0))
           if [[ -z $FILTER_MODULE ]]; then
             case "$INPUT_SCOPE" in
-              all) expected_modules=103; expected_cells=273 ;;
-              debian) expected_modules=100; expected_cells=197 ;;
+              all) expected_modules=103; expected_cells=370 ;;
+              debian) expected_modules=100; expected_cells=294 ;;
               rhel) expected_modules=38; expected_cells=76 ;;
               *) printf 'Unknown evidence scope: %s\n' "$INPUT_SCOPE" >&2; exit 2 ;;
             esac
@@ -141,6 +143,7 @@ jobs:
       matrix: ${{ fromJSON(needs.catalog.outputs.matrix) }}
     env:
       UBUNTU_24_04_IMAGE_REF: ${{ needs.catalog.outputs.ubuntu_ref }}
+      UBUNTU_26_04_IMAGE_REF: ${{ needs.catalog.outputs.ubuntu_26_04_ref }}
       DEBIAN_12_IMAGE_REF: ${{ needs.catalog.outputs.debian_ref }}
       ROCKY_9_8_IMAGE_REF: ${{ needs.catalog.outputs.rocky_9_8_ref }}
       ALMA_9_8_IMAGE_REF: ${{ needs.catalog.outputs.alma_9_8_ref }}

@@ -159,8 +159,11 @@ def build_plan(root: Path) -> list[dict[str, str]]:
     rows: list[dict[str, str]] = []
     for family, module in evidence_keys:
         family_targets = [row for row in targets if row["family"] == family]
-        if len(family_targets) != 2:
-            raise MatrixError(f"{family} must have exactly two evidence targets")
+        expected_target_count = {"debian": 3, "rhel": 2}[family]
+        if len(family_targets) != expected_target_count:
+            raise MatrixError(
+                f"{family} must have exactly {expected_target_count} evidence targets"
+            )
         for target in family_targets:
             service_values = services_for(
                 root,
@@ -190,8 +193,8 @@ def build_plan(root: Path) -> list[dict[str, str]]:
                     }
                 )
     execution_ids = [row["execution_id"] for row in rows]
-    if len(rows) != 44 or len(execution_ids) != len(set(execution_ids)):
-        raise MatrixError("systemd evidence plan must contain 44 unique executions")
+    if len(rows) != 50 or len(execution_ids) != len(set(execution_ids)):
+        raise MatrixError("systemd evidence plan must contain 50 unique executions")
     return rows
 
 

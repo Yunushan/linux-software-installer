@@ -235,21 +235,21 @@ test_admitted_terminal_replacement_loads() (
   printf '%s\n' \
     '{' \
     "  \"artifact_sha256\": \"$artifact_digest\"," \
-    "  \"cell_ids\": [\"debian-12/nginx\", \"ubuntu-24-04/nginx\"]," \
+    "  \"cell_ids\": [\"debian-12/nginx\", \"ubuntu-24-04/nginx\", \"ubuntu-26-04/nginx\"]," \
     "  \"commit_sha\": \"$commit\"," \
-    "  \"expected_cells\": 2," \
+    "  \"expected_cells\": 3," \
     "  \"index_sha256\": \"$index_digest\"," \
     "  \"module\": \"nginx\"," \
     "  \"result\": \"verified-awaiting-parity-review-and-systemd-attestation\"," \
     "  \"run_url\": \"https://github.com/Yunushan/linux-software-installer/actions/runs/123\"," \
     "  \"schema\": \"linux-software-installer/accepted-evidence-verification/v2\"," \
-    '  "target_cells": ["debian-12", "ubuntu-24-04"]' \
+    '  "target_cells": ["debian-12", "ubuntu-24-04", "ubuntu-26-04"]' \
     '}' > "$case_dir/docs/verified-nginx.json"
   printf '%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\n' \
     debian/nginx "$commit" \
     https://github.com/Yunushan/linux-software-installer/actions/runs/123 \
     https://github.com/Yunushan/linux-software-installer/actions/runs/123/artifacts/456 \
-    "sha256:$artifact_digest" "$index_digest" debian-12,ubuntu-24-04 docs/MIGRATION.md \
+    "sha256:$artifact_digest" "$index_digest" debian-12,ubuntu-24-04,ubuntu-26-04 docs/MIGRATION.md \
     https://evidence.example.invalid/systemd/123 \
     https://evidence.example.invalid/systemd/123/artifacts/456 "sha256:$systemd_digest" \
     docs/verified-nginx.json \

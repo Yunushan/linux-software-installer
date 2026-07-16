@@ -1,5 +1,6 @@
 target_id	ref_env	display_name	family	image	platform	expected_os_id	expected_version_id	expected_arch
 ubuntu-24-04	UBUNTU_24_04_IMAGE_REF	Ubuntu 24.04	debian	ubuntu:24.04	linux/amd64	ubuntu	24.04	x86_64
+ubuntu-26-04	UBUNTU_26_04_IMAGE_REF	Ubuntu 26.04	debian	ubuntu:26.04	linux/amd64	ubuntu	26.04	x86_64
 debian-12	DEBIAN_12_IMAGE_REF	Debian 12	debian	debian:12	linux/amd64	debian	12	x86_64
 rocky-9-8	ROCKY_9_8_IMAGE_REF	Rocky Linux 9.8	rhel	rockylinux/rockylinux:9.8@sha256:8101994123cf3d0a8fee517bee7f39e555c7d92bd2d9eb3303cc988a0eeed00f	linux/amd64	rocky	9.8	x86_64
 alma-9-8	ALMA_9_8_IMAGE_REF	AlmaLinux 9.8	rhel	almalinux:9.8@sha256:d2515c769e7b73f95c4fde38c0a505336ff38f14990c0b7253b77060a049a743	linux/amd64	almalinux	9.8	x86_64

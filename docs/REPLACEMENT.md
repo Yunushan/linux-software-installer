@@ -101,7 +101,7 @@ presence and compare package/version state across a repeat install; it has not
 yet produced accepted release evidence. Batch success is not standalone parity
 evidence for each module. A separate manual standalone workflow is configured
 as a 103-module matrix; each module job sequentially runs its applicable images
-in separate fresh containers, preserving all 273 independent module-image
+in separate fresh containers, preserving all 370 independent module-image
 cells without exceeding the workflow matrix limit. It emits structured
 pre/install/repeat evidence and an aggregate coverage/checksum bundle, but it
 also has no accepted run yet. None of these workflows validates systemd
@@ -115,7 +115,7 @@ parts of G5: root and confirmation gates, fail-closed lock contention,
 no-clobber protected logs and sensitive-argument redaction, package and binary
 verification failures, stop-on-error, refresh-once behavior, and explicit
 service activation. These are unit-level safety checks, not a substitute for
-the 44 exact systemd VM executions and host-state comparisons identified
+the 50 exact systemd VM executions and host-state comparisons identified
 below.
 
 The container jobs receive a credential-free `git archive` export of the
@@ -156,9 +156,9 @@ The current ledger proves that the 70 Debian-family and 72 RHEL-family rows all
 have an `intent`-parity active-module candidate, but all 142 still have evidence
 class `none` and promotion readiness `no`. Their mappings collapse to 80 unique
 modules and 90 module-family evidence keys (67 Debian and 23 RHEL), so duplicate
-legacy entries can share evidence. Those keys require 180 standalone
-module-image cells: 134 Debian and 46 RHEL. A full-catalog standalone run emits
-273 cells; 180 of them cover every currently planned row.
+legacy entries can share evidence. Those keys require 247 standalone
+module-image cells: 201 Debian and 46 RHEL. A full-catalog standalone run emits
+370 cells; 247 of them cover every currently planned row.
 
 The ledger labels 134 rows as `implemented-candidate` and eight as
 `superseded-candidate`; these are review routes, not terminal claims. The eight
@@ -170,11 +170,11 @@ row's retained outcome and intentional differences before changing the source
 inventory.
 
 Thirty-two rows share 11 service-bearing module-family contracts across nine
-modules. Their normal standalone footprint is 22 module-image cells. G5 also
-requires each of those 11 contracts on both family targets, with and without
-`--enable-services`: 11 contracts x 2 images x 2 modes = 44 disposable systemd
+modules. Their normal standalone footprint is 25 module-image cells. G5 also
+requires each of those 11 contracts on every exact family target, with and without
+`--enable-services`, for 50 disposable systemd
 executions. Evidence may be reused by every row with the same `evidence_key`.
-[`SYSTEMD_EVIDENCE.md`](SYSTEMD_EVIDENCE.md) defines the executable 44-row
+[`SYSTEMD_EVIDENCE.md`](SYSTEMD_EVIDENCE.md) defines the executable 50-row
 plan, single-use fresh-VM runner, captured host-state contract and structural
 validator. No accepted VM execution exists: all local runner bundles remain
 provisional until an external provisioning attestation and durable trust
@@ -259,8 +259,8 @@ The smallest safe path to close these 142 rows is:
    run that demonstrably satisfies the same G3 conditions).
 2. Complete one green full-catalog standalone run, import its validated
    aggregate, and record the GitHub artifact digest/ID/URL or an equivalent
-   signed trust anchor. Reuse its 180 relevant cells by `evidence_key`.
-3. Produce the 44 systemd executions for the 11 service contracts.
+   signed trust anchor. Reuse its 247 relevant cells by `evidence_key`.
+3. Produce the 50 systemd executions for the 11 service contracts.
 4. Check in a row-parity report covering package source/channel, service,
    configuration, firewall, credential and data differences; then change each
    row's disposition and durable `evidence` link together in one review.
@@ -327,7 +327,7 @@ Support must be based on exact evidence rather than family detection alone.
 
 | Tier | Meaning | Current members |
 |---|---|---|
-| Candidate Tier 1 | Exact releases in the blocking CI distro matrix; not install-verified yet | Ubuntu 24.04, Debian 12, Rocky Linux 9.8, AlmaLinux 9.8 on the CI runner architecture |
+| Candidate Tier 1 | Exact releases in the blocking CI distro matrix; not install-verified yet | Ubuntu 24.04, Ubuntu 26.04, Debian 12, Rocky Linux 9.8, AlmaLinux 9.8 on the CI runner architecture |
 | Release-verified Tier 1 | Candidate releases that pass every applicable gate below | None yet |
 | Detection/best effort | Normalized by `/etc/os-release` but without the complete release evidence | Other maintained Debian/Ubuntu and RHEL-compatible releases |
 | Legacy blocked | Historical source targets retained only for provenance | Ubuntu 16.04 and CentOS 6/7 |
@@ -380,7 +380,7 @@ The gates are cumulative.
   without adding an undeclared repository or bypassing signature checks.
 - The 100 family-wide modules contribute 270 candidate module-image cells.
   Three distro-component modules contribute one declared exact cell each, for
-  273 total cells: 197 Debian-family and 76 RHEL-family. Totals are derived
+  370 total cells: 294 Debian-family and 76 RHEL-family. Totals are derived
   after exact-cell filtering.
 
 ### G4 — Real installation and verification
