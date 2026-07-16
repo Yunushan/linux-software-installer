@@ -539,7 +539,7 @@ lsi_migration_validate_terminal_admissions() {
     lsi_migration_error 'terminal replacement claims require the readiness validator.'
     return 1
   }
-  "$validator" \
+  bash "$validator" \
     --inventory "$LSI_MIGRATION_INVENTORY" \
     --readiness "$LSI_MIGRATION_READINESS" \
     --admissions "$LSI_MIGRATION_ACCEPTED_EVIDENCE" \
