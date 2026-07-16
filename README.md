@@ -275,12 +275,12 @@ and after a repeat installation. The catalog is deterministically partitioned
 into two conflict-safe batches (currently separating Apache/Nginx and
 MariaDB/MySQL). Accepted evidence requires a green run
 tied to the commit and image digests. These are catalog-batch checks, not
-standalone parity evidence for each module. Service-state testing still
-requires disposable systemd VMs.
+standalone parity evidence for each module. Service-state testing uses the
+separate manual disposable-systemd-VM workflow described below.
 
 The manual `Standalone module evidence` workflow uses one matrix job per module
 (103 jobs for the full catalog). Each job sequentially starts a separate fresh
-container for every applicable target, so all 273 declared module-image cells
+container for every applicable target, so all 370 declared module-image cells
 remain independent without exceeding GitHub's 256-job matrix limit. It records
 pre-install, post-install and post-repeat package state, tested commit and image
 digest, package sources, binary checks and structured failure details. A final
@@ -296,11 +296,16 @@ published artifact digest, tested commit and run URL. It rechecks the external
 ZIP digest and aggregate/bundle contract, but does not replace the required
 parity review or service attestation.
 
-The 100 family-wide modules contribute 270 cells. Three distro-package
-candidates are deliberately limited to one exact cell each, producing the
-present total of 273. Target restrictions are filtered before matrix and
-contract generation, so totals are derived from manifest policy rather than
-blindly multiplying each family mapping by two images.
+The 103 modules contribute 370 cells across Ubuntu 24.04, Ubuntu 26.04,
+Debian 12, Rocky Linux 9.8 and AlmaLinux 9.8. Target restrictions are filtered
+before matrix and contract generation, so totals are derived from manifest
+policy rather than blindly multiplying family mappings.
+
+The manual [`Systemd VM evidence`](.github/workflows/systemd-vm-evidence.yml)
+workflow runs exactly one service-bearing plan row on one externally
+provisioned, disposable self-hosted VM. It requires an immutable VM image
+reference and external provision/create/destroy attestation, and remains
+provisional until that external attestation is independently verified.
 
 Container-based workflows disable persisted checkout credentials and export
 the tested commit with `git archive`, so containers receive neither `.git` nor

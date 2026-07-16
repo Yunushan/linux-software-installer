@@ -71,9 +71,10 @@ uploadable.
 Without `--enable-services`, the installer does not explicitly invoke
 `systemctl` to activate module services. Package-manager maintainer scripts are
 outside that boundary and can start a service during package installation.
-The 50-row disposable-VM contract and its current provisional-only trust
-boundary are documented in [`SYSTEMD_EVIDENCE.md`](SYSTEMD_EVIDENCE.md). The
-repository has no accepted systemd VM run and therefore makes no release-level
+The 50-row disposable-VM contract, manual self-hosted workflow and its current
+provisional-only trust boundary are documented in
+[`SYSTEMD_EVIDENCE.md`](SYSTEMD_EVIDENCE.md). The repository has no accepted
+systemd VM run and therefore makes no release-level
 service-state claim.
 
 Other releases recognized by `/etc/os-release` are best effort. That includes

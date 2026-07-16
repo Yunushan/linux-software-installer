@@ -112,11 +112,25 @@ destruction, an allowlisted immutable VM image digest, the tested commit and a
 durable signed artifact digest. Until then the promotion ledger remains
 `evidence_class=none` and `promotion_ready=no`.
 
-There is intentionally no generic GitHub Actions workflow for these runs.
-Adding one is safe only after the repository has explicit ephemeral
-self-hosted labels and an authenticated provision/destroy protocol; persistent
-or GitHub-hosted container runners must never be presented as systemd VM
+The checked-in [`Systemd VM evidence` workflow](../.github/workflows/systemd-vm-evidence.yml)
+is intentionally **not** a generic GitHub-hosted workflow. It can run only on
+the `self-hosted`, `linux`, `x64`, and `lsi-systemd-evidence` labels. The
+external provisioner must assign that last label only after it has created one
+fresh target VM, written the root-owned single-use marker, and recorded the
+immutable image reference. It must remove the runner registration and destroy
+the VM after that one workflow execution. Persistent runners and GitHub-hosted
+container runners must never carry this label or be presented as systemd VM
 evidence.
+
+Dispatch one workflow run for one exact `execution_id`. In addition to the VM
+image reference, it requires a reviewed provisioner ID plus an HTTPS reference
+and SHA-256 digest for the externally published provision/create/destroy
+attestation. The job validates the real observation, uploads the observation
+and records that external reference, but it remains provisional: the current
+repository deliberately has no verifier that can independently validate the
+provider attestation or prove VM destruction. Do not add it to
+`accepted-evidence.tsv` until that verifier and durable trust anchor are
+implemented.
 
 The deterministic and refusal paths are covered with mocks only:
 

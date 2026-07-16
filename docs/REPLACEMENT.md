@@ -104,8 +104,10 @@ as a 103-module matrix; each module job sequentially runs its applicable images
 in separate fresh containers, preserving all 370 independent module-image
 cells without exceeding the workflow matrix limit. It emits structured
 pre/install/repeat evidence and an aggregate coverage/checksum bundle, but it
-also has no accepted run yet. None of these workflows validates systemd
-behavior.
+also has no accepted run yet. A separate manual self-hosted `Systemd VM
+evidence` workflow can validate one exact systemd plan row on one externally
+provisioned disposable VM; it remains provisional until an independent
+provision/create/destroy attestation verifier is implemented.
 Bundle-internal hashes provide corruption checks, not an independent trust
 anchor. Durable promotion must additionally record an externally published
 GitHub artifact digest, signed release hash or attestation.

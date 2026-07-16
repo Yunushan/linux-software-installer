@@ -1,0 +1,135 @@
+name: Systemd VM evidence
+
+on:
+  workflow_dispatch:
+    inputs:
+      execution_id:
+        description: One exact systemd evidence-plan execution ID
+        required: true
+        type: string
+      vm_image_ref:
+        description: Immutable VM image reference recorded by the external provisioner
+        required: true
+        type: string
+      provisioner_id:
+        description: Reviewed external ephemeral-VM provisioner identity
+        required: true
+        type: string
+      provisioner_attestation_url:
+        description: HTTPS URL for the external provision/create/destroy attestation
+        required: true
+        type: string
+      provisioner_attestation_digest:
+        description: SHA-256 digest of that externally published attestation
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+concurrency:
+  group: systemd-vm-evidence-${{ inputs.execution_id }}
+  cancel-in-progress: false
+
+jobs:
+  capture:
+    name: VM / ${{ inputs.execution_id }}
+    # This label is registered only by the external provisioner on a newly
+    # created, single-use VM. GitHub-hosted and persistent runners must not
+    # carry it.
+    runs-on: [self-hosted, linux, x64, lsi-systemd-evidence]
+    timeout-minutes: 65
+    env:
+      EXECUTION_ID: ${{ inputs.execution_id }}
+      VM_IMAGE_REF: ${{ inputs.vm_image_ref }}
+      PROVISIONER_ID: ${{ inputs.provisioner_id }}
+      PROVISIONER_ATTESTATION_URL: ${{ inputs.provisioner_attestation_url }}
+      PROVISIONER_ATTESTATION_DIGEST: ${{ inputs.provisioner_attestation_digest }}
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+        with:
+          persist-credentials: false
+          fetch-depth: 1
+
+      - name: Verify provisioner handoff
+        run: |
+          set -Eeuo pipefail
+          [[ $EXECUTION_ID =~ ^[a-z0-9]+(-[a-z0-9]+)*$ ]]
+          [[ $VM_IMAGE_REF =~ ^[^[:space:]@]+@sha256:[0-9a-f]{64}$ ]]
+          [[ $PROVISIONER_ID =~ ^[a-z0-9]+(-[a-z0-9]+)*$ ]]
+          [[ $PROVISIONER_ATTESTATION_URL =~ ^https://[^[:space:]]+$ ]]
+          [[ $PROVISIONER_ATTESTATION_DIGEST =~ ^sha256:[0-9a-f]{64}$ ]]
+          sudo --non-interactive test -f /etc/linux-software-installer/systemd-evidence-vm.tsv
+          sudo --non-interactive test ! -L /etc/linux-software-installer/systemd-evidence-vm.tsv
+          [[ $(sudo --non-interactive stat -c '%u:%a:%h' \
+            /etc/linux-software-installer/systemd-evidence-vm.tsv) == 0:600:1 ]]
+          git diff --quiet --
+          git diff --cached --quiet --
+          [[ -z $(git status --porcelain --untracked-files=all) ]]
+
+      - name: Capture one disposable-VM observation
+        id: capture
+        run: |
+          set -Eeuo pipefail
+          evidence_root="$RUNNER_TEMP/systemd-vm-evidence"
+          evidence_dir="$evidence_root/$EXECUTION_ID"
+          mkdir -p "$evidence_root"
+          sudo --non-interactive bash tests/run-systemd-evidence.sh \
+            --root "$GITHUB_WORKSPACE" \
+            --execution-id "$EXECUTION_ID" \
+            --output "$evidence_dir" \
+            --tested-commit "$GITHUB_SHA" \
+            --vm-image-ref "$VM_IMAGE_REF"
+          sudo --non-interactive chown -R "$(id -u):$(id -g)" "$evidence_root"
+          printf 'evidence_dir=%s\n' "$evidence_dir" >> "$GITHUB_OUTPUT"
+
+      - name: Validate captured VM observation
+        run: |
+          set -Eeuo pipefail
+          bash tests/validate-systemd-evidence.sh "$GITHUB_WORKSPACE" \
+            --evidence "${{ steps.capture.outputs.evidence_dir }}" \
+            --tested-commit "$GITHUB_SHA" \
+            --vm-image-ref "$VM_IMAGE_REF" \
+            --require-real
+
+      - name: Record external attestation reference
+        run: |
+          set -Eeuo pipefail
+          reference="$RUNNER_TEMP/systemd-vm-evidence/provisioner-attestation.tsv"
+          printf 'field\tvalue\n' > "$reference"
+          printf 'provisioner_id\t%s\n' "$PROVISIONER_ID" >> "$reference"
+          printf 'provisioner_attestation_url\t%s\n' "$PROVISIONER_ATTESTATION_URL" >> "$reference"
+          printf 'provisioner_attestation_digest\t%s\n' "$PROVISIONER_ATTESTATION_DIGEST" >> "$reference"
+          printf 'tested_commit\t%s\n' "$GITHUB_SHA" >> "$reference"
+          printf 'execution_id\t%s\n' "$EXECUTION_ID" >> "$reference"
+          printf 'vm_image_ref\t%s\n' "$VM_IMAGE_REF" >> "$reference"
+          sha256sum "${{ steps.capture.outputs.evidence_dir }}/files.sha256" \
+            > "$RUNNER_TEMP/systemd-vm-evidence/evidence-files.sha256"
+
+      - name: Upload validated VM observation
+        id: upload
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: systemd-vm-evidence-${{ inputs.execution_id }}-${{ github.run_id }}
+          path: ${{ runner.temp }}/systemd-vm-evidence
+          if-no-files-found: error
+          retention-days: 90
+
+      - name: Summarize provisional evidence
+        env:
+          ARTIFACT_DIGEST: ${{ steps.upload.outputs.artifact-digest }}
+          ARTIFACT_URL: ${{ steps.upload.outputs.artifact-url }}
+        run: |
+          set -Eeuo pipefail
+          [[ $ARTIFACT_DIGEST =~ ^(sha256:)?[0-9a-fA-F]{64}$ ]]
+          [[ $ARTIFACT_URL =~ ^https://github\.com/ ]]
+          {
+            printf '### Provisional systemd VM evidence\n\n'
+            printf -- '- Execution: `%s`\n' "$EXECUTION_ID"
+            printf -- '- VM image: `%s`\n' "$VM_IMAGE_REF"
+            printf -- '- External provisioner: `%s`\n' "$PROVISIONER_ID"
+            printf -- '- Artifact digest: `%s`\n' "$ARTIFACT_DIGEST"
+            printf -- '- Artifact URL: %s\n' "$ARTIFACT_URL"
+            printf '\nThis is not accepted promotion evidence until the external provisioning and destruction attestation is independently verified.\n'
+          } >> "$GITHUB_STEP_SUMMARY"
