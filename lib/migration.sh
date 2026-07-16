@@ -592,8 +592,8 @@ lsi_migration_retirement_status() {
   printf '\n%s\n' 'Retirement decision           : NOT READY'
   printf '%s\n' \
     'The old repositories remain necessary for any requested capability that is' \
-    'still provisional or third-party blocked. Candidate module mappings do not' \
-    'become replacements until accepted evidence is recorded for their exact' \
+    'still provisional or third-party blocked. Candidate module mappings do not become replacements' \
+    'until accepted evidence is recorded for their exact' \
     'target cells. Third-party routes require a reviewed provider or documented' \
     'terminal handoff before they can leave the backlog.'
   printf '\n%s\n' \
