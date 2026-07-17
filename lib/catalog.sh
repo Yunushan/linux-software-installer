@@ -187,8 +187,9 @@ lsi_validate_module_target_package_overrides() {
       lsi_die "Target package override has no packages in $MODULE_ID: $cell" 3
     seen_packages=()
     for package in "${packages[@]}"; do
-      [[ -n $package ]] && lsi_package_token_is_safe "$package" ||
+      if [[ -z $package ]] || ! lsi_package_token_is_safe "$package"; then
         lsi_die "Unsafe target package override token in $MODULE_ID: $package" 3
+      fi
       [[ -z ${seen_packages[$package]+x} ]] ||
         lsi_die "Duplicate target package override token in $MODULE_ID: $package" 3
       seen_packages["$package"]=1
@@ -231,6 +232,11 @@ lsi_module_packages_for_target() {
     rhel) printf '%s\n' "${MODULE_RHEL_PACKAGES[@]}" ;;
     *) return 1 ;;
   esac
+}
+
+lsi_module_packages() {
+  lsi_module_packages_for_target \
+    "$LSI_OS_FAMILY" "$LSI_OS_ID" "$LSI_OS_VERSION_ID" "$LSI_ARCH"
 }
 
 lsi_current_target_label() {
