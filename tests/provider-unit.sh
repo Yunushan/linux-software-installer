@@ -859,6 +859,7 @@ run_test 'normal APT repositories require components' test_invalid_manifest_file
 run_test 'duplicate target cell is rejected' test_invalid_manifest_file cells-duplicate.tsv cells.tsv
 run_test 'duplicate exact target tuple is rejected' test_invalid_manifest_file cells-duplicate-target.tsv cells.tsv
 run_test 'DNF package-only signature policy is rejected' test_invalid_manifest_file cells-rpm-package-only.tsv cells.tsv
+run_test 'unsupported DNF metalink-hash policy is rejected' test_invalid_manifest_file cells-rpm-metalink-hash.tsv cells.tsv
 run_test 'latest package version is rejected' test_invalid_manifest_file locks-latest.tsv locks.tsv
 run_test 'short package digest is rejected' test_invalid_manifest_file locks-short-sha.tsv locks.tsv
 run_test 'shell-shaped package-lock cell is rejected before lookup' test_invalid_manifest_file locks-invalid-cell.tsv locks.tsv
