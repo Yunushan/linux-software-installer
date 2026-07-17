@@ -234,6 +234,11 @@ lsi_module_packages_for_target() {
   esac
 }
 
+lsi_module_packages() {
+  lsi_module_packages_for_target \
+    "$LSI_OS_FAMILY" "$LSI_OS_ID" "$LSI_OS_VERSION_ID" "$LSI_ARCH"
+}
+
 lsi_current_target_label() {
   printf '%s:%s:%s' "$LSI_OS_ID" "${LSI_OS_VERSION_ID:-unknown}" "$LSI_ARCH"
 }

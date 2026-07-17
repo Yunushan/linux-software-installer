@@ -89,6 +89,13 @@ test_manifest_schema_and_matching() (
     fail 'exact target package override was not selected'
   [[ $(lsi_module_packages_for_target debian debian 12 x86_64) == git ]] ||
     fail 'base package mapping was not retained outside its target override'
+
+  LSI_OS_FAMILY=debian
+  LSI_OS_ID=ubuntu
+  LSI_OS_VERSION_ID=24.04
+  LSI_ARCH=x86_64
+  [[ $(lsi_module_packages) == git-minimal ]] ||
+    fail 'current-target package resolver did not select the exact override'
 )
 
 test_schema_rejections() {

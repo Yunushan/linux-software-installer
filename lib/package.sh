@@ -50,11 +50,6 @@ lsi_install_packages() {
   esac
 }
 
-lsi_module_packages() {
-  lsi_module_packages_for_target \
-    "$LSI_OS_FAMILY" "$LSI_OS_ID" "$LSI_OS_VERSION_ID" "$LSI_ARCH"
-}
-
 lsi_module_services() {
   case "$LSI_OS_FAMILY" in
     debian) ((${#MODULE_DEBIAN_SERVICES[@]} == 0)) || printf '%s\n' "${MODULE_DEBIAN_SERVICES[@]}" ;;
