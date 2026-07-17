@@ -187,8 +187,9 @@ lsi_validate_module_target_package_overrides() {
       lsi_die "Target package override has no packages in $MODULE_ID: $cell" 3
     seen_packages=()
     for package in "${packages[@]}"; do
-      [[ -n $package ]] && lsi_package_token_is_safe "$package" ||
+      if [[ -z $package ]] || ! lsi_package_token_is_safe "$package"; then
         lsi_die "Unsafe target package override token in $MODULE_ID: $package" 3
+      fi
       [[ -z ${seen_packages[$package]+x} ]] ||
         lsi_die "Duplicate target package override token in $MODULE_ID: $package" 3
       seen_packages["$package"]=1
