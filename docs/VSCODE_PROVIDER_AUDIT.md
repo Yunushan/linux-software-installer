@@ -4,8 +4,9 @@ This record captures a 2026-07-16 investigation of a possible Microsoft
 Visual Studio Code provider for the two unresolved `visual-studio-code`
 backlog rows. It is a planning record, not a provider-admission decision,
 module-support claim, replacement-evidence artifact or instruction to change a
-system repository. No provider is registered and this project has no provider
-apply operation.
+system repository. No provider is registered. This project has a narrowly
+scoped, digest-authorized `provider-apply` operation, but an empty live
+registry prevents this candidate from reaching it.
 
 ## Legacy scope and proposed route
 
@@ -58,9 +59,12 @@ registry row without a reviewed acquisition and rotation policy.
 The proposed route remains planning-only because all of these independent
 requirements are unsatisfied:
 
-1. **No mutation boundary exists.** The installer can validate and render a
-   read-only provider plan, but cannot safely install a scoped keyring, write a
-   repository file, update metadata, install an exact package or clean up.
+1. **No admitted route exists.** The installer can digest-authorize an
+   admitted provider to materialize its reviewed keyring and repository file,
+   and can safely deactivate those exact files. This candidate has no admitted
+   provider tree or exact-cell policy. Those primitives also intentionally do
+   not update metadata or install packages, so they are not installation
+   evidence.
 2. **Key provenance and lifecycle are unproved.** A checked-in key must be
    independently bound to a publisher identity, primary fingerprint, expiry,
    revocation and reviewed rotation process. A URL and a self-recorded hash are

@@ -4,7 +4,9 @@ This record captures a 2026-07-15 audit of a possible
 `kubernetes-v1-36` provider for the three unresolved `kubectl` backlog rows.
 It is a fixture-candidate planning record, not an installed fixture, live provider, repository-admission
 decision, module-support claim or replacement-evidence artifact. No provider
-directory is registered and the installer has no provider apply operation.
+directory is registered. The installer does have a tightly scoped,
+digest-authorized `provider-apply` operation, but the empty live registry means
+this candidate cannot reach it.
 
 The proposed catalog identity is deliberately version- and channel-specific:
 
@@ -113,10 +115,11 @@ cluster; the provider must not silently follow a newer minor channel.
 
 The route remains planning-only for all of the following independent reasons:
 
-1. **No live apply boundary exists.** The provider catalog validates and
-   renders read-only plans only. There is no reviewed code for scoped keyring
-   installation, repository writes, immutable plan-digest authorization,
-   cleanup or drift-safe rollback.
+1. **No admitted provider route exists.** The installer has reviewed,
+   digest-authorized apply and deactivate primitives for an admitted provider,
+   including scoped keyring and repository-file handling plus drift-safe
+   removal. This candidate has no registered provider tree, reviewed fixture or
+   exact-cell policy that could safely use those primitives.
 2. **The EL probes were TLS-disabled.** Local certificate interception made the
    exploratory Rocky Linux 9.8 and AlmaLinux 9.8 probes possible only with TLS
    verification disabled. Those results cannot authenticate transport and are

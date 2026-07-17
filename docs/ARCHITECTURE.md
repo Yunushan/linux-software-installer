@@ -5,7 +5,8 @@
 ```text
 install.sh
   -> clean read-only migration dispatch (`migrations`, `migrate`)
-  -> read-only provider dispatch (`providers`, `provider-info`, `provider-plan`)
+  -> provider catalog dispatch (`providers`, `provider-info`, `provider-plan`,
+     `provider-config`, `provider-apply`, `provider-deactivate`)
   -> bin/linux-software-installer
      -> CLI parsing
      -> /etc/os-release detection
@@ -32,16 +33,20 @@ quarantined snapshots to remain read-only under `legacy/`; parser independence
 does not authorize their removal. The command contract is documented in
 [`MIGRATION.md`](MIGRATION.md).
 
-The provider dispatch is currently read-only. `providers/registry.tsv` is its
-sole admission source and binds each provider ID and catalog revision to an
-exact provider-tree SHA-256. `lib/provider_catalog.sh` parses the fixed-column
-TSV, verifies the tree before and after parsing, and rejects unregistered,
-missing or drifted trees. `provider-plan` validates exact target cells,
-revision-bound provider authorization, provider-specific policy
-acknowledgements, dependency closure and package locks. It renders from the
-validated in-memory snapshot and prints a plan digest without downloading or
-writing anything. No provider is live and there is no repository mutation
-path. The admission and future mutation boundary is documented in
+`providers/registry.tsv` is the provider catalog's sole admission source and
+binds each provider ID and catalog revision to an exact provider-tree SHA-256.
+`lib/provider_catalog.sh` parses the fixed-column TSV, verifies the tree
+before and after parsing, and rejects unregistered, missing or drifted trees.
+`provider-plan` validates exact target cells, revision-bound provider
+authorization, provider-specific policy acknowledgements, dependency closure
+and package locks. It renders from the validated in-memory snapshot and prints
+a plan digest without downloading or writing anything. `provider-config` is
+also read-only. For an admitted provider only, `provider-apply` requires that
+reviewed digest and atomically materializes just the checked-in keyring and
+repository file; `provider-deactivate` removes only those verified files.
+Neither command refreshes metadata or installs packages. No provider is live,
+so the production registry cannot currently reach either mutation command. The
+admission and mutation boundaries are documented in
 [`PROVIDERS.md`](PROVIDERS.md).
 
 ## Trust boundaries
