@@ -51,10 +51,8 @@ lsi_install_packages() {
 }
 
 lsi_module_packages() {
-  case "$LSI_OS_FAMILY" in
-    debian) ((${#MODULE_DEBIAN_PACKAGES[@]} == 0)) || printf '%s\n' "${MODULE_DEBIAN_PACKAGES[@]}" ;;
-    rhel) ((${#MODULE_RHEL_PACKAGES[@]} == 0)) || printf '%s\n' "${MODULE_RHEL_PACKAGES[@]}" ;;
-  esac
+  lsi_module_packages_for_target \
+    "$LSI_OS_FAMILY" "$LSI_OS_ID" "$LSI_OS_VERSION_ID" "$LSI_ARCH"
 }
 
 lsi_module_services() {

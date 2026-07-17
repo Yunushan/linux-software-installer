@@ -37,16 +37,16 @@ fi
 declare -a packages=() binaries=() services=()
 case "$FAMILY" in
   debian)
-    packages=("${MODULE_DEBIAN_PACKAGES[@]}")
     binaries=("${MODULE_DEBIAN_VERIFY_BINARIES[@]}")
     services=("${MODULE_DEBIAN_SERVICES[@]}")
     ;;
   rhel)
-    packages=("${MODULE_RHEL_PACKAGES[@]}")
     binaries=("${MODULE_RHEL_VERIFY_BINARIES[@]}")
     services=("${MODULE_RHEL_SERVICES[@]}")
     ;;
 esac
+mapfile -t packages < <(lsi_module_packages_for_target \
+  "$FAMILY" "$TARGET_OS_ID" "$TARGET_VERSION_ID" "$TARGET_ARCH")
 ((${#binaries[@]} > 0)) || binaries=("${MODULE_VERIFY_BINARIES[@]}")
 
 printf 'type\tvalue\n'

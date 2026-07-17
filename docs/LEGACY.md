@@ -78,3 +78,8 @@ remaining third-party gap are machine-checked in
 executing any quarantined source. Until every ledger row has a terminal,
 evidence-backed disposition, this project replaces the active execution path
 but does not claim complete legacy feature parity.
+
+The two preserved trees have also been independently compared, blob by blob,
+with their exact upstream commit trees; see
+[`ORIGIN_VERIFICATION.md`](ORIGIN_VERIFICATION.md). This proves the migration
+denominator is intact, not that the retirement gate has been met.

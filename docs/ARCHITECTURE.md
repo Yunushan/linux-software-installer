@@ -67,6 +67,15 @@ rejects malformed, duplicate, unknown or cross-family cells; plan, install,
 repository smoke and standalone evidence paths all use the same exact matcher.
 An absent array preserves the existing family-wide best-effort behavior.
 
+When an otherwise-supported target distributes a different package name or a
+virtual replacement, a manifest may use `MODULE_TARGET_PACKAGE_OVERRIDES` with
+entries in the form `ID:VERSION_ID:architecture=package[,package...]`. Each
+entry must name a valid exact target in one of the module's declared families and
+uses the same safe package-token rules as the normal package arrays. The exact
+target resolver supplies that list consistently to plan, install, repository
+smoke and evidence collection; all other supported targets retain their
+family-level package mapping.
+
 Install runs fail closed when `flock` is unavailable. Logging remains disabled
 until a new direct regular file has been created without clobbering inside the
 installer-owned `0750` log directory; the file must be single-link,

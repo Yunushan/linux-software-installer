@@ -24,10 +24,8 @@ lsi_discover_modules
 for module in "${LSI_MODULE_IDS[@]}"; do
   lsi_load_module "$module"
   lsi_module_supports_current_target || continue
-  case "$LSI_OS_FAMILY" in
-    debian) module_packages=("${MODULE_DEBIAN_PACKAGES[@]}") ;;
-    rhel) module_packages=("${MODULE_RHEL_PACKAGES[@]}") ;;
-  esac
+  mapfile -t module_packages < <(lsi_module_packages_for_target \
+    "$LSI_OS_FAMILY" "$LSI_OS_ID" "$LSI_OS_VERSION_ID" "$LSI_ARCH")
   for package in "${module_packages[@]}"; do
     [[ -z ${seen_packages[$package]+x} ]] || continue
     seen_packages[$package]=1
@@ -64,7 +62,8 @@ for module in "${LSI_MODULE_IDS[@]}"; do
   lsi_module_supports_current_target || continue
   case "$LSI_OS_FAMILY" in
     debian)
-      module_packages=("${MODULE_DEBIAN_PACKAGES[@]}")
+      mapfile -t module_packages < <(lsi_module_packages_for_target \
+        "$LSI_OS_FAMILY" "$LSI_OS_ID" "$LSI_OS_VERSION_ID" "$LSI_ARCH")
       if ! apt-get install --simulate --no-install-recommends \
         "${module_packages[@]}" > /dev/null 2>&1; then
         printf 'Dependency solving failed for %s: %s\n' \
@@ -73,7 +72,8 @@ for module in "${LSI_MODULE_IDS[@]}"; do
       fi
       ;;
     rhel)
-      module_packages=("${MODULE_RHEL_PACKAGES[@]}")
+      mapfile -t module_packages < <(lsi_module_packages_for_target \
+        "$LSI_OS_FAMILY" "$LSI_OS_ID" "$LSI_OS_VERSION_ID" "$LSI_ARCH")
       solver_output=''
       if solver_output=$(dnf -q --setopt=retries=3 \
         --setopt=install_weak_deps=False --assumeno install \

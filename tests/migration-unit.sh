@@ -117,6 +117,17 @@ test_retirement_status_reports_exact_blockers() (
     grep -q 'Candidate module mappings do not become replacements' <<< "$output"
 )
 
+test_retirement_status_allows_only_zero_remaining_rows() (
+  local output
+  lsi_migration_load || return 1
+  LSI_MIGRATION_PLANNED=0
+  LSI_MIGRATION_BLOCKED=0
+  output=$(lsi_migration_retirement_status) || return 1
+  grep -q '^Retirement decision           : READY TO RETIRE$' <<< "$output" &&
+    grep -q 'Every tracked legacy entry is a validated terminal replacement or documented handoff' <<< "$output" &&
+    ! grep -q 'Candidate module mappings do not become replacements' <<< "$output"
+)
+
 test_unknown_and_unsafe_ids_fail() (
   ! lsi_migration_show does-not-exist > /dev/null 2>&1 &&
     ! lsi_migration_show ../../legacy > /dev/null 2>&1 &&
@@ -359,6 +370,7 @@ run_test 'terminal lookup is a documented handoff' test_terminal_lookup_is_hando
 run_test 'blocked lookup cannot become an install command' test_blocked_lookup_is_not_installable
 run_test 'complete list reports counts without support claims' test_list_is_complete_and_nonclaiming
 run_test 'retirement status reports exact remaining blockers' test_retirement_status_reports_exact_blockers
+run_test 'retirement status permits only a fully resolved ledger' test_retirement_status_allows_only_zero_remaining_rows
 run_test 'unknown and unsafe legacy IDs are rejected' test_unknown_and_unsafe_ids_fail
 run_test 'unexpected inventory header fails closed' test_bad_header_fails_closed
 run_test 'duplicate legacy IDs fail closed' test_duplicate_id_fails_closed

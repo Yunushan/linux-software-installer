@@ -624,6 +624,15 @@ lsi_migration_retirement_status() {
   printf 'Unresolved third-party routes : %d\n' "$LSI_MIGRATION_BLOCKED"
   printf 'Accepted evidence admissions  : %d\n' "$LSI_MIGRATION_ACCEPTED_EVIDENCE_COUNT"
   printf 'Registered live providers     : %d\n' "$LSI_MIGRATION_REGISTERED_PROVIDER_COUNT"
+
+  if ((LSI_MIGRATION_PLANNED == 0 && LSI_MIGRATION_BLOCKED == 0)); then
+    printf '\n%s\n' 'Retirement decision           : READY TO RETIRE'
+    printf '%s\n' \
+      'Every tracked legacy entry is a validated terminal replacement or documented handoff.' \
+      'Archive or delete the old repositories only after preserving this reviewed retirement record.'
+    return 0
+  fi
+
   printf '\n%s\n' 'Retirement decision           : NOT READY'
   printf '%s\n' \
     'The old repositories remain necessary for any requested capability that is' \

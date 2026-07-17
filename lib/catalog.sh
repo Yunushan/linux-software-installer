@@ -20,6 +20,7 @@ lsi_module_reset() {
   declare -ga MODULE_FAMILIES=()
   declare -ga MODULE_DEBIAN_PACKAGES=()
   declare -ga MODULE_RHEL_PACKAGES=()
+  declare -ga MODULE_TARGET_PACKAGE_OVERRIDES=()
   declare -ga MODULE_DEBIAN_SERVICES=()
   declare -ga MODULE_RHEL_SERVICES=()
   declare -ga MODULE_VERIFY_BINARIES=()
@@ -60,6 +61,7 @@ lsi_load_module() {
   [[ $MODULE_ID == "$requested_id" ]] || lsi_die "Module ID mismatch in $path." 3
   [[ -n $MODULE_NAME && ${#MODULE_FAMILIES[@]} -gt 0 ]] || lsi_die "Incomplete module metadata: $requested_id" 3
   lsi_validate_module_target_cells
+  lsi_validate_module_target_package_overrides
 }
 
 lsi_discover_modules() {
@@ -142,6 +144,58 @@ lsi_module_has_target_restrictions() {
   ((${#MODULE_TARGET_CELLS[@]} > 0))
 }
 
+lsi_package_token_is_safe() {
+  [[ $1 =~ ^[a-zA-Z0-9][a-zA-Z0-9+._:@/-]*$ ]]
+}
+
+lsi_parse_target_package_override() {
+  local override=$1
+  local -n cell_ref=$2 packages_ref=$3
+  local extra=''
+  IFS='=' read -r cell_ref packages_ref extra <<< "$override"
+  [[ -n $cell_ref && -n $packages_ref && -z $extra && $override == *=* ]]
+}
+
+lsi_validate_module_target_package_overrides() {
+  local override cell package_csv id version arch family package
+  local -a packages=()
+  local -A seen_cells=() seen_packages=()
+
+  for override in "${MODULE_TARGET_PACKAGE_OVERRIDES[@]}"; do
+    cell=''
+    package_csv=''
+    lsi_parse_target_package_override "$override" cell package_csv ||
+      lsi_die "Malformed target package override in $MODULE_ID: $override" 3
+    lsi_parse_target_cell "$cell" id version arch ||
+      lsi_die "Malformed target package override cell in $MODULE_ID: $cell" 3
+    [[ -z ${seen_cells[$cell]+x} ]] ||
+      lsi_die "Duplicate target package override in $MODULE_ID: $cell" 3
+    seen_cells["$cell"]=1
+    family=$(lsi_target_id_family "$id") ||
+      lsi_die "Unknown target OS ID in package override for $MODULE_ID: $id" 3
+    lsi_known_target_architecture "$arch" ||
+      lsi_die "Unknown target architecture in package override for $MODULE_ID: $arch" 3
+    lsi_module_supports_family "$family" ||
+      lsi_die "Target package override $cell is outside the declared families for $MODULE_ID." 3
+    if lsi_module_has_target_restrictions; then
+      lsi_module_supports_target "$family" "$id" "$version" "$arch" ||
+        lsi_die "Target package override $cell is outside the declared target cells for $MODULE_ID." 3
+    fi
+
+    IFS=, read -r -a packages <<< "$package_csv"
+    ((${#packages[@]} > 0)) ||
+      lsi_die "Target package override has no packages in $MODULE_ID: $cell" 3
+    seen_packages=()
+    for package in "${packages[@]}"; do
+      [[ -n $package ]] && lsi_package_token_is_safe "$package" ||
+        lsi_die "Unsafe target package override token in $MODULE_ID: $package" 3
+      [[ -z ${seen_packages[$package]+x} ]] ||
+        lsi_die "Duplicate target package override token in $MODULE_ID: $package" 3
+      seen_packages["$package"]=1
+    done
+  done
+}
+
 lsi_module_supports_target() {
   local family=$1 id=$2 version=$3 arch=$4 cell
   lsi_module_supports_family "$family" || return 1
@@ -155,6 +209,28 @@ lsi_module_supports_target() {
 lsi_module_supports_current_target() {
   lsi_module_supports_target \
     "$LSI_OS_FAMILY" "$LSI_OS_ID" "$LSI_OS_VERSION_ID" "$LSI_ARCH"
+}
+
+lsi_module_packages_for_target() {
+  local family=$1 id=$2 version=$3 arch=$4 override cell package_csv
+  local -a packages=()
+
+  lsi_module_supports_target "$family" "$id" "$version" "$arch" || return 1
+  for override in "${MODULE_TARGET_PACKAGE_OVERRIDES[@]}"; do
+    cell=''
+    package_csv=''
+    lsi_parse_target_package_override "$override" cell package_csv || return 1
+    [[ $cell == "$id:$version:$arch" ]] || continue
+    IFS=, read -r -a packages <<< "$package_csv"
+    printf '%s\n' "${packages[@]}"
+    return 0
+  done
+
+  case "$family" in
+    debian) printf '%s\n' "${MODULE_DEBIAN_PACKAGES[@]}" ;;
+    rhel) printf '%s\n' "${MODULE_RHEL_PACKAGES[@]}" ;;
+    *) return 1 ;;
+  esac
 }
 
 lsi_current_target_label() {

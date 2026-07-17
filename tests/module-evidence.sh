@@ -113,16 +113,15 @@ lsi_module_supports_current_target ||
 declare -a packages=() binaries=() services=()
 case "$LSI_OS_FAMILY" in
   debian)
-    packages=("${MODULE_DEBIAN_PACKAGES[@]}")
     binaries=("${MODULE_DEBIAN_VERIFY_BINARIES[@]}")
     services=("${MODULE_DEBIAN_SERVICES[@]}")
     ;;
   rhel)
-    packages=("${MODULE_RHEL_PACKAGES[@]}")
     binaries=("${MODULE_RHEL_VERIFY_BINARIES[@]}")
     services=("${MODULE_RHEL_SERVICES[@]}")
     ;;
 esac
+mapfile -t packages < <(lsi_module_packages)
 ((${#binaries[@]} > 0)) || binaries=("${MODULE_VERIFY_BINARIES[@]}")
 
 metadata os_id "$LSI_OS_ID"
