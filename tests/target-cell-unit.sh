@@ -83,6 +83,12 @@ test_manifest_schema_and_matching() (
     fail 'an existing-style family-wide manifest lost best-effort family support'
   ((${#MODULE_TARGET_CELLS[@]} == 0)) ||
     fail 'target restrictions leaked from the previously loaded manifest'
+
+  lsi_load_module overridden
+  [[ $(lsi_module_packages_for_target debian ubuntu 24.04 x86_64) == git-minimal ]] ||
+    fail 'exact target package override was not selected'
+  [[ $(lsi_module_packages_for_target debian debian 12 x86_64) == git ]] ||
+    fail 'base package mapping was not retained outside its target override'
 )
 
 test_schema_rejections() {
@@ -91,6 +97,10 @@ test_schema_rejections() {
   expect_invalid_module unknown 'Unknown target OS ID'
   expect_invalid_module unknown-arch 'Unknown target architecture'
   expect_invalid_module wrong-family 'outside the declared families'
+  expect_invalid_module override-malformed 'Malformed target package override'
+  expect_invalid_module override-unsafe 'Unsafe target package override token'
+  expect_invalid_module override-duplicate 'Duplicate target package override'
+  expect_invalid_module override-outside-target 'outside the declared target cells'
 }
 
 test_runtime_plan_and_install_gates() {
@@ -121,6 +131,18 @@ test_runtime_plan_and_install_gates() {
   run_fixture_cli "$ROOT_DIR/tests/fixtures/debian.env" \
     plan --no-refresh family-wide > /dev/null ||
     fail 'family-wide compatibility was not preserved'
+
+  supported=$(run_fixture_cli "$ROOT_DIR/tests/fixtures/ubuntu.env" \
+    plan --no-refresh overridden 2>&1) ||
+    fail 'target package override did not plan on its exact target'
+  grep -q 'apt-get install.*git-minimal' <<< "$supported" ||
+    fail 'target package override was omitted from the install plan'
+
+  supported=$(run_fixture_cli "$ROOT_DIR/tests/fixtures/debian.env" \
+    plan --no-refresh overridden 2>&1) ||
+    fail 'base package plan failed outside the target override'
+  grep -q 'apt-get install.*git' <<< "$supported" ||
+    fail 'base package mapping was not retained in the install plan'
 }
 
 test_catalog_disclosure() (
@@ -168,8 +190,8 @@ test_evidence_filtering() {
     "$fixture_repo" cells all) || fail 'fixture evidence cells failed'
   [[ $(head -n 1 <<< "$cells") == $'cell_id\ttarget_id\tfamily\tmodule\timage\tplatform\texpected_os_id\texpected_version_id\texpected_arch' ]] ||
     fail 'evidence cells do not expose the exact version-ID contract'
-  [[ $(tail -n +2 <<< "$cells" | wc -l) -eq 6 ]] ||
-    fail 'evidence cells did not equal five family-wide plus one restricted cell'
+  [[ $(tail -n +2 <<< "$cells" | wc -l) -eq 9 ]] ||
+    fail 'evidence cells did not equal five family-wide, three overridden and one restricted cell'
   grep -q $'^ubuntu-24-04/restricted\t' <<< "$cells" ||
     fail 'declared Ubuntu evidence cell was omitted'
   ! grep -q $'^debian-12/restricted\t' <<< "$cells" ||
@@ -178,6 +200,12 @@ test_evidence_filtering() {
     fail 'unsupported Ubuntu 26.04 evidence cell was generated'
   ! grep -q $'/unlisted\t' <<< "$cells" ||
     fail 'unconfigured exact target generated an evidence cell'
+  grep -q $'^ubuntu-24-04/overridden\t' <<< "$cells" ||
+    fail 'target-overridden module was omitted from its exact Ubuntu cell'
+  grep -q $'^ubuntu-26-04/overridden\t' <<< "$cells" ||
+    fail 'target-overridden module was omitted from the Ubuntu 26.04 cell'
+  grep -q $'^debian-12/overridden\t' <<< "$cells" ||
+    fail 'target-overridden module was omitted from the Debian 12 cell'
   grep -q $'^rocky-9-8/family-wide\trocky-9-8\trhel\tfamily-wide\t.*\tlinux/amd64\trocky\t9\.8\tx86_64$' \
     <<< "$cells" || fail 'Rocky 9.8 exact evidence target was omitted or broadened'
   grep -q $'^alma-9-8/family-wide\talma-9-8\trhel\tfamily-wide\t.*\tlinux/amd64\talmalinux\t9\.8\tx86_64$' \

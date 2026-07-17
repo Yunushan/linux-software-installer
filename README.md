@@ -341,6 +341,11 @@ read-only lookup documented in [`docs/MIGRATION.md`](docs/MIGRATION.md) to find
 the candidate, unresolved route or terminal handoff for any legacy entry
 without executing the old repositories.
 
+`./install.sh retirement-status` reports `READY TO RETIRE` only after every
+legacy row is a validated terminal replacement or a documented terminal
+handoff. Until then it reports `NOT READY`; do not archive or delete either
+legacy repository.
+
 ## Contributing
 
 Contributions are welcome. Read [`CONTRIBUTING.md`](CONTRIBUTING.md) and run
