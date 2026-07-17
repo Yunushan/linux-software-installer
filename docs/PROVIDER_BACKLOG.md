@@ -16,15 +16,16 @@ evidence and do not make a live provider admissible.
 The dated [`KUBECTL_PROVIDER_AUDIT.md`](KUBECTL_PROVIDER_AUDIT.md) investigation
 records a planning-only `kubernetes-v1-36` preview candidate for four exact
 modern cells. Its exact repository coordinates and package locks are planning
-inputs only: no live apply path exists, and key provenance/expiry, APT replay,
+inputs only: the digest-bound apply/deactivate primitives exist, but no
+provider is admitted for this candidate; key provenance/expiry, APT replay,
 TLS-clean EL probes and accepted evidence remain explicit blockers.
 
 The dated [`VSCODE_PROVIDER_AUDIT.md`](VSCODE_PROVIDER_AUDIT.md) investigation
 records a planning-only Microsoft repository route for the two Visual Studio
 Code rows. The vendor's published APT and RPM coordinates are useful planning
-inputs only: provider mutation code, key provenance and lifecycle controls,
-exact-cell locks, authenticated metadata/origin checks and accepted evidence
-remain explicit blockers.
+inputs only: no provider is admitted for this route, and key provenance and
+lifecycle controls, exact-cell locks, authenticated metadata/origin checks and
+accepted evidence remain explicit blockers.
 
 Run `bash tests/validate-provider-backlog.sh` after changing either ledger. The
 validator requires an exact one-to-one join by `legacy_id`, rejects duplicate or
