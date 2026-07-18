@@ -58,8 +58,8 @@ use_case() {
 test_canonical_catalog_loads() (
   lsi_migration_load || return 1
   [[ $LSI_MIGRATION_TOTAL -eq 355 &&
-    $LSI_MIGRATION_TERMINAL -eq 181 &&
-    $LSI_MIGRATION_PLANNED -eq 48 &&
+    $LSI_MIGRATION_TERMINAL -eq 186 &&
+    $LSI_MIGRATION_PLANNED -eq 43 &&
     $LSI_MIGRATION_BLOCKED -eq 126 ]]
 )
 
@@ -99,7 +99,7 @@ test_list_is_complete_and_nonclaiming() (
   output=$(lsi_migration_list) || return 1
   count=$(grep -Ec '^(ubuntu|rhel)-[a-z0-9-]+[[:space:]]+' <<< "$output")
   [[ $count -eq 355 ]] &&
-    grep -q '355 entries: 181 terminal, 48 provisional, 126 unresolved third-party' <<< "$output" &&
+    grep -q '355 entries: 186 terminal, 43 provisional, 126 unresolved third-party' <<< "$output" &&
     grep -q 'not support claims' <<< "$output" &&
     grep -q 'Read-only migration guidance' <<< "$output"
 )
@@ -108,10 +108,10 @@ test_retirement_status_reports_exact_blockers() (
   local output
   output=$(lsi_migration_retirement_status) || return 1
   grep -q '^Tracked legacy entries        : 355$' <<< "$output" &&
-    grep -q '^Terminal dispositions         : 181$' <<< "$output" &&
-    grep -q '^Provisional module candidates : 48$' <<< "$output" &&
+    grep -q '^Terminal dispositions         : 186$' <<< "$output" &&
+    grep -q '^Provisional module candidates : 43$' <<< "$output" &&
     grep -q '^Unresolved third-party routes : 126$' <<< "$output" &&
-    grep -q '^Accepted evidence admissions  : 69$' <<< "$output" &&
+    grep -q '^Accepted evidence admissions  : 74$' <<< "$output" &&
     grep -q '^Registered live providers     : 0$' <<< "$output" &&
     grep -q '^Retirement decision           : NOT READY$' <<< "$output" &&
     grep -q 'Candidate module mappings do not become replacements' <<< "$output"
@@ -273,7 +273,7 @@ test_admitted_terminal_replacement_loads() (
   use_case "$case_dir" "$case_dir/accepted-evidence.tsv" "$case_dir/legacy-promotion-readiness.tsv" "$case_dir"
   lsi_migration_load || return 1
   output=$(lsi_migration_show ubuntu-002) || return 1
-  [[ $LSI_MIGRATION_TERMINAL -eq 182 && $LSI_MIGRATION_PLANNED -eq 47 ]] &&
+  [[ $LSI_MIGRATION_TERMINAL -eq 187 && $LSI_MIGRATION_PLANNED -eq 42 ]] &&
     grep -q '^Disposition   : implemented$' <<< "$output" &&
     grep -q "^Evidence      : $reference$" <<< "$output" &&
     grep -q 'terminal replacement recorded with assessed parity and evidence' <<< "$output" || return 1
