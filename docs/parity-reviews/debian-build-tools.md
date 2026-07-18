@@ -14,6 +14,7 @@
 | Legacy ID | Immutable source locator | Legacy outcome | Decision |
 | --- | --- | --- | --- |
 | `ubuntu-106` | `legacy/ubuntu-16.04/Ubuntu16-04-install-script.sh#menu:106` | Added the Ubuntu toolchain PPA and installed the pinned `gcc-8` and `g++-8` packages. | `implemented` |
+| `ubuntu-107` | `legacy/ubuntu-16.04/Ubuntu16-04-install-script.sh#menu:107` | Upgraded system Python 2 `pip` and installed CMake through it. | `implemented` |
 
 ## Active replacement contract
 
@@ -24,6 +25,6 @@
 ## Reviewer conclusion
 
 The active module repeatedly installs a complete supported native build
-toolchain. It deliberately does not reproduce the obsolete GCC 8 version pin
-or PPA; current distribution compilers are the safe successor. `intent` parity
-is accurate.
+toolchain. It deliberately does not reproduce the obsolete GCC 8 version pin,
+PPA, or unsafe system-wide pip path; current distribution tools are the safe
+successor. `intent` parity is accurate.
