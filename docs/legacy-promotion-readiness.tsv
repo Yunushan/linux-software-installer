@@ -17,7 +17,7 @@ ubuntu-026	debian	transmission	debian/transmission	implemented-candidate	intent	
 ubuntu-027	debian	mpv	debian/mpv	implemented-candidate	intent	3	no	0	none	-	no	G3-repository-resolution+G4-standalone-install+row-parity-review+durable-trust-anchor
 ubuntu-028	debian	smplayer	debian/smplayer	implemented-candidate	intent	3	no	0	none	-	no	G3-repository-resolution+G4-standalone-install+row-parity-review+durable-trust-anchor
 ubuntu-029	debian	kazam	debian/kazam	implemented-candidate	intent	3	no	0	none	-	no	G3-repository-resolution+G4-standalone-install+row-parity-review+durable-trust-anchor
-ubuntu-030	debian	audacity	debian/audacity	implemented-candidate	intent	3	no	0	none	-	no	G3-repository-resolution+G4-standalone-install+row-parity-review+durable-trust-anchor
+ubuntu-030	debian	audacity	debian/audacity	implemented-candidate	intent	3	no	0	accepted	https://github.com/Yunushan/linux-software-installer/actions/runs/29640717432#artifact-digest=e744fab69651ad0d2adce755e7a65da1191822af6524d44b8b1d1d259140d477	yes	-
 ubuntu-032	debian	conky	debian/conky	implemented-candidate	intent	3	no	0	none	-	no	G3-repository-resolution+G4-standalone-install+row-parity-review+durable-trust-anchor
 ubuntu-033	debian	handbrake	debian/handbrake	implemented-candidate	intent	3	no	0	none	-	no	G3-repository-resolution+G4-standalone-install+row-parity-review+durable-trust-anchor
 ubuntu-034	debian	inkscape	debian/inkscape	implemented-candidate	intent	3	no	0	none	-	no	G3-repository-resolution+G4-standalone-install+row-parity-review+durable-trust-anchor
