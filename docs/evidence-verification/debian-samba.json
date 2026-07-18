@@ -1,0 +1,20 @@
+{
+  "artifact_sha256": "5d84feef4344c29d39f8de5b713b55b3f12cb1b1378800fe68ca6b57c4cde30c",
+  "cell_ids": [
+    "debian-12/samba",
+    "ubuntu-24-04/samba",
+    "ubuntu-26-04/samba"
+  ],
+  "commit_sha": "27646bafef32bb78c3f5f97d3b9b41451ee96e2e",
+  "expected_cells": 371,
+  "index_sha256": "7b9f4bd77fdb460d0ef5fe890c68ec15e148cb16d755c1edf0b0b81cb08cb003",
+  "module": "samba",
+  "result": "verified-awaiting-parity-review-and-systemd-attestation",
+  "run_url": "https://github.com/Yunushan/linux-software-installer/actions/runs/29657467906",
+  "schema": "linux-software-installer/accepted-evidence-verification/v2",
+  "target_cells": [
+    "debian-12",
+    "ubuntu-24-04",
+    "ubuntu-26-04"
+  ]
+}

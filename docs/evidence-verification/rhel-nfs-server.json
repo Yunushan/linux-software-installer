@@ -1,15 +1,15 @@
 {
-  "artifact_sha256": "034859b6311d086dabf08f54d71d04140707a16c8be680de1172104c105bb5fe",
+  "artifact_sha256": "5d84feef4344c29d39f8de5b713b55b3f12cb1b1378800fe68ca6b57c4cde30c",
   "cell_ids": [
     "alma-9-8/nfs-server",
     "rocky-9-8/nfs-server"
   ],
-  "commit_sha": "e3e3be187b1c4b82d6a73e31be49e4852043bed8",
-  "expected_cells": 2,
-  "index_sha256": "13f3658abf12055ec4cef8080653af329ca2038475f6648e1b8412f1f1ab2233",
+  "commit_sha": "27646bafef32bb78c3f5f97d3b9b41451ee96e2e",
+  "expected_cells": 371,
+  "index_sha256": "7b9f4bd77fdb460d0ef5fe890c68ec15e148cb16d755c1edf0b0b81cb08cb003",
   "module": "nfs-server",
   "result": "verified-awaiting-parity-review-and-systemd-attestation",
-  "run_url": "https://github.com/Yunushan/linux-software-installer/actions/runs/29657213775",
+  "run_url": "https://github.com/Yunushan/linux-software-installer/actions/runs/29657467906",
   "schema": "linux-software-installer/accepted-evidence-verification/v2",
   "target_cells": [
     "alma-9-8",

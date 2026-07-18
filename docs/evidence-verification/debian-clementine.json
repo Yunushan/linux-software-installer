@@ -1,16 +1,16 @@
 {
-  "artifact_sha256": "756df89ebcc27889612281bd46caa05bde73d6268e3db045019b69a9a8dd71d3",
+  "artifact_sha256": "5d84feef4344c29d39f8de5b713b55b3f12cb1b1378800fe68ca6b57c4cde30c",
   "cell_ids": [
     "debian-12/clementine",
     "ubuntu-24-04/clementine",
     "ubuntu-26-04/clementine"
   ],
-  "commit_sha": "93f4a37923d32f1aa67f71f2f7f22140be0d77a5",
+  "commit_sha": "27646bafef32bb78c3f5f97d3b9b41451ee96e2e",
   "expected_cells": 371,
-  "index_sha256": "02c6e4edfd8c76657790b20562e7c94b44b9761fc76061115d1c39826ed2ce46",
+  "index_sha256": "7b9f4bd77fdb460d0ef5fe890c68ec15e148cb16d755c1edf0b0b81cb08cb003",
   "module": "clementine",
   "result": "verified-awaiting-parity-review-and-systemd-attestation",
-  "run_url": "https://github.com/Yunushan/linux-software-installer/actions/runs/29652229194",
+  "run_url": "https://github.com/Yunushan/linux-software-installer/actions/runs/29657467906",
   "schema": "linux-software-installer/accepted-evidence-verification/v2",
   "target_cells": [
     "debian-12",

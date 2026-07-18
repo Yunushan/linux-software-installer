@@ -1,15 +1,15 @@
 {
-  "artifact_sha256": "d229e175f0eecafcbd867eb999fe6c0e72c83a0945f182a354bdecbd14266959",
+  "artifact_sha256": "5d84feef4344c29d39f8de5b713b55b3f12cb1b1378800fe68ca6b57c4cde30c",
   "cell_ids": [
     "alma-9-8/postgresql",
     "rocky-9-8/postgresql"
   ],
-  "commit_sha": "e3e3be187b1c4b82d6a73e31be49e4852043bed8",
-  "expected_cells": 2,
-  "index_sha256": "60b6f8fbd6e9561a651ee2f4f2a7306192b5d74b008588a04cda55b27e2bfcbf",
+  "commit_sha": "27646bafef32bb78c3f5f97d3b9b41451ee96e2e",
+  "expected_cells": 371,
+  "index_sha256": "7b9f4bd77fdb460d0ef5fe890c68ec15e148cb16d755c1edf0b0b81cb08cb003",
   "module": "postgresql",
   "result": "verified-awaiting-parity-review-and-systemd-attestation",
-  "run_url": "https://github.com/Yunushan/linux-software-installer/actions/runs/29657203174",
+  "run_url": "https://github.com/Yunushan/linux-software-installer/actions/runs/29657467906",
   "schema": "linux-software-installer/accepted-evidence-verification/v2",
   "target_cells": [
     "alma-9-8",

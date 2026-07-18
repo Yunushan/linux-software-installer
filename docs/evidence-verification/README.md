@@ -7,7 +7,7 @@ tested commit, aggregate-index digest, and GitHub-published ZIP digest.
 
 The directory deliberately contains both full-catalog reports and focused
 refreshes. For example, the full catalog artifact from
-[`29652229194`](https://github.com/Yunushan/linux-software-installer/actions/runs/29652229194)
+[`29657467906`](https://github.com/Yunushan/linux-software-installer/actions/runs/29657467906)
 verified 371 indexed cells, while a focused run may supersede one report after
 that module's contract changes. Always use the individual report's `run_url`,
 `commit_sha`, `index_sha256`, and `artifact_sha256`; do not infer those values
