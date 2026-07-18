@@ -186,6 +186,15 @@ def main() -> int:
             "debian/nginx": docs_only
         }
 
+        write(
+            root / "tests" / "validate-legacy-inventory.sh",
+            "#!/usr/bin/env bash\n# admission-ledger accounting change\n",
+        )
+        commit(root, "adjust admission-ledger accounting")
+        assert READINESS.load_accepted_admissions(root, [expected_row()]) == {
+            "debian/nginx": docs_only
+        }
+
         write(root / "lib" / "installer.sh", "# untested runtime change\n")
         commit(root, "untested runtime change")
         try:

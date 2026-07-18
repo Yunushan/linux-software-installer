@@ -172,6 +172,15 @@ ADMISSION_ONLY_PATHS = {
     "docs/legacy-inventory.tsv",
     "docs/legacy-promotion-readiness.tsv",
     "docs/REPLACEMENT.md",
+    # These validators govern the admission ledger's lifecycle accounting.
+    # They neither select packages nor participate in container execution,
+    # capture, sanitization, aggregate validation, or artifact verification.
+    # Keeping this list explicit lets a fully verified installer artifact be
+    # carried forward after an admission-only accounting correction, while any
+    # change to installer or evidence behavior still requires a fresh run.
+    "tests/validate-legacy-inventory.sh",
+    "tests/validate-legacy-promotion-readiness.py",
+    "tests/test-accepted-evidence.py",
 }
 ADMISSION_ONLY_PREFIXES = (
     "docs/evidence-verification/",
@@ -184,8 +193,11 @@ def is_admission_only_path(path: str) -> bool:
 
     Evidence reports and their registry necessarily change *after* the tested
     commit has been produced.  This narrow allowlist makes that documentation
-    step possible without letting an untested installer, catalog, workflow or
-    test change inherit the earlier evidence.
+    step possible without letting an untested installer, catalog, workflow,
+    evidence-capture or evidence-verification change inherit earlier evidence.
+    The two named legacy-ledger validators are also permitted because they are
+    admission bookkeeping only; this is deliberately not a blanket tests/
+    allowlist.
     """
 
     return path in ADMISSION_ONLY_PATHS or path.startswith(ADMISSION_ONLY_PREFIXES)
