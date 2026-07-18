@@ -149,8 +149,8 @@ def build_plan(root: Path) -> list[dict[str, str]]:
             if row["service_contract"] == "yes"
         }
     )
-    if len(evidence_keys) != 11 or len({module for _, module in evidence_keys}) != 9:
-        raise MatrixError("service-bearing readiness coverage drifted from 11 contracts / 9 modules")
+    if len(evidence_keys) != 13 or len({module for _, module in evidence_keys}) != 11:
+        raise MatrixError("service-bearing readiness coverage drifted from 13 contracts / 11 modules")
 
     target_ids = [row["target_id"] for row in targets]
     if len(target_ids) != len(set(target_ids)):
@@ -193,8 +193,8 @@ def build_plan(root: Path) -> list[dict[str, str]]:
                     }
                 )
     execution_ids = [row["execution_id"] for row in rows]
-    if len(rows) != 50 or len(execution_ids) != len(set(execution_ids)):
-        raise MatrixError("systemd evidence plan must contain 50 unique executions")
+    if len(rows) != 58 or len(execution_ids) != len(set(execution_ids)):
+        raise MatrixError("systemd evidence plan must contain 58 unique executions")
     return rows
 
 

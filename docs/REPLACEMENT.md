@@ -121,7 +121,7 @@ parts of G5: root and confirmation gates, fail-closed lock contention,
 no-clobber protected logs and sensitive-argument redaction, package and binary
 verification failures, stop-on-error, refresh-once behavior, and explicit
 service activation. These are unit-level safety checks, not a substitute for
-the 50 exact systemd VM executions and host-state comparisons identified
+the 58 exact systemd VM executions and host-state comparisons identified
 below.
 
 The container jobs receive a credential-free `git archive` export of the
@@ -177,10 +177,10 @@ inventory.
 
 Thirty-two rows share 11 service-bearing module-family contracts across nine
 modules. Their normal standalone footprint is 25 module-image cells. G5 also
-requires each of those 11 contracts on every exact family target, with and without
-`--enable-services`, for 50 disposable systemd
+requires each of those 13 contracts on every exact family target, with and without
+`--enable-services`, for 58 disposable systemd
 executions. Evidence may be reused by every row with the same `evidence_key`.
-[`SYSTEMD_EVIDENCE.md`](SYSTEMD_EVIDENCE.md) defines the executable 50-row
+[`SYSTEMD_EVIDENCE.md`](SYSTEMD_EVIDENCE.md) defines the executable 58-row
 plan, single-use fresh-VM runner, captured host-state contract and structural
 validator. No accepted VM execution exists: all local runner bundles remain
 provisional until an external provisioning attestation and durable trust
@@ -281,7 +281,7 @@ The smallest safe path to close the remaining 37 planned rows is:
 2. Complete one green full-catalog standalone run, import its validated
    aggregate, and record the GitHub artifact digest/ID/URL or an equivalent
    signed trust anchor. Reuse its relevant cells by `evidence_key`.
-3. Produce the 50 systemd executions for the 11 service contracts.
+3. Produce the 58 systemd executions for the 13 service contracts.
 4. Check in a row-parity report covering package source/channel, service,
    configuration, firewall, credential and data differences; then change each
    row's disposition and durable `evidence` link together in one review.

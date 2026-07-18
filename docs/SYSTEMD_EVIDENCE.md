@@ -12,8 +12,8 @@ digest is authentic or that the VM was destroyed afterward.
 The plan is derived from three reviewed sources: the service-bearing rows in
 [`legacy-promotion-readiness.tsv`](legacy-promotion-readiness.tsv), each live
 module contract and [`evidence-targets.tsv`](../tests/evidence-targets.tsv).
-It fails if that derivation no longer yields 11 module-family contracts across
-nine modules and exactly 50 unique executions:
+It fails if that derivation no longer yields 13 module-family contracts across
+11 modules and exactly 58 unique executions:
 
 ```bash
 bash tests/systemd-evidence-matrix.sh "$PWD" plan
