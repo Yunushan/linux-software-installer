@@ -82,10 +82,10 @@ EXPECTED_CATALOG_INVARIANTS = {
     "modules": 83,
     "module_family_pairs": 93,
     "standalone_cells": 250,
-    "service_rows": 36,
-    "service_modules": 11,
-    "service_pairs": 13,
-    "systemd_executions": 58,
+    "service_rows": 37,
+    "service_modules": 12,
+    "service_pairs": 14,
+    "systemd_executions": 64,
 }
 
 
