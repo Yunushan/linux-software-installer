@@ -101,10 +101,10 @@ obsolete.
 This review closes 84 of the 355 immutable legacy rows through 20 permanent
 safety rejections, 25 retirements of unsupported legacy scope and 39 reviewed
 external handoffs. Subsequent accepted active-replacement admissions have
-closed a further 72 rows (71 `implemented` and one `superseded`), bringing the
-terminal total to 156. The remaining 199 rows stay non-terminal as 72
-active-module candidates and 127 third-party provider gaps until their
+closed a further 73 rows (72 `implemented` and one `superseded`), bringing the
+terminal total to 157. The remaining 198 rows stay non-terminal as 72
+active-module candidates and 126 third-party provider gaps until their
 replacement or disposition has evidence that satisfies
-`docs/REPLACEMENT.md`. The proposed next route for each of those 127 gaps is
+`docs/REPLACEMENT.md`. The proposed next route for each of those 126 gaps is
 tracked without changing its status in
 [`PROVIDER_BACKLOG.md`](PROVIDER_BACKLOG.md).

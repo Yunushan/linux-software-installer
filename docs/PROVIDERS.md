@@ -155,7 +155,7 @@ Before any provider can become live, implementation and tests must prove:
 - real install, repeat, origin, signature and cleanup evidence on every exact
   claimed target cell.
 
-The 127 unresolved third-party legacy rows and their recommended provider or
+The 126 unresolved third-party legacy rows and their recommended provider or
 authenticated-artifact routes are tracked in
 [`PROVIDER_BACKLOG.md`](PROVIDER_BACKLOG.md). A backlog entry is not a support
 claim and must not be promoted merely because a provider manifest can be

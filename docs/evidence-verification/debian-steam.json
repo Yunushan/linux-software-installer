@@ -1,18 +1,16 @@
 {
   "artifact_sha256": "756df89ebcc27889612281bd46caa05bde73d6268e3db045019b69a9a8dd71d3",
   "cell_ids": [
-    "alma-9-8/build-tools",
-    "rocky-9-8/build-tools"
+    "ubuntu-24-04/steam"
   ],
   "commit_sha": "93f4a37923d32f1aa67f71f2f7f22140be0d77a5",
   "expected_cells": 371,
   "index_sha256": "02c6e4edfd8c76657790b20562e7c94b44b9761fc76061115d1c39826ed2ce46",
-  "module": "build-tools",
+  "module": "steam",
   "result": "verified-awaiting-parity-review-and-systemd-attestation",
   "run_url": "https://github.com/Yunushan/linux-software-installer/actions/runs/29652229194",
   "schema": "linux-software-installer/accepted-evidence-verification/v2",
   "target_cells": [
-    "alma-9-8",
-    "rocky-9-8"
+    "ubuntu-24-04"
   ]
 }

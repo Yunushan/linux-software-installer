@@ -55,13 +55,13 @@ The TSV schema is deliberately reviewable without a database:
 
 ## Current coverage truth
 
-The current inventory snapshot has 156 terminal rows: 71 `implemented`, one
+The current inventory snapshot has 157 terminal rows: 72 `implemented`, one
 `superseded`, 20 `blocked-safety`, 25 `retired` and 39 `out-of-scope`. The
-remaining 199 rows are non-terminal: 72 `planned` active-module candidates and
-127 `blocked-third-party` provider gaps. No legacy row is called replaced
+remaining 198 rows are non-terminal: 72 `planned` active-module candidates and
+126 `blocked-third-party` provider gaps. No legacy row is called replaced
 merely because a similarly named package module exists. The active catalog
 contains 103 low-risk package modules plus one explicit medium-risk multiarch
-module; only the 72 accepted active-replacement rows carry accepted row-by-row
+module; only the 73 accepted active-replacement rows carry accepted row-by-row
 parity and installation evidence.
 
 A mechanical comparison after the current package-only migration batches finds:
@@ -70,32 +70,28 @@ A mechanical comparison after the current package-only migration batches finds:
   and 53 `blocked-third-party` provider/repository rows;
 - 33 planned RHEL rows with an explicit RHEL-family active-module candidate and
   74 `blocked-third-party` provider/repository rows;
-- 72 candidate rows in total and 127 provider/repository rows in total, all
+- 72 candidate rows in total and 126 provider/repository rows in total, all
   still non-terminal pending their applicable evidence or reviewed handoff.
 
 These are discovery numbers, not accepted parity. For example, current modules
 deliberately do not reproduce pinned PHP, Python 2, GCC 8, JDK 8/11 selection,
 source builds, automatic vendor repositories or legacy configuration changes.
-The exact proposed route for all 127 third-party rows is recorded in
+The exact proposed route for all 126 third-party rows is recorded in
 [`provider-backlog.tsv`](provider-backlog.tsv) and explained in
-[`PROVIDER_BACKLOG.md`](PROVIDER_BACKLOG.md): 110 provider/module candidates
+[`PROVIDER_BACKLOG.md`](PROVIDER_BACKLOG.md): 109 provider/module candidates
 and 17 conditional authenticated-artifact candidates. Thirty additional
 handoff rows and one upstream-retired product have already moved through the
 reviewed terminal-disposition gate. Backlog rows remain planning decisions
 only; their inventory states do not change until the normal evidence gates
 pass.
 
-Four distro-component outcomes now have deliberately narrow package-only
-candidates: PlayOnLinux, Tor Browser Launcher and Steam on Ubuntu 24.04 x86_64,
-and Telegram Desktop on Debian 12 x86_64. Steam requires an explicit i386
-multiarch acknowledgement. Fresh local container install/repeat
-checks are provisional engineering evidence, not durable promotion evidence.
-The exact image and package probe record is
+PlayOnLinux, Debian Telegram, and Steam have accepted exact-target evidence and
+are terminal `implemented` rows. Steam is restricted to Ubuntu 24.04 x86_64
+with explicit i386 multiarch acknowledgement. The two remaining
+`distro-component` outcomes—Tor Browser and MakeHuman—remain blocked because
+their required package/first-run evidence is not yet accepted. The exact image
+and package probe record is
 [`DISTRO_COMPONENT_PROBES.md`](DISTRO_COMPONENT_PROBES.md).
-PlayOnLinux and Debian Telegram now have accepted exact-target evidence and
-are terminal `implemented` rows. Steam remains `blocked-third-party` pending
-accepted fresh multiarch evidence; Tor Browser and MakeHuman also remain
-blocked because their required package/first-run evidence is not yet accepted.
 
 The push/PR GitHub Actions workflow is configured to run detection, catalog and
 read-only plan smoke tests plus a separate enabled-repository resolution matrix.
@@ -108,8 +104,8 @@ as a 104-module matrix; each module job sequentially runs its applicable images
 in separate fresh containers, preserving all 371 independent module-image
 cells without exceeding the workflow matrix limit. It emits structured
 pre/install/repeat evidence and an aggregate coverage/checksum bundle. A prior
-externally hashed aggregate admitted 45 module-family keys and 72 rows; a
-fresh full run is required before the newer multiarch contract can be admitted.
+externally hashed aggregate admitted 46 module-family keys and 73 rows,
+including the newer Steam multiarch contract.
 A separate manual self-hosted `Systemd VM
 evidence` workflow can validate one exact systemd plan row on one externally
 provisioned disposable VM; it remains provisional until an independent
@@ -144,7 +140,7 @@ legacy feature replacement yet.
 
 [`legacy-promotion-readiness.tsv`](legacy-promotion-readiness.tsv) is the
 derived, machine-checked promotion ledger for active replacement rows. It has
-144 rows: 71 currently `implemented`, one `superseded` and 72 still `planned`.
+145 rows: 72 currently `implemented`, one `superseded` and 72 still `planned`.
 An admitted row remains in the ledger after moving to `implemented` or
 `superseded`. Validate it against the live inventory, target matrix and module
 contracts with:
@@ -161,15 +157,15 @@ bash tests/validate-legacy-promotion-readiness.sh --emit \
   > docs/legacy-promotion-readiness.tsv
 ```
 
-The current ledger has 72 Debian-family and 72 RHEL-family active-replacement
-rows. Seventy-two rows have accepted evidence and promotion readiness `yes`;
+The current ledger has 73 Debian-family and 72 RHEL-family active-replacement
+rows. Seventy-three rows have accepted evidence and promotion readiness `yes`;
 72 remain at evidence class `none` and readiness `no`. Their mappings collapse
-to 82 unique modules and 92 module-family evidence keys, so duplicate legacy
-entries can share evidence. Those keys require 249 standalone module-image
+to 83 unique modules and 93 module-family evidence keys, so duplicate legacy
+entries can share evidence. Those keys require 250 standalone module-image
 cells. A full-catalog standalone run emits 371 cells; its coverage includes
 every active-replacement evidence key.
 
-The ledger labels 136 rows as `implemented-candidate` and eight as
+The ledger labels 137 rows as `implemented-candidate` and eight as
 `superseded-candidate`; these are review routes rather than a substitute for
 the inventory disposition. The eight explicit supersession rationales are
 `ubuntu-024`, `ubuntu-038`, `ubuntu-121`, `ubuntu-122`,
@@ -200,8 +196,8 @@ self-contained hashes are not an external authenticity anchor.
 
 ### Accepted-evidence admission
 
-[`accepted-evidence.tsv`](accepted-evidence.tsv) currently contains 45
-accepted module-family admissions, covering 72 terminal inventory rows. Each
+[`accepted-evidence.tsv`](accepted-evidence.tsv) currently contains 46
+accepted module-family admissions, covering 73 terminal inventory rows. Each
 record was created only after an external bundle was downloaded, verified with
 the offline verifier below, revalidated and reviewed. A future record per
 module-family evidence key
@@ -289,7 +285,7 @@ The smallest safe path to close the remaining 72 planned rows is:
    configuration, firewall, credential and data differences; then change each
    row's disposition and durable `evidence` link together in one review.
 
-Closing these 72 rows still leaves the separately tracked 127
+Closing these 72 rows still leaves the separately tracked 126
 `blocked-third-party` provider gaps; both sets must reach reviewed terminal
 states before the old repositories satisfy the retirement gate.
 

@@ -3,10 +3,10 @@
 ## Scope and decision
 
 - Evidence key: `rhel/emacs`
-- Tested commit: `f59c5765b5e68ba4e074331a1b494a1bfdbcb125`
+- Tested commit: `93f4a37923d32f1aa67f71f2f7f22140be0d77a5`
 - Decision: `implemented`
 - Parity level: `intent`
-- Accepted evidence: [run 29648435978](https://github.com/Yunushan/linux-software-installer/actions/runs/29648435978), artifact digest `sha256:e9b7e22c95106d4e99fe8bff465e69c78afbb70b3025458fa4380dd5937bca64`
+- Accepted evidence: [run 29652229194](https://github.com/Yunushan/linux-software-installer/actions/runs/29652229194), artifact digest `sha256:756df89ebcc27889612281bd46caa05bde73d6268e3db045019b69a9a8dd71d3`
 - Verification report: `docs/evidence-verification/rhel-emacs.json`
 
 ## Legacy rows covered
