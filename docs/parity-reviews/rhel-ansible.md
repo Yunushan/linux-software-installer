@@ -3,10 +3,10 @@
 ## Scope and decision
 
 - Evidence key: `rhel/ansible`
-- Tested commit: `f7b772a72fa8c543cb84f79db0473cf5ad05daf5`
+- Tested commit: `f59c5765b5e68ba4e074331a1b494a1bfdbcb125`
 - Decision: `implemented`
 - Parity level: `intent`
-- Accepted evidence: [run 29640717432](https://github.com/Yunushan/linux-software-installer/actions/runs/29640717432), artifact digest `sha256:e744fab69651ad0d2adce755e7a65da1191822af6524d44b8b1d1d259140d477`
+- Accepted evidence: [run 29648435978](https://github.com/Yunushan/linux-software-installer/actions/runs/29648435978), artifact digest `sha256:e9b7e22c95106d4e99fe8bff465e69c78afbb70b3025458fa4380dd5937bca64`
 - Verification report: `docs/evidence-verification/rhel-ansible.json`
 
 ## Legacy row covered

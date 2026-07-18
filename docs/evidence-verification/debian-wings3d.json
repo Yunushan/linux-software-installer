@@ -1,16 +1,16 @@
 {
-  "artifact_sha256": "e744fab69651ad0d2adce755e7a65da1191822af6524d44b8b1d1d259140d477",
+  "artifact_sha256": "e9b7e22c95106d4e99fe8bff465e69c78afbb70b3025458fa4380dd5937bca64",
   "cell_ids": [
     "debian-12/wings3d",
     "ubuntu-24-04/wings3d",
     "ubuntu-26-04/wings3d"
   ],
-  "commit_sha": "f7b772a72fa8c543cb84f79db0473cf5ad05daf5",
+  "commit_sha": "f59c5765b5e68ba4e074331a1b494a1bfdbcb125",
   "expected_cells": 370,
-  "index_sha256": "abe5460f2b2ec4a23def4592bf57f14b5f31b16d999fe7167a06ceb30845e02b",
+  "index_sha256": "99533d5ae2171cd5479f183edf8a1eff82083f0b6433a962c21898ddafb34089",
   "module": "wings3d",
   "result": "verified-awaiting-parity-review-and-systemd-attestation",
-  "run_url": "https://github.com/Yunushan/linux-software-installer/actions/runs/29640717432",
+  "run_url": "https://github.com/Yunushan/linux-software-installer/actions/runs/29648435978",
   "schema": "linux-software-installer/accepted-evidence-verification/v2",
   "target_cells": [
     "debian-12",
