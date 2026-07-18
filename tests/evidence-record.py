@@ -63,10 +63,12 @@ SUCCESS_STAGE_ORDER = [
     "detect-and-contract",
     "snapshot-before-install",
     "initial-install",
+    "foreign-architecture-check-after-install",
     "binary-check-after-install",
     "snapshot-after-install",
     "package-source-capture",
     "repeat-install",
+    "foreign-architecture-check-after-repeat",
     "binary-check-after-repeat",
     "snapshot-after-repeat",
     "repeat-state-compare",
@@ -84,6 +86,7 @@ FINAL_CHECK_KEYS = {
     "binary_evidence",
     "package_source_evidence",
     "package_snapshot_evidence",
+    "foreign_architecture_evidence",
     "payload_complete",
     "target_identity",
     "stage_sequence",
@@ -1043,6 +1046,7 @@ def command_finalize(args: argparse.Namespace) -> int:
         "package": [],
         "verification_binary": [],
         "service": [],
+        "foreign_architecture": [],
     }
     contract_errors: list[str] = []
     trusted_contract_text, trusted_contract_error = derive_trusted_contract(
@@ -1112,6 +1116,18 @@ def command_finalize(args: argparse.Namespace) -> int:
             repeat, contracts["package"], "post-repeat package snapshot"
         )
     )
+    foreign_architecture_errors = validate_foreign_architectures(
+        cell_dir / "foreign-architectures-after-install.txt",
+        contracts["foreign_architecture"],
+        "post-install foreign-architecture evidence",
+    )
+    foreign_architecture_errors.extend(
+        validate_foreign_architectures(
+            cell_dir / "foreign-architectures-after-repeat.txt",
+            contracts["foreign_architecture"],
+            "post-repeat foreign-architecture evidence",
+        )
+    )
     repeated_state_unchanged = (
         after.is_file()
         and repeat.is_file()
@@ -1132,6 +1148,8 @@ def command_finalize(args: argparse.Namespace) -> int:
         "binary-paths-after-install.tsv",
         "binary-paths-after-repeat.tsv",
         "package-sources.txt",
+        "foreign-architectures-after-install.txt",
+        "foreign-architectures-after-repeat.txt",
         "container.log",
         SANITIZE_REPORT_NAME,
     ]
@@ -1172,6 +1190,7 @@ def command_finalize(args: argparse.Namespace) -> int:
         "binary_evidence": not binary_errors,
         "package_source_evidence": not package_source_errors,
         "package_snapshot_evidence": not package_snapshot_errors,
+        "foreign_architecture_evidence": not foreign_architecture_errors,
         "payload_complete": not missing_files,
         "target_identity": not target_errors,
         "stage_sequence": not stage_errors,
@@ -1210,6 +1229,7 @@ def command_finalize(args: argparse.Namespace) -> int:
         + binary_errors
         + package_source_errors
         + package_snapshot_errors
+        + foreign_architecture_errors
         + stage_errors
         + [f"missing payload: {name}" for name in missing_files]
     )
@@ -1257,6 +1277,7 @@ def command_finalize(args: argparse.Namespace) -> int:
             "packages": contracts["package"],
             "verification_binaries": contracts["verification_binary"],
             "services": contracts["service"],
+            "foreign_architectures": contracts["foreign_architecture"],
             "explicit_service_activation_requested": False,
         },
         "execution": {
@@ -1500,6 +1521,28 @@ def validate_package_snapshot(
     missing = sorted(set(expected_packages) - set(packages))
     if missing:
         errors.append(f"{label} lacks trusted contract packages: {', '.join(missing)}")
+    return errors
+
+
+def validate_foreign_architectures(
+    path: Path, expected_architectures: list[str], label: str
+) -> list[str]:
+    errors: list[str] = []
+    try:
+        if not path.is_file() or path.is_symlink():
+            return [f"{label} is not a safe regular file"]
+        if path.stat().st_size > MAX_SEMANTIC_TABLE_BYTES:
+            return [f"{label} exceeds the semantic size limit"]
+        observed = path.read_text(encoding="utf-8").splitlines()
+    except (OSError, UnicodeDecodeError) as error:
+        return [f"cannot read {label}: {error}"]
+    if any(not architecture or not re.fullmatch(r"[a-z0-9][a-z0-9-]*", architecture) for architecture in observed):
+        errors.append(f"{label} contains an invalid architecture token")
+    if observed != sorted(set(observed)):
+        errors.append(f"{label} is not sorted and unique")
+    expected = sorted(expected_architectures)
+    if observed != expected:
+        errors.append(f"{label} does not match the trusted foreign-architecture contract")
     return errors
 
 
@@ -1811,20 +1854,8 @@ def command_validate(args: argparse.Namespace) -> int:
                 "stage evidence",
             )
             stage_errors.extend(stage_table_errors)
-            expected_stage_order = [
-                "detect-and-contract",
-                "snapshot-before-install",
-                "initial-install",
-                "binary-check-after-install",
-                "snapshot-after-install",
-                "package-source-capture",
-                "repeat-install",
-                "binary-check-after-repeat",
-                "snapshot-after-repeat",
-                "repeat-state-compare",
-            ]
             expected_stage_rows: list[tuple[str, str, str]] = []
-            for stage_name in expected_stage_order:
+            for stage_name in SUCCESS_STAGE_ORDER:
                 expected_stage_rows.extend(
                     ((stage_name, "running", "-"), (stage_name, "passed", "0"))
                 )
@@ -1891,6 +1922,7 @@ def command_validate(args: argparse.Namespace) -> int:
                 "package": [],
                 "verification_binary": [],
                 "service": [],
+                "foreign_architecture": [],
             }
             for row in contract_rows:
                 kind = row["type"]
@@ -1903,6 +1935,7 @@ def command_validate(args: argparse.Namespace) -> int:
                 ("packages", "package"),
                 ("verification_binaries", "verification_binary"),
                 ("services", "service"),
+                ("foreign_architectures", "foreign_architecture"),
             ):
                 if module.get(result_key) != contract_values[contract_key]:
                     contract_errors.append(
@@ -1942,6 +1975,18 @@ def command_validate(args: argparse.Namespace) -> int:
                     cell_dir / "packages-after-repeat.tsv",
                     contract_values["package"],
                     "post-repeat package snapshot",
+                )
+            )
+            foreign_architecture_errors = validate_foreign_architectures(
+                cell_dir / "foreign-architectures-after-install.txt",
+                contract_values["foreign_architecture"],
+                "post-install foreign-architecture evidence",
+            )
+            foreign_architecture_errors.extend(
+                validate_foreign_architectures(
+                    cell_dir / "foreign-architectures-after-repeat.txt",
+                    contract_values["foreign_architecture"],
+                    "post-repeat foreign-architecture evidence",
                 )
             )
 
@@ -1993,6 +2038,7 @@ def command_validate(args: argparse.Namespace) -> int:
                 + binary_errors
                 + package_source_errors
                 + package_snapshot_errors
+                + foreign_architecture_errors
                 + snapshot_errors
             )
             cell_issues.extend(verify_integrity(result_path, result))

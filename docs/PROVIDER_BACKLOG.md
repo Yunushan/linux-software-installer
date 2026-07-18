@@ -87,10 +87,10 @@ absent from this TSV because it covers only current `blocked-third-party` rows.
 
 The validator also cross-checks every proposed `replacement_outcome` against
 the active module catalog. The 127 rows represent 82 normalized capabilities
-and 80 canonical outcomes. Of those rows, 46 point to 19 existing modules:
+and 80 canonical outcomes. Of those rows, 47 point to 20 existing modules:
 `clamav`, `composer`, `deluge`, `dvblast`, `fail2ban`, `ffmpeg`, `htop`,
 `magic-wormhole`, `monitoring-tools`, `neovim`, `quassel`, `timeshift`,
-`tinc`, `transmission`, `vlc`, `weechat`, `wine`, `telegram`, and
+`steam`, `tinc`, `transmission`, `vlc`, `weechat`, `wine`, `telegram`, and
 `tor-browser`.
 
 That is implementation reuse, not current coverage. Forty-five rows are
@@ -98,10 +98,10 @@ RHEL-family gaps while their 18 matching modules declare Debian-family support
 only; that includes the RHEL Telegram row whose matching module is Debian
 12-only. Tor Browser Launcher remains one Debian distro-component candidate
 restricted to one exact Tier-1 cell.
-Therefore the number of family-wide ready reuse rows remains **zero**, with one
-target-restricted reuse row. A row remains blocked until its applicable target
+Therefore the number of family-wide ready reuse rows remains **zero**, with two
+target-restricted reuse rows. A row remains blocked until its applicable target
 coverage and durable solver/install/repeat-install evidence are accepted. The
-other 81 rows cover 61 outcomes for which no active module exists yet.
+other 80 rows cover 60 outcomes for which no active module exists yet.
 
 Three rows can investigate distribution components without adding an external
 trust root: MakeHuman, Steam, and Tor Browser. PlayOnLinux and Telegram are
@@ -113,7 +113,7 @@ upstream artifact. Their shared implementation leverage is:
 
 | Closure group | Rows | Canonical outcomes in group | Existing-module reuse | Required work |
 | --- | ---: | ---: | ---: | --- |
-| Distribution components | 3 | 3 | 1 row / 1 outcome | Tor Browser needs first-run browser evidence; Steam still needs multiarch design and MakeHuman remains unavailable. |
+| Distribution components | 3 | 3 | 2 rows / 2 outcomes | Tor Browser needs first-run browser evidence; Steam needs accepted fresh multiarch evidence and MakeHuman remains unavailable. |
 | EPEL | 35 | 16 | 34 rows / 15 outcomes | Resolve the metadata-trust blocker in `EPEL_AUDIT.md`; only then re-probe exact packages and consider RHEL mappings or a new `links` module. |
 | RPM Fusion | 10 | 2 | 10 rows / 2 outcomes | One signed RPM Fusion provider plus RHEL mappings for existing `ffmpeg` and `vlc`. |
 | Vendor APT and RPM | 28 | 16 | 0 rows / 0 outcomes | Family-specific repository adapters and new modules; five outcomes span both families. |

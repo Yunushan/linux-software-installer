@@ -59,7 +59,8 @@ The current inventory snapshot has 84 terminal rows (20 `blocked-safety`, 25
 `retired` and 39 `out-of-scope`) and 271 non-terminal rows: 142 `planned`
 active-module candidates and 129 `blocked-third-party` provider gaps. No legacy
 row is called replaced merely because a similarly named package module exists. The active
-catalog contains 103 low-risk package modules, but those modules do not yet
+catalog contains 103 low-risk package modules plus one explicit medium-risk
+multiarch module, but those modules do not yet
 carry accepted row-by-row parity and installation evidence.
 
 A mechanical comparison after the current package-only migration batches finds:
@@ -83,15 +84,17 @@ reviewed terminal-disposition gate. Backlog rows remain planning decisions
 only; their inventory states do not change until the normal evidence gates
 pass.
 
-Three distro-component outcomes now have deliberately narrow package-only
-candidates: PlayOnLinux and Tor Browser Launcher on Ubuntu 24.04 x86_64, and
-Telegram Desktop on Debian 12 x86_64. Fresh local container install/repeat
+Four distro-component outcomes now have deliberately narrow package-only
+candidates: PlayOnLinux, Tor Browser Launcher and Steam on Ubuntu 24.04 x86_64,
+and Telegram Desktop on Debian 12 x86_64. Steam requires an explicit i386
+multiarch acknowledgement. Fresh local container install/repeat
 checks are provisional engineering evidence, not durable promotion evidence.
 The exact image and package probe record is
 [`DISTRO_COMPONENT_PROBES.md`](DISTRO_COMPONENT_PROBES.md).
 All five distro-component inventory rows therefore remain
-`blocked-third-party`; Steam still needs an explicit multiarch design and
-MakeHuman was unavailable on both default Tier-1 Debian-family repositories.
+`blocked-third-party`; Steam now has an explicit Ubuntu 24.04 x86_64 multiarch
+candidate but still needs accepted fresh evidence, and MakeHuman was unavailable
+on both default Tier-1 Debian-family repositories.
 
 The push/PR GitHub Actions workflow is configured to run detection, catalog and
 read-only plan smoke tests plus a separate enabled-repository resolution matrix.
@@ -100,8 +103,8 @@ supported catalog module in bounded catalog batches, check post-install binary
 presence and compare package/version state across a repeat install; it has not
 yet produced accepted release evidence. Batch success is not standalone parity
 evidence for each module. A separate manual standalone workflow is configured
-as a 103-module matrix; each module job sequentially runs its applicable images
-in separate fresh containers, preserving all 370 independent module-image
+as a 104-module matrix; each module job sequentially runs its applicable images
+in separate fresh containers, preserving all 371 independent module-image
 cells without exceeding the workflow matrix limit. It emits structured
 pre/install/repeat evidence and an aggregate coverage/checksum bundle, but it
 also has no accepted run yet. A separate manual self-hosted `Systemd VM
@@ -160,7 +163,7 @@ class `none` and promotion readiness `no`. Their mappings collapse to 80 unique
 modules and 90 module-family evidence keys (67 Debian and 23 RHEL), so duplicate
 legacy entries can share evidence. Those keys require 247 standalone
 module-image cells: 201 Debian and 46 RHEL. A full-catalog standalone run emits
-370 cells; 247 of them cover every currently planned row.
+371 cells; 247 of them cover every currently planned row.
 
 The ledger labels 134 rows as `implemented-candidate` and eight as
 `superseded-candidate`; these are review routes, not terminal claims. The eight
@@ -395,7 +398,7 @@ The gates are cumulative.
   without adding an undeclared repository or bypassing signature checks.
 - The 100 family-wide modules contribute 270 candidate module-image cells.
   Three distro-component modules contribute one declared exact cell each, for
-  370 total cells: 294 Debian-family and 76 RHEL-family. Totals are derived
+  371 total cells: 295 Debian-family and 76 RHEL-family. Totals are derived
   after exact-cell filtering.
 
 ### G4 — Real installation and verification

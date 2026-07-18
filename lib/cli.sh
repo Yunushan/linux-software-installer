@@ -3,6 +3,7 @@
 declare -ga LSI_DIRECT_MODULES=()
 declare -ga LSI_REQUESTED_PROFILES=()
 declare -ga LSI_FINAL_MODULES=()
+declare -gA LSI_ALLOWED_FOREIGN_ARCHITECTURES=()
 
 lsi_usage() {
   cat << 'EOF'
@@ -26,6 +27,8 @@ Options:
   --profile NAME        Add a predefined module profile (repeatable)
   --yes, -y             Skip the normal confirmation prompt
   --enable-services     Enable and start declared services after installation
+  --allow-foreign-architecture ARCH
+                       Explicitly permit a reviewed global Debian multiarch change
   --no-refresh          Do not refresh package repository metadata
   --dry-run             Print commands without executing them
   --force-unsupported   Bypass the legacy-version guard
@@ -69,6 +72,18 @@ lsi_parse_options() {
       --enable-services)
         LSI_ENABLE_SERVICES=true
         shift
+        ;;
+      --allow-foreign-architecture)
+        (($# >= 2)) || lsi_die '--allow-foreign-architecture requires an architecture.' 2
+        lsi_valid_debian_foreign_architecture "$2" ||
+          lsi_die "Unsupported foreign architecture: $2" 2
+        [[ -z ${LSI_ALLOWED_FOREIGN_ARCHITECTURES[$2]+x} ]] ||
+          lsi_die "Duplicate foreign-architecture acknowledgement: $2" 2
+        LSI_ALLOWED_FOREIGN_ARCHITECTURES["$2"]=1
+        shift 2
+        ;;
+      --allow-foreign-architecture=*)
+        lsi_die '--allow-foreign-architecture requires a separate architecture argument.' 2
         ;;
       --no-refresh)
         LSI_NO_REFRESH=true
@@ -150,12 +165,50 @@ lsi_check_conflicts() {
   done
 }
 
+lsi_required_foreign_architectures() {
+  local id architecture
+  local -A required=()
+
+  for id in "${LSI_FINAL_MODULES[@]}"; do
+    lsi_load_module "$id"
+    while IFS= read -r architecture; do
+      [[ -n $architecture ]] && required["$architecture"]=1
+    done < <(lsi_module_debian_foreign_architectures)
+  done
+  ((${#required[@]} == 0)) || printf '%s\n' "${!required[@]}" | LC_ALL=C sort
+}
+
+lsi_check_foreign_architecture_acknowledgements() {
+  local architecture
+  local -A required=()
+
+  while IFS= read -r architecture; do
+    [[ -n $architecture ]] && required["$architecture"]=1
+  done < <(lsi_required_foreign_architectures)
+  for architecture in "${!required[@]}"; do
+    [[ -n ${LSI_ALLOWED_FOREIGN_ARCHITECTURES[$architecture]+x} ]] ||
+      lsi_die "Module selection requires --allow-foreign-architecture $architecture; this changes global Debian package-architecture state." 2
+  done
+  for architecture in "${!LSI_ALLOWED_FOREIGN_ARCHITECTURES[@]}"; do
+    [[ -n ${required[$architecture]+x} ]] ||
+      lsi_die "Foreign-architecture acknowledgement is not used by the selected modules: $architecture" 2
+  done
+}
+
 lsi_show_plan() {
-  local id
+  local id architecture
+  local -a foreign_architectures=()
   printf '\n%sInstallation plan%s\n' "$LSI_COLOR_BOLD" "$LSI_COLOR_RESET"
   lsi_print_os_info
   printf 'Refresh repos : %s\n' "$([[ $LSI_NO_REFRESH == true ]] && printf 'no' || printf 'yes')"
   printf 'Start services: %s\n' "$([[ $LSI_ENABLE_SERVICES == true ]] && printf 'yes' || printf 'no')"
+  mapfile -t foreign_architectures < <(lsi_required_foreign_architectures)
+  if ((${#foreign_architectures[@]} > 0)); then
+    for architecture in "${foreign_architectures[@]}"; do
+      printf 'Foreign arch  : %s (requires --allow-foreign-architecture %s)\n' \
+        "$architecture" "$architecture"
+    done
+  fi
   printf 'Modules:\n'
   for id in "${LSI_FINAL_MODULES[@]}"; do
     lsi_plan_module "$id"
@@ -228,6 +281,7 @@ lsi_execute() {
     return 0
   fi
 
+  lsi_check_foreign_architecture_acknowledgements
   lsi_confirm 'Apply this installation plan?' || lsi_die 'Installation cancelled.' 130
   lsi_require_root
   lsi_acquire_lock

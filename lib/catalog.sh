@@ -20,6 +20,7 @@ lsi_module_reset() {
   declare -ga MODULE_FAMILIES=()
   declare -ga MODULE_DEBIAN_PACKAGES=()
   declare -ga MODULE_RHEL_PACKAGES=()
+  declare -ga MODULE_DEBIAN_FOREIGN_ARCHITECTURES=()
   declare -ga MODULE_TARGET_PACKAGE_OVERRIDES=()
   declare -ga MODULE_DEBIAN_SERVICES=()
   declare -ga MODULE_RHEL_SERVICES=()
@@ -62,6 +63,7 @@ lsi_load_module() {
   [[ -n $MODULE_NAME && ${#MODULE_FAMILIES[@]} -gt 0 ]] || lsi_die "Incomplete module metadata: $requested_id" 3
   lsi_validate_module_target_cells
   lsi_validate_module_target_package_overrides
+  lsi_validate_module_debian_foreign_architectures
 }
 
 lsi_discover_modules() {
@@ -142,6 +144,41 @@ lsi_validate_module_target_cells() {
 
 lsi_module_has_target_restrictions() {
   ((${#MODULE_TARGET_CELLS[@]} > 0))
+}
+
+lsi_valid_debian_foreign_architecture() {
+  # Installing a foreign package architecture changes global dpkg state. Keep
+  # the active catalog intentionally narrow until each architecture has its
+  # own reviewed runtime and evidence contract.
+  [[ $1 == i386 ]]
+}
+
+lsi_validate_module_debian_foreign_architectures() {
+  local architecture cell id version target_arch family
+  local -A seen_architectures=()
+
+  ((${#MODULE_DEBIAN_FOREIGN_ARCHITECTURES[@]} > 0)) || return 0
+  lsi_module_supports_family debian ||
+    lsi_die "Foreign Debian architectures require Debian-family support in $MODULE_ID." 3
+  lsi_module_has_target_restrictions ||
+    lsi_die "Foreign Debian architectures require exact target cells in $MODULE_ID." 3
+
+  for architecture in "${MODULE_DEBIAN_FOREIGN_ARCHITECTURES[@]}"; do
+    lsi_valid_debian_foreign_architecture "$architecture" ||
+      lsi_die "Unsupported foreign Debian architecture in $MODULE_ID: $architecture" 3
+    [[ -z ${seen_architectures[$architecture]+x} ]] ||
+      lsi_die "Duplicate foreign Debian architecture in $MODULE_ID: $architecture" 3
+    seen_architectures["$architecture"]=1
+  done
+
+  for cell in "${MODULE_TARGET_CELLS[@]}"; do
+    lsi_parse_target_cell "$cell" id version target_arch ||
+      lsi_die "Malformed target cell in $MODULE_ID: $cell" 3
+    family=$(lsi_target_id_family "$id") ||
+      lsi_die "Unknown target OS ID in $MODULE_ID: $id" 3
+    [[ $family == debian && $target_arch == x86_64 ]] ||
+      lsi_die "Foreign Debian architectures in $MODULE_ID require x86_64 Debian targets only." 3
+  done
 }
 
 lsi_package_token_is_safe() {
@@ -237,6 +274,13 @@ lsi_module_packages_for_target() {
 lsi_module_packages() {
   lsi_module_packages_for_target \
     "$LSI_OS_FAMILY" "$LSI_OS_ID" "$LSI_OS_VERSION_ID" "$LSI_ARCH"
+}
+
+lsi_module_debian_foreign_architectures() {
+  lsi_module_supports_current_target || return 1
+  [[ $LSI_OS_FAMILY == debian ]] || return 0
+  ((${#MODULE_DEBIAN_FOREIGN_ARCHITECTURES[@]} == 0)) ||
+    printf '%s\n' "${MODULE_DEBIAN_FOREIGN_ARCHITECTURES[@]}"
 }
 
 lsi_current_target_label() {

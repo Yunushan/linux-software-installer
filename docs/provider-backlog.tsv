@@ -1,6 +1,6 @@
 legacy_id	normalized_capability	strategy	recommended_action	replacement_outcome	rationale
 ubuntu-005	visual-studio-code	vendor-apt	implement	visual-studio-code	Add a signed vendor APT provider with a scoped keyring and verify solver, install and update behavior.
-ubuntu-014	steam	distro-component	implement	steam	Verify the maintained distribution package on every claimed Debian-family image before adding the package-only module.
+ubuntu-014	steam	distro-component	implement	steam	An explicit Ubuntu 24.04 x86_64 multiarch module exists; require accepted real-install and repeat-state evidence before promotion.
 ubuntu-018	sublime-text-3	vendor-apt	implement	sublime-text	Add a signed vendor APT provider with a scoped keyring and verify solver, install and update behavior.
 ubuntu-019	brave	vendor-apt	implement	brave	Add a signed vendor APT provider with a scoped keyring and verify solver, install and update behavior.
 ubuntu-020	tor-browser	distro-component	implement	tor-browser	An exact Ubuntu 24.04 x86_64 candidate module is present and locally probed; keep it provisional until accepted solver, real-install, repeat-state and intent-parity evidence is tied to reviewed commit and image digests.

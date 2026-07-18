@@ -2,6 +2,7 @@
 
 LSI_REFRESHED=false
 declare -gA LSI_COMPLETED_MODULES=()
+declare -gA LSI_CONFIGURED_FOREIGN_ARCHITECTURES=()
 
 lsi_preflight() {
   [[ $LSI_DRY_RUN == true ]] && return 0
@@ -18,6 +19,30 @@ lsi_refresh_repositories() {
     *) lsi_die "No repository refresh implementation for $LSI_OS_FAMILY." 3 ;;
   esac
   LSI_REFRESHED=true
+}
+
+lsi_configure_debian_foreign_architectures() {
+  local architecture existing
+  local -a architectures=() existing_architectures=()
+  local -A configured=()
+
+  [[ $LSI_OS_FAMILY == debian ]] || return 0
+  mapfile -t architectures < <(lsi_module_debian_foreign_architectures)
+  ((${#architectures[@]} > 0)) || return 0
+  command -v dpkg > /dev/null 2>&1 ||
+    lsi_die 'dpkg is required to configure a declared foreign architecture.' 4
+  mapfile -t existing_architectures < <(dpkg --print-foreign-architectures)
+  for existing in "${existing_architectures[@]}"; do
+    [[ -n $existing ]] && configured["$existing"]=1
+  done
+
+  for architecture in "${architectures[@]}"; do
+    [[ -n ${configured[$architecture]+x} ||
+      -n ${LSI_CONFIGURED_FOREIGN_ARCHITECTURES[$architecture]+x} ]] && continue
+    lsi_info "Configuring foreign Debian package architecture: $architecture"
+    lsi_run dpkg --add-architecture "$architecture"
+    LSI_CONFIGURED_FOREIGN_ARCHITECTURES["$architecture"]=1
+  done
 }
 
 lsi_install_packages() {
@@ -126,6 +151,7 @@ lsi_install_module() {
   else
     lsi_info "Installing $MODULE_NAME"
   fi
+  lsi_configure_debian_foreign_architectures
   lsi_refresh_repositories
   lsi_install_packages "${packages[@]}"
   lsi_enable_module_services

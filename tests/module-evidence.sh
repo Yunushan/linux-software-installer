@@ -91,6 +91,14 @@ snapshot_packages() {
   esac
 }
 
+snapshot_foreign_architectures() {
+  local destination=$1
+  case "$LSI_OS_FAMILY" in
+    debian) dpkg --print-foreign-architectures | LC_ALL=C sort > "$destination" ;;
+    rhel) : > "$destination" ;;
+  esac
+}
+
 verify_binaries() {
   local destination=$1 binary path
   printf 'binary\tpath\n' > "$destination"
@@ -110,11 +118,12 @@ lsi_load_module "$MODULE"
 lsi_module_supports_current_target ||
   lsi_die "Module $MODULE does not support target $(lsi_current_target_label)." 3
 
-declare -a packages=() binaries=() services=()
+declare -a packages=() binaries=() services=() foreign_architectures=() foreign_options=()
 case "$LSI_OS_FAMILY" in
   debian)
     binaries=("${MODULE_DEBIAN_VERIFY_BINARIES[@]}")
     services=("${MODULE_DEBIAN_SERVICES[@]}")
+    foreign_architectures=("${MODULE_DEBIAN_FOREIGN_ARCHITECTURES[@]}")
     ;;
   rhel)
     binaries=("${MODULE_RHEL_VERIFY_BINARIES[@]}")
@@ -136,6 +145,8 @@ cp "$ROOT_DIR/modules/$MODULE/module.sh" "$EVIDENCE_DIR/module.sh"
   printf 'package\t%s\n' "${packages[@]}"
   printf 'verification_binary\t%s\n' "${binaries[@]}"
   ((${#services[@]} == 0)) || printf 'service\t%s\n' "${services[@]}"
+  ((${#foreign_architectures[@]} == 0)) ||
+    printf 'foreign_architecture\t%s\n' "${foreign_architectures[@]}"
 } > "$EVIDENCE_DIR/module-contract.tsv"
 stage_pass
 
@@ -144,7 +155,14 @@ snapshot_packages "$EVIDENCE_DIR/packages-before-install.tsv"
 stage_pass
 
 stage_begin initial-install
-"$ROOT_DIR/install.sh" install --yes "$MODULE"
+for architecture in "${foreign_architectures[@]}"; do
+  foreign_options+=(--allow-foreign-architecture "$architecture")
+done
+"$ROOT_DIR/install.sh" install --yes "${foreign_options[@]}" "$MODULE"
+stage_pass
+
+stage_begin foreign-architecture-check-after-install
+snapshot_foreign_architectures "$EVIDENCE_DIR/foreign-architectures-after-install.txt"
 stage_pass
 
 stage_begin binary-check-after-install
@@ -167,7 +185,11 @@ done
 stage_pass
 
 stage_begin repeat-install
-"$ROOT_DIR/install.sh" install --yes --no-refresh "$MODULE"
+"$ROOT_DIR/install.sh" install --yes --no-refresh "${foreign_options[@]}" "$MODULE"
+stage_pass
+
+stage_begin foreign-architecture-check-after-repeat
+snapshot_foreign_architectures "$EVIDENCE_DIR/foreign-architectures-after-repeat.txt"
 stage_pass
 
 stage_begin binary-check-after-repeat
