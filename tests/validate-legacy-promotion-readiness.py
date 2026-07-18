@@ -166,6 +166,77 @@ def checked_out_commit(root: Path) -> str | None:
     return None
 
 
+ADMISSION_ONLY_PATHS = {
+    "docs/accepted-evidence.tsv",
+    "docs/legacy-inventory.tsv",
+    "docs/legacy-promotion-readiness.tsv",
+    "docs/REPLACEMENT.md",
+}
+ADMISSION_ONLY_PREFIXES = (
+    "docs/evidence-verification/",
+    "docs/parity-reviews/",
+)
+
+
+def is_admission_only_path(path: str) -> bool:
+    """Return whether a commit-range path may accompany evidence admission.
+
+    Evidence reports and their registry necessarily change *after* the tested
+    commit has been produced.  This narrow allowlist makes that documentation
+    step possible without letting an untested installer, catalog, workflow or
+    test change inherit the earlier evidence.
+    """
+
+    return path in ADMISSION_ONLY_PATHS or path.startswith(ADMISSION_ONLY_PREFIXES)
+
+
+def validate_evidence_commit(root: Path, evidence_commit: str, current_commit: str) -> None:
+    """Require evidence to be current or separated only by admission documents."""
+
+    if evidence_commit == current_commit:
+        return
+    try:
+        ancestor = subprocess.run(
+            ["git", "merge-base", "--is-ancestor", evidence_commit, current_commit],
+            cwd=root,
+            check=False,
+            capture_output=True,
+            text=True,
+            encoding="utf-8",
+            timeout=10,
+        )
+        changed = subprocess.run(
+            ["git", "diff", "--name-only", f"{evidence_commit}..{current_commit}"],
+            cwd=root,
+            check=False,
+            capture_output=True,
+            text=True,
+            encoding="utf-8",
+            timeout=10,
+        )
+    except (OSError, UnicodeDecodeError, subprocess.TimeoutExpired) as error:
+        raise ReadinessError(
+            f"cannot verify whether evidence commit {evidence_commit} is admissible: {error}"
+        ) from None
+    if ancestor.returncode != 0:
+        raise ReadinessError(
+            f"evidence commit {evidence_commit} is not an ancestor of checked-out commit "
+            f"{current_commit}"
+        )
+    if changed.returncode != 0:
+        raise ReadinessError(
+            f"cannot inspect changes since evidence commit {evidence_commit}"
+        )
+    changed_paths = [path for path in changed.stdout.splitlines() if path]
+    disallowed = [path for path in changed_paths if not is_admission_only_path(path)]
+    if disallowed:
+        raise ReadinessError(
+            f"evidence commit {evidence_commit} predates checked-out commit {current_commit} "
+            "and intervening changes are not admission-only: "
+            + ", ".join(disallowed)
+        )
+
+
 def validate_admission_registry_file(path: Path) -> None:
     try:
         metadata = path.lstat()
@@ -275,11 +346,15 @@ def load_accepted_admissions(
     if not rows:
         return {}
 
+    supplied_commit = commit is not None
     commit = commit or checked_out_commit(root)
     if commit is None:
         raise ReadinessError(
             "accepted evidence requires a checked-out or explicitly supplied full commit ID"
         )
+    checked_out = checked_out_commit(root)
+    if not supplied_commit and checked_out is None:
+        raise ReadinessError("accepted evidence requires a checked-out full commit ID")
     targets = read_tsv(
         root / "tests" / "evidence-targets.tsv", TARGET_HEADER, "evidence target table"
     )
@@ -302,10 +377,13 @@ def load_accepted_admissions(
             raise ReadinessError(
                 f"accepted-evidence registry repeats evidence key {evidence_key}"
             )
-        if row["commit_sha"] != commit:
-            raise ReadinessError(
-                f"{evidence_key} is bound to {row['commit_sha']}, not checked-out commit {commit}"
-            )
+        if supplied_commit:
+            if row["commit_sha"] != commit:
+                raise ReadinessError(
+                    f"{evidence_key} is bound to {row['commit_sha']}, not requested commit {commit}"
+                )
+        else:
+            validate_evidence_commit(root, row["commit_sha"], checked_out)
         run_url = row["run_url"]
         artifact_url = row["artifact_url"]
         if not GITHUB_RUN_URL_PATTERN.fullmatch(run_url):

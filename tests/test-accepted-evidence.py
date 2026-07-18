@@ -5,6 +5,8 @@ from __future__ import annotations
 
 import importlib.util
 import json
+import shutil
+import subprocess
 import tempfile
 from pathlib import Path
 
@@ -33,7 +35,7 @@ def make_root() -> Path:
     root = Path(tempfile.mkdtemp(prefix="lsi-accepted-evidence-"))
     write(root / "docs" / "parity.md", "# reviewed parity\n")
     write(
-        root / "docs" / "verified-nginx.json",
+        root / "docs" / "evidence-verification" / "debian-nginx.json",
         json.dumps(
             {
                 "schema": READINESS.VERIFICATION_SCHEMA,
@@ -86,7 +88,7 @@ def record(service: bool = False) -> dict[str, str]:
         "systemd_run_url": "https://evidence.example.invalid/systemd/1" if service else "-",
         "systemd_artifact_url": "https://evidence.example.invalid/systemd/1/artifact" if service else "-",
         "systemd_artifact_digest": "sha256:" + SHA if service else "-",
-        "verification_report": "docs/verified-nginx.json",
+        "verification_report": "docs/evidence-verification/debian-nginx.json",
     }
 
 
@@ -94,6 +96,31 @@ def write_registry(root: Path, rows: list[dict[str, str]]) -> None:
     lines = ["\t".join(READINESS.ADMISSION_HEADER)]
     lines.extend("\t".join(row[field] for field in READINESS.ADMISSION_HEADER) for row in rows)
     write(root / "docs" / "accepted-evidence.tsv", "\n".join(lines) + "\n")
+
+
+def git(root: Path, *args: str) -> str:
+    completed = subprocess.run(
+        ["git", *args],
+        cwd=root,
+        check=True,
+        capture_output=True,
+        text=True,
+        encoding="utf-8",
+    )
+    return completed.stdout.strip()
+
+
+def commit(root: Path, message: str) -> str:
+    git(root, "add", ".")
+    git(root, "commit", "-m", message)
+    return git(root, "rev-parse", "HEAD")
+
+
+def set_report_commit(root: Path, commit_sha: str) -> None:
+    path = root / "docs" / "evidence-verification" / "debian-nginx.json"
+    report = json.loads(path.read_text(encoding="utf-8"))
+    report["commit_sha"] = commit_sha
+    write(path, json.dumps(report, indent=2, sort_keys=True) + "\n")
 
 
 def expect_failure(root: Path, rows: list[dict[str, str]], service: str = "no") -> bool:
@@ -142,6 +169,32 @@ def main() -> int:
         assert "NUL-free and end with a newline" in str(error)
     else:
         raise AssertionError("accepted-evidence registry without a final newline was accepted")
+
+    if shutil.which("git") is None:
+        print("accepted-evidence Git-history tests skipped: Git is unavailable")
+    else:
+        git(root, "init", "-q")
+        git(root, "config", "user.email", "tests@example.invalid")
+        git(root, "config", "user.name", "Evidence Tests")
+        base_commit = commit(root, "tested installer state")
+        set_report_commit(root, base_commit)
+        docs_only = record()
+        docs_only["commit_sha"] = base_commit
+        write_registry(root, [docs_only])
+        commit(root, "admit documentation evidence")
+        assert READINESS.load_accepted_admissions(root, [expected_row()]) == {
+            "debian/nginx": docs_only
+        }
+
+        write(root / "lib" / "installer.sh", "# untested runtime change\n")
+        commit(root, "untested runtime change")
+        try:
+            READINESS.load_accepted_admissions(root, [expected_row()])
+        except READINESS.ReadinessError as error:
+            assert "intervening changes are not admission-only" in str(error)
+            assert "lib/installer.sh" in str(error)
+        else:
+            raise AssertionError("accepted evidence survived an intervening runtime change")
 
     print("accepted-evidence admission tests passed")
     return 0
