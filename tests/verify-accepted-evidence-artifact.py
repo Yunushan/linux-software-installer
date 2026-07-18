@@ -161,10 +161,16 @@ def parse_index(payload: bytes, commit: str, run_url: str) -> dict[str, Any]:
         if not isinstance(cell, dict):
             raise EvidenceError("aggregate index contains a non-object cell")
         cell_id = cell.get("cell_id")
-        if not isinstance(cell_id, str) or not re.fullmatch(r"[a-z0-9]+(?:-[a-z0-9]+)*", cell_id) or cell_id in seen:
+        if not isinstance(cell_id, str) or not re.fullmatch(
+            r"[a-z0-9]+(?:-[a-z0-9]+)*/[a-z0-9]+(?:-[a-z0-9]+)*", cell_id
+        ) or cell_id in seen:
             raise EvidenceError("aggregate index has an invalid or duplicate cell ID")
         seen.add(cell_id)
-        if cell.get("result") != "passed" or cell.get("failure_stage") != "-" or cell.get("validation_errors") != 0:
+        if (
+            cell.get("result") != "passed"
+            or cell.get("failure_stage") != "-"
+            or cell.get("validation_errors") != "0"
+        ):
             raise EvidenceError(f"aggregate index cell {cell_id} is not a clean pass")
         if not isinstance(cell.get("result_sha256"), str) or not SHA256.fullmatch(cell["result_sha256"]):
             raise EvidenceError(f"aggregate index cell {cell_id} lacks a result digest")
@@ -214,9 +220,9 @@ def verify_requested_module_cells(
         not SLUG.fullmatch(target) for target in requested_targets
     ):
         raise EvidenceError("requested target cells are invalid or duplicated")
-    expected_targets = sorted(row["target_id"] for row in rows if row["module"] == module)
-    if expected_targets != sorted(requested_targets):
-        raise EvidenceError("artifact does not contain exactly the requested module target cells")
+    available_targets = {row["target_id"] for row in rows if row["module"] == module}
+    if not set(requested_targets).issubset(available_targets):
+        raise EvidenceError("artifact does not contain every requested module target cell")
     return [f"{target}/{module}" for target in sorted(requested_targets)]
 
 

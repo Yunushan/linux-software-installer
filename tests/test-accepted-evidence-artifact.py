@@ -4,6 +4,7 @@
 from __future__ import annotations
 
 import hashlib
+import importlib.util
 import io
 import json
 import subprocess
@@ -18,6 +19,14 @@ ROOT = Path(__file__).resolve().parents[1]
 VERIFIER = ROOT / "tests" / "verify-accepted-evidence-artifact.py"
 COMMIT = "a" * 40
 RUN_URL = "https://github.com/Yunushan/linux-software-installer/actions/runs/123"
+
+
+def load_verifier():
+    spec = importlib.util.spec_from_file_location("accepted_evidence_verifier", VERIFIER)
+    assert spec and spec.loader
+    verifier = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(verifier)
+    return verifier
 
 
 def sha(value: bytes) -> str:
@@ -60,13 +69,13 @@ def artifact(validation_passed: bool = True, result_sha: str | None = None) -> b
         "issues": [] if validation_passed else ["failed"],
         "cells": [
             {
-                "cell_id": "demo-cell",
+                "cell_id": "ubuntu-24-04/demo",
                 "target_id": "ubuntu-24-04",
                 "family": "debian",
                 "module": "demo",
                 "result": "passed",
                 "failure_stage": "-",
-                "validation_errors": 0,
+                "validation_errors": "0",
                 "result_sha256": result_sha or sha(result_payload),
             }
         ],
@@ -74,7 +83,7 @@ def artifact(validation_passed: bool = True, result_sha: str | None = None) -> b
     index_bytes = (json.dumps(index, indent=2, sort_keys=True) + "\n").encode("utf-8")
     summary = (
         "cell_id\ttarget_id\tfamily\tmodule\tresult\tfailure_stage\tvalidation_errors\n"
-        "demo-cell\tubuntu-24-04\tdebian\tdemo\tpassed\t-\t0\n"
+        "ubuntu-24-04/demo\tubuntu-24-04\tdebian\tdemo\tpassed\t-\t0\n"
     ).encode("utf-8")
     archive = bundle(result_payload)
     raw = io.BytesIO()
@@ -88,7 +97,7 @@ def artifact(validation_passed: bool = True, result_sha: str | None = None) -> b
             (
                 "cell_id\ttarget_id\tfamily\tmodule\timage\tplatform\t"
                 "expected_os_id\texpected_version_id\texpected_arch\n"
-                "demo-cell\tubuntu-24-04\tdebian\tdemo\tubuntu:24.04\t"
+                "ubuntu-24-04/demo\tubuntu-24-04\tdebian\tdemo\tubuntu:24.04\t"
                 "linux/amd64\tubuntu\t24.04\tx86_64\n"
             ).encode("utf-8"),
         )
@@ -142,6 +151,21 @@ def invoke(
 
 
 def main() -> int:
+    verifier = load_verifier()
+    rows = [
+        {"module": "demo", "target_id": "debian-12"},
+        {"module": "demo", "target_id": "ubuntu-24-04"},
+    ]
+    assert verifier.verify_requested_module_cells(rows, "demo", ["ubuntu-24-04"]) == [
+        "ubuntu-24-04/demo"
+    ]
+    try:
+        verifier.verify_requested_module_cells(rows, "demo", ["rocky-9-8"])
+    except verifier.EvidenceError:
+        pass
+    else:
+        raise AssertionError("a missing requested target was accepted")
+
     with tempfile.TemporaryDirectory(prefix="lsi-accepted-artifact-") as temporary:
         root = Path(temporary)
         good = artifact()
@@ -229,7 +253,7 @@ def main() -> int:
 
         wrong_module = invoke(good_path, sha(good), root / "wrong-module.json", module="other")
         assert wrong_module.returncode != 0
-        assert "does not contain exactly the requested module target cells" in wrong_module.stderr
+        assert "does not contain every requested module target cell" in wrong_module.stderr
 
         traversal = append_zip_entry(good, "../outside", b"unsafe\n")
         traversal_path = root / "traversal.zip"
