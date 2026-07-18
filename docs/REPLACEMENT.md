@@ -55,22 +55,22 @@ The TSV schema is deliberately reviewable without a database:
 
 ## Current coverage truth
 
-The current inventory snapshot has 157 terminal rows: 72 `implemented`, one
+The current inventory snapshot has 162 terminal rows: 77 `implemented`, one
 `superseded`, 20 `blocked-safety`, 25 `retired` and 39 `out-of-scope`. The
-remaining 198 rows are non-terminal: 72 `planned` active-module candidates and
+remaining 193 rows are non-terminal: 67 `planned` active-module candidates and
 126 `blocked-third-party` provider gaps. No legacy row is called replaced
 merely because a similarly named package module exists. The active catalog
 contains 103 low-risk package modules plus one explicit medium-risk multiarch
-module; only the 73 accepted active-replacement rows carry accepted row-by-row
+module; only the 78 accepted active-replacement rows carry accepted row-by-row
 parity and installation evidence.
 
 A mechanical comparison after the current package-only migration batches finds:
 
-- 39 planned Ubuntu rows with an explicit Debian-family active-module candidate
+- 34 planned Ubuntu rows with an explicit Debian-family active-module candidate
   and 53 `blocked-third-party` provider/repository rows;
 - 33 planned RHEL rows with an explicit RHEL-family active-module candidate and
   74 `blocked-third-party` provider/repository rows;
-- 72 candidate rows in total and 126 provider/repository rows in total, all
+- 67 candidate rows in total and 126 provider/repository rows in total, all
   still non-terminal pending their applicable evidence or reviewed handoff.
 
 These are discovery numbers, not accepted parity. For example, current modules
@@ -104,8 +104,9 @@ as a 104-module matrix; each module job sequentially runs its applicable images
 in separate fresh containers, preserving all 371 independent module-image
 cells without exceeding the workflow matrix limit. It emits structured
 pre/install/repeat evidence and an aggregate coverage/checksum bundle. A prior
-externally hashed aggregate admitted 46 module-family keys and 73 rows,
-including the newer Steam multiarch contract.
+externally hashed aggregate admitted 51 module-family keys and 78 rows,
+including the Steam multiarch contract and five additional non-service
+Debian-family replacements.
 A separate manual self-hosted `Systemd VM
 evidence` workflow can validate one exact systemd plan row on one externally
 provisioned disposable VM; it remains provisional until an independent
@@ -140,7 +141,7 @@ legacy feature replacement yet.
 
 [`legacy-promotion-readiness.tsv`](legacy-promotion-readiness.tsv) is the
 derived, machine-checked promotion ledger for active replacement rows. It has
-145 rows: 72 currently `implemented`, one `superseded` and 72 still `planned`.
+145 rows: 77 currently `implemented`, one `superseded` and 67 still `planned`.
 An admitted row remains in the ledger after moving to `implemented` or
 `superseded`. Validate it against the live inventory, target matrix and module
 contracts with:
@@ -157,20 +158,18 @@ bash tests/validate-legacy-promotion-readiness.sh --emit \
   > docs/legacy-promotion-readiness.tsv
 ```
 
-The current ledger has 73 Debian-family and 72 RHEL-family active-replacement
-rows. Seventy-three rows have accepted evidence and promotion readiness `yes`;
-72 remain at evidence class `none` and readiness `no`. Their mappings collapse
+The current ledger has 78 Debian-family and 72 RHEL-family active-replacement
+rows. Seventy-eight rows have accepted evidence and promotion readiness `yes`;
+67 remain at evidence class `none` and readiness `no`. Their mappings collapse
 to 83 unique modules and 93 module-family evidence keys, so duplicate legacy
 entries can share evidence. Those keys require 250 standalone module-image
 cells. A full-catalog standalone run emits 371 cells; its coverage includes
 every active-replacement evidence key.
 
-The ledger labels 137 rows as `implemented-candidate` and eight as
+The ledger labels 140 rows as `implemented-candidate` and five as
 `superseded-candidate`; these are review routes rather than a substitute for
-the inventory disposition. The eight explicit supersession rationales are
-`ubuntu-024`, `ubuntu-038`, `ubuntu-121`, `ubuntu-122`,
-`rhel-almalinux-8-015-docker`, `rhel-centos-7-015-docker`,
-`rhel-red-hat-enterprise-linux-8-027-docker` and
+the inventory disposition. The five explicit supersession rationales are
+`ubuntu-024`, `ubuntu-038`, `ubuntu-121`, `ubuntu-122`, and
 `rhel-red-hat-enterprise-linux-8-039-ufw`. A reviewer must still confirm each
 row's retained outcome and intentional differences before changing the source
 inventory.
@@ -196,8 +195,8 @@ self-contained hashes are not an external authenticity anchor.
 
 ### Accepted-evidence admission
 
-[`accepted-evidence.tsv`](accepted-evidence.tsv) currently contains 46
-accepted module-family admissions, covering 73 terminal inventory rows. Each
+[`accepted-evidence.tsv`](accepted-evidence.tsv) currently contains 51
+accepted module-family admissions, covering 78 terminal inventory rows. Each
 record was created only after an external bundle was downloaded, verified with
 the offline verifier below, revalidated and reviewed. A future record per
 module-family evidence key
@@ -272,10 +271,10 @@ python3 tests/verify-accepted-evidence-artifact.py \
 The output directory must not already exist. This only creates verification
 reports; it never writes an admission registry row or promotes inventory.
 
-The smallest safe path to close the remaining 72 planned rows is:
+The smallest safe path to close the remaining 67 planned rows is:
 
 1. Publish repository-resolution evidence for the tested commit, exact image
-   digests and all 47 remaining module-family contracts (or a reviewed stronger
+   digests and all 42 remaining module-family contracts (or a reviewed stronger
    run that demonstrably satisfies the same G3 conditions).
 2. Complete one green full-catalog standalone run, import its validated
    aggregate, and record the GitHub artifact digest/ID/URL or an equivalent
