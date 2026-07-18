@@ -101,8 +101,8 @@ obsolete.
 This review closes 84 of the 355 immutable legacy rows through 20 permanent
 safety rejections, 25 retirements of unsupported legacy scope and 39 reviewed
 external handoffs. Subsequent accepted active-replacement admissions have
-closed a further 92 rows (91 `implemented` and one `superseded`), bringing the
-terminal total to 176. The remaining 179 rows stay non-terminal as 53
+closed a further 97 rows (96 `implemented` and one `superseded`), bringing the
+terminal total to 181. The remaining 174 rows stay non-terminal as 48
 active-module candidates and 126 third-party provider gaps until their
 replacement or disposition has evidence that satisfies
 `docs/REPLACEMENT.md`. The proposed next route for each of those 126 gaps is
