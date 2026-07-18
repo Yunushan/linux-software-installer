@@ -23,9 +23,10 @@ source locator is provenance only and must never be executed.
 | `blocked-safety` | Automation was rejected because it changes a critical component or violates the safety contract. | Use the documented specialist or platform workflow. |
 | `out-of-scope` | Ownership belongs to a vendor, deployment system or other explicit handoff. | Follow the recorded handoff instead of the legacy script. |
 
-The current immutable denominator is 355 entries: 142 provisional candidates,
-129 unresolved third-party routes and 84 terminal dispositions. Those numbers
-describe migration accounting, not the public support level of a module.
+The current immutable denominator is 355 entries: 72 provisional active-module
+candidates, 127 unresolved third-party routes and 156 terminal dispositions.
+Those numbers describe migration accounting, not the public support level of a
+module.
 
 `./install.sh retirement-status` also reports the read-only counts of accepted
 external-evidence admissions and registered live providers. Those counts make

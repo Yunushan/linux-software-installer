@@ -58,9 +58,9 @@ use_case() {
 test_canonical_catalog_loads() (
   lsi_migration_load || return 1
   [[ $LSI_MIGRATION_TOTAL -eq 355 &&
-    $LSI_MIGRATION_TERMINAL -eq 84 &&
-    $LSI_MIGRATION_PLANNED -eq 142 &&
-    $LSI_MIGRATION_BLOCKED -eq 129 ]]
+    $LSI_MIGRATION_TERMINAL -eq 156 &&
+    $LSI_MIGRATION_PLANNED -eq 72 &&
+    $LSI_MIGRATION_BLOCKED -eq 127 ]]
 )
 
 test_planned_lookup_is_provisional() (
@@ -99,7 +99,7 @@ test_list_is_complete_and_nonclaiming() (
   output=$(lsi_migration_list) || return 1
   count=$(grep -Ec '^(ubuntu|rhel)-[a-z0-9-]+[[:space:]]+' <<< "$output")
   [[ $count -eq 355 ]] &&
-    grep -q '355 entries: 84 terminal, 142 provisional, 129 unresolved third-party' <<< "$output" &&
+    grep -q '355 entries: 156 terminal, 72 provisional, 127 unresolved third-party' <<< "$output" &&
     grep -q 'not support claims' <<< "$output" &&
     grep -q 'Read-only migration guidance' <<< "$output"
 )
@@ -108,10 +108,10 @@ test_retirement_status_reports_exact_blockers() (
   local output
   output=$(lsi_migration_retirement_status) || return 1
   grep -q '^Tracked legacy entries        : 355$' <<< "$output" &&
-    grep -q '^Terminal dispositions         : 84$' <<< "$output" &&
-    grep -q '^Provisional module candidates : 142$' <<< "$output" &&
-    grep -q '^Unresolved third-party routes : 129$' <<< "$output" &&
-    grep -q '^Accepted evidence admissions  : 0$' <<< "$output" &&
+    grep -q '^Terminal dispositions         : 156$' <<< "$output" &&
+    grep -q '^Provisional module candidates : 72$' <<< "$output" &&
+    grep -q '^Unresolved third-party routes : 127$' <<< "$output" &&
+    grep -q '^Accepted evidence admissions  : 45$' <<< "$output" &&
     grep -q '^Registered live providers     : 0$' <<< "$output" &&
     grep -q '^Retirement decision           : NOT READY$' <<< "$output" &&
     grep -q 'Candidate module mappings do not become replacements' <<< "$output"
@@ -273,7 +273,7 @@ test_admitted_terminal_replacement_loads() (
   use_case "$case_dir" "$case_dir/accepted-evidence.tsv" "$case_dir/legacy-promotion-readiness.tsv" "$case_dir"
   lsi_migration_load || return 1
   output=$(lsi_migration_show ubuntu-002) || return 1
-  [[ $LSI_MIGRATION_TERMINAL -eq 85 && $LSI_MIGRATION_PLANNED -eq 141 ]] &&
+  [[ $LSI_MIGRATION_TERMINAL -eq 157 && $LSI_MIGRATION_PLANNED -eq 71 ]] &&
     grep -q '^Disposition   : implemented$' <<< "$output" &&
     grep -q "^Evidence      : $reference$" <<< "$output" &&
     grep -q 'terminal replacement recorded with assessed parity and evidence' <<< "$output" || return 1

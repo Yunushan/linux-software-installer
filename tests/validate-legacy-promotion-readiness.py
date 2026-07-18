@@ -172,6 +172,8 @@ ADMISSION_ONLY_PATHS = {
     "docs/legacy-inventory.tsv",
     "docs/legacy-promotion-readiness.tsv",
     "docs/REPLACEMENT.md",
+    "docs/MIGRATION.md",
+    "docs/LEGACY_DISPOSITIONS.md",
     "docs/DISTRO_COMPONENT_PROBES.md",
     "docs/PROVIDER_BACKLOG.md",
     "docs/provider-backlog.tsv",
@@ -182,6 +184,7 @@ ADMISSION_ONLY_PATHS = {
     # carried forward after an admission-only accounting correction, while any
     # change to installer or evidence behavior still requires a fresh run.
     "tests/validate-legacy-inventory.sh",
+    "tests/migration-unit.sh",
     "tests/validate-legacy-promotion-readiness.py",
     "tests/test-accepted-evidence.py",
     "tests/validate-provider-backlog.sh",
