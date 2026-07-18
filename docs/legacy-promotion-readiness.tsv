@@ -7,7 +7,7 @@ ubuntu-007	debian	monitoring-tools	debian/monitoring-tools	implemented-candidate
 ubuntu-008	debian	wine	debian/wine	implemented-candidate	intent	3	no	0	accepted	https://github.com/Yunushan/linux-software-installer/actions/runs/29640717432#artifact-digest=e744fab69651ad0d2adce755e7a65da1191822af6524d44b8b1d1d259140d477	yes	-
 ubuntu-009	debian	qbittorrent	debian/qbittorrent	implemented-candidate	intent	3	no	0	accepted	https://github.com/Yunushan/linux-software-installer/actions/runs/29640717432#artifact-digest=e744fab69651ad0d2adce755e7a65da1191822af6524d44b8b1d1d259140d477	yes	-
 ubuntu-011	debian	gimp	debian/gimp	implemented-candidate	intent	3	no	0	accepted	https://github.com/Yunushan/linux-software-installer/actions/runs/29640717432#artifact-digest=e744fab69651ad0d2adce755e7a65da1191822af6524d44b8b1d1d259140d477	yes	-
-ubuntu-012	debian	nmap	debian/nmap	implemented-candidate	intent	3	no	0	none	-	no	G3-repository-resolution+G4-standalone-install+row-parity-review+durable-trust-anchor
+ubuntu-012	debian	nmap	debian/nmap	implemented-candidate	intent	3	no	0	accepted	https://github.com/Yunushan/linux-software-installer/actions/runs/29640717432#artifact-digest=e744fab69651ad0d2adce755e7a65da1191822af6524d44b8b1d1d259140d477	yes	-
 ubuntu-015	debian	obs-studio	debian/obs-studio	implemented-candidate	intent	3	no	0	none	-	no	G3-repository-resolution+G4-standalone-install+row-parity-review+durable-trust-anchor
 ubuntu-016	debian	openshot	debian/openshot	implemented-candidate	intent	3	no	0	none	-	no	G3-repository-resolution+G4-standalone-install+row-parity-review+durable-trust-anchor
 ubuntu-023	debian	vuze	debian/vuze	implemented-candidate	intent	3	no	0	none	-	no	G3-repository-resolution+G4-standalone-install+row-parity-review+durable-trust-anchor
@@ -70,7 +70,7 @@ ubuntu-136	debian	midnight-commander	debian/midnight-commander	implemented-candi
 ubuntu-154	debian	remmina	debian/remmina	implemented-candidate	intent	3	no	0	none	-	no	G3-repository-resolution+G4-standalone-install+row-parity-review+durable-trust-anchor
 ubuntu-157	debian	dvblast	debian/dvblast	implemented-candidate	intent	3	no	0	none	-	no	G3-repository-resolution+G4-standalone-install+row-parity-review+durable-trust-anchor
 rhel-almalinux-8-001-php	rhel	php	rhel/php	implemented-candidate	intent	2	yes	4	none	-	no	G3-repository-resolution+G4-standalone-install+G5-systemd-behavior+row-parity-review+durable-trust-anchor
-rhel-almalinux-8-011-nmap	rhel	nmap	rhel/nmap	implemented-candidate	intent	2	no	0	none	-	no	G3-repository-resolution+G4-standalone-install+row-parity-review+durable-trust-anchor
+rhel-almalinux-8-011-nmap	rhel	nmap	rhel/nmap	implemented-candidate	intent	2	no	0	accepted	https://github.com/Yunushan/linux-software-installer/actions/runs/29640717432#artifact-digest=e744fab69651ad0d2adce755e7a65da1191822af6524d44b8b1d1d259140d477	yes	-
 rhel-almalinux-8-012-irssi	rhel	irssi	rhel/irssi	implemented-candidate	intent	2	no	0	none	-	no	G3-repository-resolution+G4-standalone-install+row-parity-review+durable-trust-anchor
 rhel-almalinux-8-015-docker	rhel	podman	rhel/podman	superseded-candidate	intent	2	no	0	none	-	no	G3-repository-resolution+G4-standalone-install+row-parity-review+durable-trust-anchor
 rhel-almalinux-8-019-gnu-emacs	rhel	emacs	rhel/emacs	implemented-candidate	intent	2	no	0	none	-	no	G3-repository-resolution+G4-standalone-install+row-parity-review+durable-trust-anchor
@@ -98,7 +98,7 @@ rhel-centos-6-005-gplusplus	rhel	build-tools	rhel/build-tools	implemented-candid
 rhel-centos-6-006-cmake	rhel	build-tools	rhel/build-tools	implemented-candidate	intent	2	no	0	none	-	no	G3-repository-resolution+G4-standalone-install+row-parity-review+durable-trust-anchor
 rhel-centos-6-008-apache	rhel	apache	rhel/apache	implemented-candidate	intent	2	yes	4	none	-	no	G3-repository-resolution+G4-standalone-install+G5-systemd-behavior+row-parity-review+durable-trust-anchor
 rhel-centos-7-001-php	rhel	php	rhel/php	implemented-candidate	intent	2	yes	4	none	-	no	G3-repository-resolution+G4-standalone-install+G5-systemd-behavior+row-parity-review+durable-trust-anchor
-rhel-centos-7-011-nmap	rhel	nmap	rhel/nmap	implemented-candidate	intent	2	no	0	none	-	no	G3-repository-resolution+G4-standalone-install+row-parity-review+durable-trust-anchor
+rhel-centos-7-011-nmap	rhel	nmap	rhel/nmap	implemented-candidate	intent	2	no	0	accepted	https://github.com/Yunushan/linux-software-installer/actions/runs/29640717432#artifact-digest=e744fab69651ad0d2adce755e7a65da1191822af6524d44b8b1d1d259140d477	yes	-
 rhel-centos-7-012-irssi	rhel	irssi	rhel/irssi	implemented-candidate	intent	2	no	0	none	-	no	G3-repository-resolution+G4-standalone-install+row-parity-review+durable-trust-anchor
 rhel-centos-7-015-docker	rhel	podman	rhel/podman	superseded-candidate	intent	2	no	0	none	-	no	G3-repository-resolution+G4-standalone-install+row-parity-review+durable-trust-anchor
 rhel-centos-7-019-gnu-emacs	rhel	emacs	rhel/emacs	implemented-candidate	intent	2	no	0	none	-	no	G3-repository-resolution+G4-standalone-install+row-parity-review+durable-trust-anchor
@@ -131,7 +131,7 @@ rhel-red-hat-enterprise-linux-8-039-ufw	rhel	firewalld	rhel/firewalld	superseded
 rhel-red-hat-enterprise-linux-8-043-podman	rhel	podman	rhel/podman	implemented-candidate	intent	2	no	0	none	-	no	G3-repository-resolution+G4-standalone-install+row-parity-review+durable-trust-anchor
 rhel-red-hat-enterprise-linux-8-044-nfs-server	rhel	nfs-server	rhel/nfs-server	implemented-candidate	intent	2	no	0	none	-	no	G3-repository-resolution+G4-standalone-install+row-parity-review+durable-trust-anchor
 rhel-red-hat-enterprise-linux-8-006-apache	rhel	apache	rhel/apache	implemented-candidate	intent	2	yes	4	none	-	no	G3-repository-resolution+G4-standalone-install+G5-systemd-behavior+row-parity-review+durable-trust-anchor
-rhel-red-hat-enterprise-linux-8-008-nmap	rhel	nmap	rhel/nmap	implemented-candidate	intent	2	no	0	none	-	no	G3-repository-resolution+G4-standalone-install+row-parity-review+durable-trust-anchor
+rhel-red-hat-enterprise-linux-8-008-nmap	rhel	nmap	rhel/nmap	implemented-candidate	intent	2	no	0	accepted	https://github.com/Yunushan/linux-software-installer/actions/runs/29640717432#artifact-digest=e744fab69651ad0d2adce755e7a65da1191822af6524d44b8b1d1d259140d477	yes	-
 rhel-red-hat-enterprise-linux-8-009-nginx	rhel	nginx	rhel/nginx	implemented-candidate	intent	2	yes	4	none	-	no	G3-repository-resolution+G4-standalone-install+G5-systemd-behavior+row-parity-review+durable-trust-anchor
 rhel-red-hat-enterprise-linux-9-001-php	rhel	php	rhel/php	implemented-candidate	intent	2	yes	4	none	-	no	G3-repository-resolution+G4-standalone-install+G5-systemd-behavior+row-parity-review+durable-trust-anchor
 rhel-red-hat-enterprise-linux-9-010-openjdk	rhel	openjdk	rhel/openjdk	implemented-candidate	intent	2	no	0	none	-	no	G3-repository-resolution+G4-standalone-install+row-parity-review+durable-trust-anchor
