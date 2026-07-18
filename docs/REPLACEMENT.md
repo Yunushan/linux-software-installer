@@ -210,11 +210,13 @@ admission commit may instead reference an ancestor tested commit, because the
 report and registry cannot exist before the artifact is independently verified.
 In that case the validator requires the tested commit to be an ancestor and
 allows only the admission registry, derived readiness ledger, inventory
-disposition/evidence fields, this contract, and files below
-`docs/evidence-verification/` or `docs/parity-reviews/` to have changed. Any
-intervening installer, module, provider, workflow, test, legacy-source or
-other path change fails the admission. This exception does not let evidence
-survive a code change: a new full evidence run is required first.
+disposition/evidence fields, this contract, files below
+`docs/evidence-verification/` or `docs/parity-reviews/`, and the two explicit
+legacy-ledger accounting validators to have changed. Any intervening installer,
+module, provider, workflow, evidence capture or verification, legacy-source,
+or other test path change fails the admission. This exception does not let
+evidence survive a runtime or evidence-behavior change: a new full evidence
+run is required first.
 
 To promote a row, the same review must change its inventory disposition to
 `implemented` or `superseded` and set its `evidence` field to the exact
