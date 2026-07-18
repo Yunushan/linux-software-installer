@@ -82,7 +82,11 @@ snapshot_packages() {
   local destination=$1
   case "$LSI_OS_FAMILY" in
     debian)
-      dpkg-query -W -f='${Package}\t${Version}\n' | sort > "$destination"
+      # ${Package} omits the architecture suffix, which makes multiarch
+      # package snapshots ambiguous (for example steam-libs on amd64+i386).
+      # Preserve dpkg's canonical binary package identity for a sorted,
+      # unambiguous evidence table.
+      dpkg-query -W -f='${binary:Package}\t${Version}\n' | sort > "$destination"
       ;;
     rhel)
       rpm -qa --qf '%{NAME}\t%{EPOCHNUM}:%{VERSION}-%{RELEASE}.%{ARCH}\n' |
