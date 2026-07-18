@@ -76,12 +76,12 @@ SERVICE_MISSING = (
 # ``planned_rows`` deliberately do not belong here: they must change when a
 # verified replacement is promoted from planned to implemented or superseded.
 EXPECTED_CATALOG_INVARIANTS = {
-    "active_rows": 142,
-    "debian_rows": 70,
+    "active_rows": 144,
+    "debian_rows": 72,
     "rhel_rows": 72,
-    "modules": 80,
-    "module_family_pairs": 90,
-    "standalone_cells": 247,
+    "modules": 82,
+    "module_family_pairs": 92,
+    "standalone_cells": 249,
     "service_rows": 32,
     "service_modules": 9,
     "service_pairs": 11,
@@ -372,7 +372,9 @@ def load_accepted_admissions(
         root / "tests" / "evidence-targets.tsv", TARGET_HEADER, "evidence target table"
     )
     targets_by_family = {
-        family: tuple(sorted(row["target_id"] for row in targets if row["family"] == family))
+        family: tuple(
+            sorted(row["target_id"] for row in targets if row["family"] == family)
+        )
         for family in {"debian", "rhel"}
     }
     report_root = report_root or root
@@ -410,10 +412,14 @@ def load_accepted_admissions(
         if not SHA256_PATTERN.fullmatch(row["index_sha256"]):
             raise ReadinessError(f"{evidence_key} has an invalid aggregate index digest")
         target_cells = comma_tokens(row["target_cells"])
-        expected_cells = targets_by_family[derived["target_family"]]
+        expected_cells = tuple(
+            derived.get(
+                "evidence_target_cells", targets_by_family[derived["target_family"]]
+            )
+        )
         if target_cells != expected_cells:
             raise ReadinessError(
-                f"{evidence_key} target cells do not exactly match its target family"
+                f"{evidence_key} target cells do not exactly match its supported module contract"
             )
         if not valid_reference(root, row["parity_report"]):
             raise ReadinessError(f"{evidence_key} has an invalid parity review reference")
@@ -454,16 +460,27 @@ def admission_reference(admission: dict[str, str]) -> str:
     )
 
 
-def derive_contract(root: Path, module: str, family: str) -> tuple[str, ...]:
+def derive_contract(
+    root: Path, module: str, family: str, target: dict[str, str] | None = None
+) -> tuple[str, ...]:
+    command = [
+        "bash",
+        str(root / "tests" / "evidence-contract.sh"),
+        str(root),
+        module,
+        family,
+    ]
+    if target is not None:
+        command.extend(
+            [
+                target["expected_os_id"],
+                target["expected_version_id"],
+                target["expected_arch"],
+            ]
+        )
     try:
         completed = subprocess.run(
-            [
-                "bash",
-                str(root / "tests" / "evidence-contract.sh"),
-                str(root),
-                module,
-                family,
-            ],
+            command,
             cwd=root,
             check=False,
             capture_output=True,
@@ -497,6 +514,38 @@ def derive_contract(root: Path, module: str, family: str) -> tuple[str, ...]:
             f"evidence contract for {family}/{module} lacks package or binary coverage"
         )
     return tuple(row["value"] for row in rows if row["type"] == "service")
+
+
+def derive_supported_target_contract(
+    root: Path, module: str, family: str, targets: tuple[dict[str, str], ...]
+) -> tuple[tuple[str, ...], tuple[str, ...]]:
+    """Derive the exact evidence targets accepted by a module-family contract.
+
+    Family-wide modules accept every catalog target; target-restricted modules
+    must be invoked with each exact OS/version/architecture tuple, so a
+    supported single cell cannot accidentally be promoted as whole-family
+    evidence.
+    """
+
+    supported: list[tuple[str, tuple[str, ...]]] = []
+    for target in targets:
+        try:
+            services = derive_contract(root, module, family, target)
+        except ReadinessError as error:
+            if "does not support target" in str(error):
+                continue
+            raise
+        supported.append((target["target_id"], services))
+    if not supported:
+        raise ReadinessError(
+            f"evidence contract for {family}/{module} supports no catalog target cell"
+        )
+    service_sets = {services for _, services in supported}
+    if len(service_sets) != 1:
+        raise ReadinessError(
+            f"evidence contract for {family}/{module} has inconsistent service declarations"
+        )
+    return tuple(target_id for target_id, _ in supported), supported[0][1]
 
 
 def expected_rows_and_summary(
@@ -556,16 +605,29 @@ def expected_rows_and_summary(
             f"evidence target family counts drifted: {dict(sorted(target_counts.items()))}"
         )
 
+    targets_by_family = {
+        family: tuple(
+            sorted(
+                (row for row in targets if row["family"] == family),
+                key=lambda row: row["target_id"],
+            )
+        )
+        for family in {"debian", "rhel"}
+    }
     pairs = sorted({(row["replacement"], row["target_family"]) for row in active})
-    services = {
-        (module, family): derive_contract(root, module, family)
+    contracts = {
+        (module, family): derive_supported_target_contract(
+            root, module, family, targets_by_family[family]
+        )
         for module, family in pairs
     }
+    services = {key: contract[1] for key, contract in contracts.items()}
     expected: list[dict[str, str]] = []
     for row in active:
         module = row["replacement"]
         family = row["target_family"]
         key = (module, family)
+        evidence_target_cells = contracts[key][0]
         has_services = bool(services[key])
         expected.append(
             {
@@ -575,11 +637,12 @@ def expected_rows_and_summary(
                 "evidence_key": f"{family}/{module}",
                 "review_route": review_route(row),
                 "parity_level": row["parity_level"],
-                "required_standalone_cells": str(target_counts[family]),
+                "required_standalone_cells": str(len(evidence_target_cells)),
                 "service_contract": "yes" if has_services else "no",
                 "shared_systemd_executions": (
-                    str(target_counts[family] * 2) if has_services else "0"
+                    str(len(evidence_target_cells) * 2) if has_services else "0"
                 ),
+                "evidence_target_cells": evidence_target_cells,
                 "evidence_class": "none",
                 "evidence_reference": "-",
                 "promotion_ready": "no",
@@ -623,7 +686,7 @@ def expected_rows_and_summary(
         "superseded_candidates": routes["superseded-candidate"],
         "modules": len({row["replacement"] for row in expected}),
         "module_family_pairs": len(pairs),
-        "standalone_cells": sum(target_counts[family] for _, family in pairs),
+        "standalone_cells": sum(len(contracts[key][0]) for key in pairs),
         "service_rows": sum(
             (row["replacement"], row["target_family"]) in service_pairs
             for row in active
@@ -631,7 +694,7 @@ def expected_rows_and_summary(
         "service_modules": len({module for module, _ in service_pairs}),
         "service_pairs": len(service_pairs),
         "systemd_executions": sum(
-            target_counts[family] * 2 for _, family in service_pairs
+            len(contracts[key][0]) * 2 for key in service_pairs
         ),
     }
     return expected, summary
@@ -699,6 +762,7 @@ def emit_rows(rows: list[dict[str, str]]) -> None:
         delimiter="\t",
         lineterminator="\n",
         quoting=csv.QUOTE_NONE,
+        extrasaction="ignore",
     )
     writer.writeheader()
     writer.writerows(rows)

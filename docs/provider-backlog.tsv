@@ -5,7 +5,6 @@ ubuntu-018	sublime-text-3	vendor-apt	implement	sublime-text	Add a signed vendor 
 ubuntu-019	brave	vendor-apt	implement	brave	Add a signed vendor APT provider with a scoped keyring and verify solver, install and update behavior.
 ubuntu-020	tor-browser	distro-component	implement	tor-browser	An exact Ubuntu 24.04 x86_64 candidate module is present and locally probed; keep it provisional until accepted solver, real-install, repeat-state and intent-parity evidence is tied to reviewed commit and image digests.
 ubuntu-022	eclipse-ide	public-artifact	conditional-artifact	eclipse-ide	Automate only with an immutable version and trusted upstream signature or digest; otherwise document a vendor handoff.
-ubuntu-031	playonlinux	distro-component	implement	playonlinux	An exact Ubuntu 24.04 x86_64 candidate module is present and locally probed; keep it provisional until accepted solver, real-install, repeat-state and intent-parity evidence is tied to reviewed commit and image digests.
 ubuntu-035	signal	vendor-apt	implement	signal	Add a signed vendor APT provider with a scoped keyring and verify solver, install and update behavior.
 ubuntu-036	dropbox	vendor-apt	implement	dropbox	Add a signed vendor APT provider with a scoped keyring and verify solver, install and update behavior.
 ubuntu-037	wps-office	public-artifact	conditional-artifact	wps-office	Automate only with an immutable version and trusted upstream signature or digest; otherwise document a vendor handoff.
@@ -18,7 +17,6 @@ ubuntu-058	vivaldi	vendor-apt	implement	vivaldi	Add a signed vendor APT provider
 ubuntu-059	spotify	snap-store	implement	spotify	Add an opt-in Snap provider only after publisher, channel, confinement and repeat-install review.
 ubuntu-061	pcloud-drive	public-artifact	conditional-artifact	pcloud-drive	Automate only with an immutable version and trusted upstream signature or digest; otherwise document a vendor handoff.
 ubuntu-065	jenkins	vendor-apt	implement	jenkins	Add a signed vendor APT provider with a scoped keyring and verify solver, install and update behavior.
-ubuntu-068	telegram	distro-component	implement	telegram	An exact Debian 12 x86_64 candidate module is present and locally probed; keep it provisional until accepted solver, real-install, repeat-state and intent-parity evidence is tied to reviewed commit and image digests.
 ubuntu-083	bitwarden	snap-store	implement	bitwarden	Add an opt-in Snap provider only after publisher, channel, confinement and repeat-install review.
 ubuntu-090	gitkraken	snap-store	implement	gitkraken	Add an opt-in Snap provider only after publisher, channel, confinement and repeat-install review.
 ubuntu-091	wire	public-artifact	conditional-artifact	wire	Automate only with an immutable version and trusted upstream signature or digest; otherwise document a vendor handoff.
