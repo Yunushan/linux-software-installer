@@ -1,16 +1,16 @@
 {
-  "artifact_sha256": "e9b7e22c95106d4e99fe8bff465e69c78afbb70b3025458fa4380dd5937bca64",
+  "artifact_sha256": "02659dc185102d018d091288acc41c24955a2d446f995a627fde93edaf792d32",
   "cell_ids": [
     "debian-12/transmission",
     "ubuntu-24-04/transmission",
     "ubuntu-26-04/transmission"
   ],
-  "commit_sha": "f59c5765b5e68ba4e074331a1b494a1bfdbcb125",
-  "expected_cells": 370,
-  "index_sha256": "99533d5ae2171cd5479f183edf8a1eff82083f0b6433a962c21898ddafb34089",
+  "commit_sha": "0273ed24bd25e4a182c5755ac48a5d515d285439",
+  "expected_cells": 3,
+  "index_sha256": "420df5356caa18a2ceafc189af4f6a18853e5f4577ee44c7ffbb641417192816",
   "module": "transmission",
   "result": "verified-awaiting-parity-review-and-systemd-attestation",
-  "run_url": "https://github.com/Yunushan/linux-software-installer/actions/runs/29648435978",
+  "run_url": "https://github.com/Yunushan/linux-software-installer/actions/runs/29656979377",
   "schema": "linux-software-installer/accepted-evidence-verification/v2",
   "target_cells": [
     "debian-12",
