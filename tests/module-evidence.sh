@@ -103,7 +103,7 @@ verify_binaries() {
   local destination=$1 binary path
   printf 'binary\tpath\n' > "$destination"
   for binary in "${binaries[@]}"; do
-    path=$(command -v "$binary") || {
+    path=$(lsi_resolve_verification_binary "$binary") || {
       printf 'Declared verification command is unavailable: %s\n' "$binary" >&2
       return 6
     }

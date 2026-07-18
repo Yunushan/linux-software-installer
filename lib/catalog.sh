@@ -8,6 +8,24 @@ lsi_valid_slug() {
   [[ $1 =~ ^[a-z0-9][a-z0-9-]*$ ]]
 }
 
+lsi_resolve_verification_binary() {
+  local binary=$1 path
+
+  path=$(command -v -- "$binary" 2> /dev/null) && {
+    printf '%s\n' "$path"
+    return 0
+  }
+
+  # Debian packages may install desktop launchers in /usr/games, which is not
+  # normally present in the non-interactive root PATH used by CI containers.
+  # Keep manifest declarations as safe command names and resolve that standard
+  # system location explicitly for installation and evidence verification.
+  [[ $binary != */* && -d /usr/games && ! -L /usr/games ]] || return 1
+  path="/usr/games/$binary"
+  [[ -f $path && -x $path ]] || return 1
+  printf '%s\n' "$path"
+}
+
 lsi_module_reset() {
   unset MODULE_ID MODULE_NAME MODULE_DESCRIPTION MODULE_CATEGORY MODULE_STATUS MODULE_RISK MODULE_NOTES
   declare -g MODULE_ID=''

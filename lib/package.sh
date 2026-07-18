@@ -110,7 +110,7 @@ lsi_verify_module() {
   esac
   for binary in "${binaries[@]}"; do
     [[ -n $binary ]] || continue
-    if ! command -v "$binary" > /dev/null 2>&1; then
+    if ! lsi_resolve_verification_binary "$binary" > /dev/null; then
       lsi_error "Verification failed for $MODULE_ID: command not found: $binary"
       missing=true
     fi
