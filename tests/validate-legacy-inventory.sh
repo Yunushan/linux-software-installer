@@ -18,15 +18,8 @@ EXPECTED_RHEL=196
 EXPECTED_RHEL_CAPABILITIES=87
 EXPECTED_TOTAL=355
 EXPECTED_SOURCE_DEFECTS=9
-EXPECTED_TERMINAL=84
-EXPECTED_NONTERMINAL=271
-EXPECTED_PLANNED=142
-EXPECTED_BLOCKED_THIRD_PARTY=129
-EXPECTED_IMPLEMENTED=0
-EXPECTED_SUPERSEDED=0
-EXPECTED_RETIRED=25
-EXPECTED_BLOCKED_SAFETY=20
-EXPECTED_OUT_OF_SCOPE=39
+INITIAL_TERMINAL=84
+INITIAL_NONTERMINAL=271
 EXPECTED_HEADER=$'legacy_id\tsource_set\tsource_path\tsource_item\tdisplay_name\tnormalized_capability\ttarget_family\tdisposition\treplacement\tparity_level\tevidence\trationale'
 EXPECTED_DEFECT_HEADER=$'defect_id\tlegacy_id\tsource_path\tsource_line\tobserved_fragment\texpected_behavior\trationale'
 
@@ -308,25 +301,14 @@ done
 
 [[ $((terminal_count + nonterminal_count)) -eq $EXPECTED_TOTAL ]] ||
   die 'terminal and non-terminal disposition totals do not reconcile'
-[[ $terminal_count -eq $EXPECTED_TERMINAL ]] ||
-  die "inventory has $terminal_count terminal rows; expected $EXPECTED_TERMINAL"
-[[ $nonterminal_count -eq $EXPECTED_NONTERMINAL ]] ||
-  die "inventory has $nonterminal_count non-terminal rows; expected $EXPECTED_NONTERMINAL"
-[[ $planned_count -eq $EXPECTED_PLANNED ]] ||
-  die "inventory has $planned_count planned rows; expected $EXPECTED_PLANNED"
-[[ $blocked_third_party_count -eq $EXPECTED_BLOCKED_THIRD_PARTY ]] ||
-  die "inventory has $blocked_third_party_count blocked-third-party rows; expected $EXPECTED_BLOCKED_THIRD_PARTY"
-[[ $implemented_count -eq $EXPECTED_IMPLEMENTED ]] ||
-  die "inventory has $implemented_count implemented rows; expected $EXPECTED_IMPLEMENTED"
-[[ $superseded_count -eq $EXPECTED_SUPERSEDED ]] ||
-  die "inventory has $superseded_count superseded rows; expected $EXPECTED_SUPERSEDED"
-[[ $retired_count -eq $EXPECTED_RETIRED ]] ||
-  die "inventory has $retired_count retired rows; expected $EXPECTED_RETIRED"
-[[ $blocked_safety_count -eq $EXPECTED_BLOCKED_SAFETY ]] ||
-  die "inventory has $blocked_safety_count blocked-safety rows; expected $EXPECTED_BLOCKED_SAFETY"
-[[ $out_of_scope_count -eq $EXPECTED_OUT_OF_SCOPE ]] ||
-  die "inventory has $out_of_scope_count out-of-scope rows; expected $EXPECTED_OUT_OF_SCOPE"
-
+[[ $terminal_count -ge $INITIAL_TERMINAL ]] ||
+  die "inventory regressed to $terminal_count terminal rows; baseline is $INITIAL_TERMINAL"
+[[ $nonterminal_count -le $INITIAL_NONTERMINAL ]] ||
+  die "inventory regressed to $nonterminal_count non-terminal rows; baseline is $INITIAL_NONTERMINAL"
+# The starting snapshot deliberately had no implemented or superseded rows.
+# Those values, and the planned/blocked-third-party counts, must evolve as
+# accepted evidence closes real legacy entries.  The exact source-cardinality
+# checks above and per-row evidence checks remain immutable.
 printf 'Legacy inventory valid: %d Ubuntu choices + %d RHEL scripts = %d entries.\n' \
   "$ubuntu_count" "$rhel_count" "$total_count"
 printf 'RHEL source capabilities: %d distinct filename-derived names.\n' \

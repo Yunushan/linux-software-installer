@@ -72,12 +72,13 @@ SERVICE_MISSING = (
     "G3-repository-resolution+G4-standalone-install+G5-systemd-behavior+"
     "row-parity-review+durable-trust-anchor"
 )
-EXPECTED_BASELINE = {
+# These are catalog-shape invariants.  Lifecycle counters such as
+# ``planned_rows`` deliberately do not belong here: they must change when a
+# verified replacement is promoted from planned to implemented or superseded.
+EXPECTED_CATALOG_INVARIANTS = {
     "active_rows": 142,
     "debian_rows": 70,
     "rhel_rows": 72,
-    "implemented_candidates": 134,
-    "superseded_candidates": 8,
     "modules": 80,
     "module_family_pairs": 90,
     "standalone_cells": 247,
@@ -707,10 +708,13 @@ def main() -> int:
         expected, summary = expected_rows_and_summary(
             root, args.inventory, args.admissions, args.report_root
         )
-        baseline_summary = {key: summary[key] for key in EXPECTED_BASELINE}
-        if baseline_summary != EXPECTED_BASELINE:
+        baseline_summary = {
+            key: summary[key] for key in EXPECTED_CATALOG_INVARIANTS
+        }
+        if baseline_summary != EXPECTED_CATALOG_INVARIANTS:
             raise ReadinessError(
-                f"promotion-readiness baseline drifted: expected {EXPECTED_BASELINE}, "
+                "promotion-readiness catalog invariants drifted: expected "
+                f"{EXPECTED_CATALOG_INVARIANTS}, "
                 f"found {baseline_summary}"
             )
         if args.emit:
