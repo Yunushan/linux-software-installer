@@ -1518,7 +1518,18 @@ def validate_package_snapshot(
         packages.append(values[0])
     if packages != sorted(packages) or len(packages) != len(set(packages)):
         errors.append(f"{label} is not a sorted unique package snapshot")
-    missing = sorted(set(expected_packages) - set(packages))
+    # Debian's ${binary:Package} preserves a Multi-Arch suffix such as
+    # ``pkg-config:amd64``.  Keep that exact identity in the snapshot so an
+    # amd64/i386 pair cannot collapse into duplicate rows, while allowing an
+    # unqualified manifest package token to match either its ordinary or
+    # architecture-qualified installed identity.  An explicitly qualified
+    # contract token still requires its exact installed identity.
+    observed_package_names = set(packages)
+    for package in packages:
+        name, separator, architecture = package.rpartition(":")
+        if separator and re.fullmatch(r"[a-z0-9][a-z0-9-]*", architecture):
+            observed_package_names.add(name)
+    missing = sorted(set(expected_packages) - observed_package_names)
     if missing:
         errors.append(f"{label} lacks trusted contract packages: {', '.join(missing)}")
     return errors

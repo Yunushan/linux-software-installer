@@ -84,8 +84,10 @@ fi
 printf 'NAME=Ubuntu\nID=ubuntu\nVERSION_ID="24.04"\n' > "$RAW_CELL_DIR/os-release.txt"
 cp "$ROOT_DIR/modules/git/module.sh" "$RAW_CELL_DIR/module.sh"
 printf 'base\t1\n' > "$RAW_CELL_DIR/packages-before-install.tsv"
-printf 'base\t1\ngit\t1\n' > "$RAW_CELL_DIR/packages-after-install.tsv"
-printf 'base\t1\ngit\t1\n' > "$RAW_CELL_DIR/packages-after-repeat.tsv"
+# A Debian Multi-Arch package reports its canonical installed identity with an
+# architecture suffix.  The unqualified module contract must still bind it.
+printf 'base\t1\ngit:amd64\t1\n' > "$RAW_CELL_DIR/packages-after-install.tsv"
+printf 'base\t1\ngit:amd64\t1\n' > "$RAW_CELL_DIR/packages-after-repeat.tsv"
 printf '%s\n' $'binary\tpath' $'git\t/usr/bin/git' \
   > "$RAW_CELL_DIR/binary-paths-after-install.tsv"
 printf '%s\n' $'binary\tpath' $'git\t/usr/bin/git' \
