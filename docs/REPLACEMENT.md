@@ -196,7 +196,7 @@ self-contained hashes are not an external authenticity anchor.
 there is no accepted external evidence to admit yet. Once an external bundle is
 downloaded, verified with the offline verifier below, revalidated and reviewed,
 one record per module-family evidence key
-must bind the current commit to its GitHub Actions run, artifact URL and digest,
+must bind its tested commit to its GitHub Actions run, artifact URL and digest,
 aggregate-index hash, exact target cells and a parity review. Service contracts
 also require externally hosted systemd-run and artifact attestations with a
 digest. It must also reference a checked-in verification report that binds the
@@ -204,6 +204,17 @@ downloaded artifact to the exact module and target-cell IDs. The readiness
 validator derives `accepted` and `promotion_ready` only from records that
 satisfy those exact checks; adding a registry row never changes inventory
 status by itself.
+
+The evidence commit is normally the checked-out commit. A documentation-only
+admission commit may instead reference an ancestor tested commit, because the
+report and registry cannot exist before the artifact is independently verified.
+In that case the validator requires the tested commit to be an ancestor and
+allows only the admission registry, derived readiness ledger, inventory
+disposition/evidence fields, this contract, and files below
+`docs/evidence-verification/` or `docs/parity-reviews/` to have changed. Any
+intervening installer, module, provider, workflow, test, legacy-source or
+other path change fails the admission. This exception does not let evidence
+survive a code change: a new full evidence run is required first.
 
 To promote a row, the same review must change its inventory disposition to
 `implemented` or `superseded` and set its `evidence` field to the exact
