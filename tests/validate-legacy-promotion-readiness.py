@@ -172,6 +172,9 @@ ADMISSION_ONLY_PATHS = {
     "docs/legacy-inventory.tsv",
     "docs/legacy-promotion-readiness.tsv",
     "docs/REPLACEMENT.md",
+    "docs/DISTRO_COMPONENT_PROBES.md",
+    "docs/PROVIDER_BACKLOG.md",
+    "docs/provider-backlog.tsv",
     # These validators govern the admission ledger's lifecycle accounting.
     # They neither select packages nor participate in container execution,
     # capture, sanitization, aggregate validation, or artifact verification.
@@ -181,6 +184,7 @@ ADMISSION_ONLY_PATHS = {
     "tests/validate-legacy-inventory.sh",
     "tests/validate-legacy-promotion-readiness.py",
     "tests/test-accepted-evidence.py",
+    "tests/validate-provider-backlog.sh",
 }
 ADMISSION_ONLY_PREFIXES = (
     "docs/evidence-verification/",
@@ -195,9 +199,9 @@ def is_admission_only_path(path: str) -> bool:
     commit has been produced.  This narrow allowlist makes that documentation
     step possible without letting an untested installer, catalog, workflow,
     evidence-capture or evidence-verification change inherit earlier evidence.
-    The two named legacy-ledger validators are also permitted because they are
-    admission bookkeeping only; this is deliberately not a blanket tests/
-    allowlist.
+    The named ledger validators and provider-backlog documents are also
+    permitted because they are admission bookkeeping only; this is deliberately
+    not a blanket docs/ or tests/ allowlist.
     """
 
     return path in ADMISSION_ONLY_PATHS or path.startswith(ADMISSION_ONLY_PREFIXES)

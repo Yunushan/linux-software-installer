@@ -144,6 +144,51 @@ def main() -> int:
     wrong_targets["target_cells"] = "ubuntu-24-04"
     assert expect_failure(root, [wrong_targets])
 
+    restricted = record()
+    restricted["evidence_key"] = "debian/telegram"
+    restricted["target_cells"] = "debian-12"
+    restricted["verification_report"] = "docs/evidence-verification/debian-telegram.json"
+    write(
+        root / "docs" / "evidence-verification" / "debian-telegram.json",
+        json.dumps(
+            {
+                "schema": READINESS.VERIFICATION_SCHEMA,
+                "artifact_sha256": SHA,
+                "index_sha256": INDEX_SHA,
+                "commit_sha": COMMIT,
+                "run_url": RUN_URL,
+                "expected_cells": 2,
+                "module": "telegram",
+                "target_cells": ["debian-12"],
+                "cell_ids": ["debian-12/telegram"],
+                "result": "verified-awaiting-parity-review-and-systemd-attestation",
+            },
+            indent=2,
+            sort_keys=True,
+        )
+        + "\n",
+    )
+    restricted_expected = {
+        "evidence_key": "debian/telegram",
+        "target_family": "debian",
+        "replacement": "telegram",
+        "service_contract": "no",
+        "evidence_target_cells": ("debian-12",),
+    }
+    write_registry(root, [restricted])
+    assert READINESS.load_accepted_admissions(
+        root, [restricted_expected], commit=COMMIT
+    ) == {"debian/telegram": restricted}
+    restricted_wrong_targets = dict(restricted)
+    restricted_wrong_targets["target_cells"] = "debian-12,ubuntu-24-04"
+    write_registry(root, [restricted_wrong_targets])
+    try:
+        READINESS.load_accepted_admissions(root, [restricted_expected], commit=COMMIT)
+    except READINESS.ReadinessError as error:
+        assert "supported module contract" in str(error)
+    else:
+        raise AssertionError("restricted evidence was accepted for an extra target cell")
+
     wrong_url = record()
     wrong_url["artifact_url"] = "https://github.com/Yunushan/linux-software-installer/actions/runs/999/artifacts/456"
     assert expect_failure(root, [wrong_url])
@@ -191,6 +236,19 @@ def main() -> int:
             "#!/usr/bin/env bash\n# admission-ledger accounting change\n",
         )
         commit(root, "adjust admission-ledger accounting")
+        assert READINESS.load_accepted_admissions(root, [expected_row()]) == {
+            "debian/nginx": docs_only
+        }
+
+        write(
+            root / "docs" / "provider-backlog.tsv",
+            "legacy_id\tnormalized_capability\tstrategy\trecommended_action\treplacement_outcome\trationale\n",
+        )
+        write(
+            root / "tests" / "validate-provider-backlog.sh",
+            "#!/usr/bin/env bash\n# provider-backlog accounting change\n",
+        )
+        commit(root, "adjust provider backlog accounting")
         assert READINESS.load_accepted_admissions(root, [expected_row()]) == {
             "debian/nginx": docs_only
         }
