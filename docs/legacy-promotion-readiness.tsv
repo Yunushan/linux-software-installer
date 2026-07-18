@@ -45,10 +45,10 @@ ubuntu-080	debian	simplescreenrecorder	debian/simplescreenrecorder	implemented-c
 ubuntu-082	debian	shutter	debian/shutter	implemented-candidate	intent	3	no	0	none	-	no	G3-repository-resolution+G4-standalone-install+row-parity-review+durable-trust-anchor
 ubuntu-084	debian	plank	debian/plank	implemented-candidate	intent	3	no	0	none	-	no	G3-repository-resolution+G4-standalone-install+row-parity-review+durable-trust-anchor
 ubuntu-085	debian	thonny	debian/thonny	implemented-candidate	intent	3	no	0	none	-	no	G3-repository-resolution+G4-standalone-install+row-parity-review+durable-trust-anchor
-ubuntu-086	debian	bluefish	debian/bluefish	implemented-candidate	intent	3	no	0	none	-	no	G3-repository-resolution+G4-standalone-install+row-parity-review+durable-trust-anchor
+ubuntu-086	debian	bluefish	debian/bluefish	implemented-candidate	intent	3	no	0	accepted	https://github.com/Yunushan/linux-software-installer/actions/runs/29640717432#artifact-digest=e744fab69651ad0d2adce755e7a65da1191822af6524d44b8b1d1d259140d477	yes	-
 ubuntu-087	debian	vim	debian/vim	implemented-candidate	intent	3	no	0	none	-	no	G3-repository-resolution+G4-standalone-install+row-parity-review+durable-trust-anchor
-ubuntu-088	debian	geany	debian/geany	implemented-candidate	intent	3	no	0	none	-	no	G3-repository-resolution+G4-standalone-install+row-parity-review+durable-trust-anchor
-ubuntu-089	debian	emacs	debian/emacs	implemented-candidate	intent	3	no	0	none	-	no	G3-repository-resolution+G4-standalone-install+row-parity-review+durable-trust-anchor
+ubuntu-088	debian	geany	debian/geany	implemented-candidate	intent	3	no	0	accepted	https://github.com/Yunushan/linux-software-installer/actions/runs/29640717432#artifact-digest=e744fab69651ad0d2adce755e7a65da1191822af6524d44b8b1d1d259140d477	yes	-
+ubuntu-089	debian	emacs	debian/emacs	implemented-candidate	intent	3	no	0	accepted	https://github.com/Yunushan/linux-software-installer/actions/runs/29640717432#artifact-digest=e744fab69651ad0d2adce755e7a65da1191822af6524d44b8b1d1d259140d477	yes	-
 ubuntu-094	debian	magic-wormhole	debian/magic-wormhole	implemented-candidate	intent	3	no	0	none	-	no	G3-repository-resolution+G4-standalone-install+row-parity-review+durable-trust-anchor
 ubuntu-095	debian	hexchat	debian/hexchat	implemented-candidate	intent	3	no	0	none	-	no	G3-repository-resolution+G4-standalone-install+row-parity-review+durable-trust-anchor
 ubuntu-096	debian	wings3d	debian/wings3d	implemented-candidate	intent	3	no	0	none	-	no	G3-repository-resolution+G4-standalone-install+row-parity-review+durable-trust-anchor
