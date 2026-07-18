@@ -1,7 +1,7 @@
 legacy_id	target_family	replacement	evidence_key	review_route	parity_level	required_standalone_cells	service_contract	shared_systemd_executions	evidence_class	evidence_reference	promotion_ready	missing_acceptance
 ubuntu-002	debian	nginx	debian/nginx	implemented-candidate	intent	3	yes	6	none	-	no	G3-repository-resolution+G4-standalone-install+G5-systemd-behavior+row-parity-review+durable-trust-anchor
 ubuntu-003	debian	apache	debian/apache	implemented-candidate	intent	3	yes	6	none	-	no	G3-repository-resolution+G4-standalone-install+G5-systemd-behavior+row-parity-review+durable-trust-anchor
-ubuntu-004	debian	vlc	debian/vlc	implemented-candidate	intent	3	no	0	none	-	no	G3-repository-resolution+G4-standalone-install+row-parity-review+durable-trust-anchor
+ubuntu-004	debian	vlc	debian/vlc	implemented-candidate	intent	3	no	0	accepted	https://github.com/Yunushan/linux-software-installer/actions/runs/29640717432#artifact-digest=e744fab69651ad0d2adce755e7a65da1191822af6524d44b8b1d1d259140d477	yes	-
 ubuntu-006	debian	ffmpeg	debian/ffmpeg	implemented-candidate	intent	3	no	0	accepted	https://github.com/Yunushan/linux-software-installer/actions/runs/29640717432#artifact-digest=e744fab69651ad0d2adce755e7a65da1191822af6524d44b8b1d1d259140d477	yes	-
 ubuntu-007	debian	monitoring-tools	debian/monitoring-tools	implemented-candidate	intent	3	no	0	accepted	https://github.com/Yunushan/linux-software-installer/actions/runs/29640717432#artifact-digest=e744fab69651ad0d2adce755e7a65da1191822af6524d44b8b1d1d259140d477	yes	-
 ubuntu-008	debian	wine	debian/wine	implemented-candidate	intent	3	no	0	accepted	https://github.com/Yunushan/linux-software-installer/actions/runs/29640717432#artifact-digest=e744fab69651ad0d2adce755e7a65da1191822af6524d44b8b1d1d259140d477	yes	-
