@@ -9,7 +9,7 @@ ubuntu-009	debian	qbittorrent	debian/qbittorrent	implemented-candidate	intent	3	
 ubuntu-011	debian	gimp	debian/gimp	implemented-candidate	intent	3	no	0	accepted	https://github.com/Yunushan/linux-software-installer/actions/runs/29640717432#artifact-digest=e744fab69651ad0d2adce755e7a65da1191822af6524d44b8b1d1d259140d477	yes	-
 ubuntu-012	debian	nmap	debian/nmap	implemented-candidate	intent	3	no	0	accepted	https://github.com/Yunushan/linux-software-installer/actions/runs/29640717432#artifact-digest=e744fab69651ad0d2adce755e7a65da1191822af6524d44b8b1d1d259140d477	yes	-
 ubuntu-015	debian	obs-studio	debian/obs-studio	implemented-candidate	intent	3	no	0	none	-	no	G3-repository-resolution+G4-standalone-install+row-parity-review+durable-trust-anchor
-ubuntu-016	debian	openshot	debian/openshot	implemented-candidate	intent	3	no	0	none	-	no	G3-repository-resolution+G4-standalone-install+row-parity-review+durable-trust-anchor
+ubuntu-016	debian	openshot	debian/openshot	implemented-candidate	intent	3	no	0	accepted	https://github.com/Yunushan/linux-software-installer/actions/runs/29640717432#artifact-digest=e744fab69651ad0d2adce755e7a65da1191822af6524d44b8b1d1d259140d477	yes	-
 ubuntu-023	debian	vuze	debian/vuze	implemented-candidate	intent	3	no	0	none	-	no	G3-repository-resolution+G4-standalone-install+row-parity-review+durable-trust-anchor
 ubuntu-024	debian	qbittorrent	debian/qbittorrent	superseded-candidate	intent	3	no	0	accepted	https://github.com/Yunushan/linux-software-installer/actions/runs/29640717432#artifact-digest=e744fab69651ad0d2adce755e7a65da1191822af6524d44b8b1d1d259140d477	yes	-
 ubuntu-025	debian	deluge	debian/deluge	implemented-candidate	intent	3	no	0	none	-	no	G3-repository-resolution+G4-standalone-install+row-parity-review+durable-trust-anchor
