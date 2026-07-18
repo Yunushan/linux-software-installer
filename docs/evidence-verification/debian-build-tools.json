@@ -1,16 +1,16 @@
 {
-  "artifact_sha256": "e9b7e22c95106d4e99fe8bff465e69c78afbb70b3025458fa4380dd5937bca64",
+  "artifact_sha256": "756df89ebcc27889612281bd46caa05bde73d6268e3db045019b69a9a8dd71d3",
   "cell_ids": [
     "debian-12/build-tools",
     "ubuntu-24-04/build-tools",
     "ubuntu-26-04/build-tools"
   ],
-  "commit_sha": "f59c5765b5e68ba4e074331a1b494a1bfdbcb125",
-  "expected_cells": 370,
-  "index_sha256": "99533d5ae2171cd5479f183edf8a1eff82083f0b6433a962c21898ddafb34089",
+  "commit_sha": "93f4a37923d32f1aa67f71f2f7f22140be0d77a5",
+  "expected_cells": 371,
+  "index_sha256": "02c6e4edfd8c76657790b20562e7c94b44b9761fc76061115d1c39826ed2ce46",
   "module": "build-tools",
   "result": "verified-awaiting-parity-review-and-systemd-attestation",
-  "run_url": "https://github.com/Yunushan/linux-software-installer/actions/runs/29648435978",
+  "run_url": "https://github.com/Yunushan/linux-software-installer/actions/runs/29652229194",
   "schema": "linux-software-installer/accepted-evidence-verification/v2",
   "target_cells": [
     "debian-12",
