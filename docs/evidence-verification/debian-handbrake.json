@@ -1,0 +1,20 @@
+{
+  "artifact_sha256": "e744fab69651ad0d2adce755e7a65da1191822af6524d44b8b1d1d259140d477",
+  "cell_ids": [
+    "debian-12/handbrake",
+    "ubuntu-24-04/handbrake",
+    "ubuntu-26-04/handbrake"
+  ],
+  "commit_sha": "f7b772a72fa8c543cb84f79db0473cf5ad05daf5",
+  "expected_cells": 370,
+  "index_sha256": "abe5460f2b2ec4a23def4592bf57f14b5f31b16d999fe7167a06ceb30845e02b",
+  "module": "handbrake",
+  "result": "verified-awaiting-parity-review-and-systemd-attestation",
+  "run_url": "https://github.com/Yunushan/linux-software-installer/actions/runs/29640717432",
+  "schema": "linux-software-installer/accepted-evidence-verification/v2",
+  "target_cells": [
+    "debian-12",
+    "ubuntu-24-04",
+    "ubuntu-26-04"
+  ]
+}
