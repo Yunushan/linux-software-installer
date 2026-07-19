@@ -1948,6 +1948,132 @@ lsi_provider_apt_install_locked_package() (
   }
 )
 
+lsi_provider_dnf_install_locked_package() (
+  local row=$1 package version arch expected_sha256 verify_binary expected_origin
+  local dnf rpm sha256_bin stat_bin find_bin mktemp_bin rm_bin
+  local cache_root archive_dir rpm_db artifact candidate package_fields field_package field_version field_arch
+  local observed_sha256 requested_nevra key_source
+  local -a candidates=()
+
+  IFS=$'\t' read -r _module_id _cell_id package version arch expected_sha256 verify_binary <<< "$row"
+  [[ -n $LSI_PROVIDER_PLAN_PRIMARY ]] || {
+    lsi_provider_error 'Provider install has no primary provider snapshot.'
+    return 3
+  }
+
+  dnf=$(lsi_provider_system_tool dnf) || return
+  rpm=$(lsi_provider_system_tool rpm) || return
+  sha256_bin=$(lsi_provider_system_tool sha256sum) || return
+  stat_bin=$(lsi_provider_system_tool stat) || return
+  find_bin=$(lsi_provider_system_tool find) || return
+  mktemp_bin=$(lsi_provider_system_tool mktemp) || return
+  rm_bin=$(lsi_provider_system_tool rm) || return
+  verify_binary=$(lsi_provider_system_tool "$verify_binary") || return
+
+  cache_root=$(umask 077; "$mktemp_bin" -d '/tmp/lsi-provider-install.XXXXXX') || {
+    lsi_provider_error 'Unable to create the isolated provider package cache.'
+    return 3
+  }
+  trap '"$rm_bin" -rf -- "$cache_root"' EXIT HUP INT TERM
+  [[ -d $cache_root && ! -L $cache_root && ${cache_root#/tmp/} == lsi-provider-install.* ]] || {
+    lsi_provider_error 'The isolated provider package cache is unsafe.'
+    return 3
+  }
+  if [[ ${LSI_PROVIDER_APPLY_ALLOW_NONROOT_TEST:-false} != true ]]; then
+    [[ $("$stat_bin" -c '%u:%a' -- "$cache_root") == '0:700' ]] || {
+      lsi_provider_error 'The isolated provider package cache has unsafe ownership or mode.'
+      return 3
+    }
+  fi
+  archive_dir="$cache_root/archives"
+  rpm_db="$cache_root/rpmdb"
+  /bin/mkdir -p -- "$archive_dir" "$rpm_db" || return 3
+
+  # DNF must authenticate both repository metadata and packages.  The
+  # transient cache makes the exact downloaded RPM set observable and avoids
+  # trusting a host cache or a stale artifact from another transaction.
+  requested_nevra="$package-$version.$arch"
+  "$dnf" \
+    --setopt=gpgcheck=1 \
+    --setopt=repo_gpgcheck=1 \
+    --setopt=localpkg_gpgcheck=1 \
+    --setopt=install_weak_deps=False \
+    --setopt=keepcache=False \
+    --setopt="cachedir=$cache_root/cache" \
+    --setopt="persistdir=$cache_root/persist" \
+    --setopt="logdir=$cache_root/log" \
+    --assumeyes --downloadonly --downloaddir="$archive_dir" install "$requested_nevra" || {
+      lsi_provider_error "Signed DNF metadata refresh or locked package download failed for $requested_nevra."
+      return 4
+    }
+
+  while IFS= read -r candidate || [[ -n $candidate ]]; do
+    [[ -f $candidate && ! -L $candidate ]] || continue
+    package_fields=$("$rpm" -qp --qf '%{NAME}\t%{VERSION}-%{RELEASE}\t%{ARCH}\n' -- "$candidate" 2> /dev/null) || continue
+    IFS=$'\t' read -r field_package field_version field_arch <<< "$package_fields"
+    [[ $field_package == "$package" && $field_version == "$version" && $field_arch == "$arch" ]] || continue
+    candidates+=("$candidate")
+  done < <("$find_bin" "$archive_dir" -maxdepth 1 -type f -name '*.rpm' -print)
+  ((${#candidates[@]} == 1)) || {
+    lsi_provider_error "Locked package cache does not contain exactly one matching artifact for $requested_nevra."
+    return 4
+  }
+  artifact=${candidates[0]}
+  [[ $("$stat_bin" -c '%h' -- "$artifact") == 1 ]] || {
+    lsi_provider_error 'Downloaded provider package has unsafe links.'
+    return 3
+  }
+  if [[ ${LSI_PROVIDER_APPLY_ALLOW_NONROOT_TEST:-false} != true ]]; then
+    [[ $("$stat_bin" -c '%u:%a' -- "$artifact") =~ ^0:[0-7]{3,4}$ ]] || {
+      lsi_provider_error 'Downloaded provider package has unsafe ownership or mode.'
+      return 3
+    }
+  fi
+  observed_sha256=$("$sha256_bin" -- "$artifact") || return 3
+  observed_sha256=${observed_sha256%% *}
+  [[ $observed_sha256 == "$expected_sha256" ]] || {
+    lsi_provider_error "Downloaded provider package digest does not match the reviewed lock for $requested_nevra."
+    return 4
+  }
+
+  # Verify the RPM signature against an isolated RPM database containing only
+  # the provider's checked-in key.  This remains independent from any key the
+  # host might already have imported.
+  IFS=$'\t' read -r _cell_id _os_id _version_id _arch _manager _channel _repository_uri \
+    _suite _components key_file _key_fingerprints expected_origin _metadata_signature \
+    <<< "${LSI_PROVIDER_PLAN_ACTIVATION[$LSI_PROVIDER_PLAN_PRIMARY]}"
+  key_source="$LSI_PROVIDER_ROOT/$LSI_PROVIDER_PLAN_PRIMARY/$key_file"
+  "$rpm" --dbpath "$rpm_db" --initdb || {
+    lsi_provider_error 'Unable to initialize the isolated RPM verification database.'
+    return 3
+  }
+  "$rpm" --dbpath "$rpm_db" --import "$key_source" || {
+    lsi_provider_error 'Unable to import the checked-in provider RPM key into the isolated verification database.'
+    return 3
+  }
+  "$rpm" --dbpath "$rpm_db" --checksig --verbose -- "$artifact" > /dev/null || {
+    lsi_provider_error "Downloaded provider package signature did not verify for $requested_nevra."
+    return 4
+  }
+
+  # Install the exact verified local RPM.  DNF can resolve ordinary
+  # distribution dependencies, but it cannot replace the locked provider RPM
+  # with an unreviewed repository result.
+  "$dnf" \
+    --setopt=gpgcheck=1 \
+    --setopt=repo_gpgcheck=1 \
+    --setopt=localpkg_gpgcheck=1 \
+    --setopt=install_weak_deps=False \
+    --assumeyes install "$artifact" || {
+      lsi_provider_error "Installation failed for verified provider package $requested_nevra."
+      return 4
+    }
+  "$verify_binary" --version > /dev/null || {
+    lsi_provider_error "Installed provider binary did not verify: ${verify_binary##*/}."
+    return 4
+  }
+)
+
 lsi_provider_cleanup_transient_configurations() {
   local root=$1 provider index status=0
   for ((index = ${#LSI_PROVIDER_PLAN_ORDER[@]} - 1; index >= 0; index--)); do
@@ -2003,6 +2129,19 @@ lsi_provider_install_current() {
         IFS=$'\t' read -r _module_id lock_cell _remainder <<< "$lock_row"
         [[ $lock_cell == "$cell_id" && -n ${requested[$_module_id]+x} ]] || continue
         lsi_provider_apt_install_locked_package "$lock_row" || {
+          status=$?
+          break
+        }
+      done
+      ;;
+    dnf)
+      for selected in "${LSI_PROVIDER_PLAN_MODULES[@]}"; do
+        requested["$selected"]=1
+      done
+      for lock_row in "${LSI_PROVIDER_PLAN_PRIMARY_LOCK_ROWS[@]}"; do
+        IFS=$'\t' read -r _module_id lock_cell _remainder <<< "$lock_row"
+        [[ $lock_cell == "$cell_id" && -n ${requested[$_module_id]+x} ]] || continue
+        lsi_provider_dnf_install_locked_package "$lock_row" || {
           status=$?
           break
         }

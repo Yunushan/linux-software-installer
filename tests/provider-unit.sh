@@ -382,6 +382,69 @@ prepare_provider_install_case() {
   refresh_registry "$CASE_ROOT" demo-provider@2026-01 || return
 }
 
+prepare_provider_dnf_install_tools() {
+  local tools=$1
+  mkdir -p "$tools"
+  cat > "$tools/dnf" << 'EOF'
+#!/bin/sh
+set -eu
+printf '%s\n' "$*" >> "$LSI_PROVIDER_TEST_LOG"
+archive=''
+for argument in "$@"; do
+  case "$argument" in
+    --downloaddir=*) archive=${argument#--downloaddir=} ;;
+  esac
+done
+case " $* " in
+  *' --downloadonly '*)
+    test -n "$archive"
+    mkdir -p "$archive"
+    printf '%s\n' "${LSI_PROVIDER_TEST_DNF_PAYLOAD:-verified rpm payload}" > "$archive/demo-tool-1.2.3-1.el9.x86_64.rpm"
+    ;;
+esac
+EOF
+  cat > "$tools/rpm" << 'EOF'
+#!/bin/sh
+set -eu
+printf '%s\n' "$*" >> "$LSI_PROVIDER_TEST_LOG"
+case " $* " in
+  *' -qp '*) printf 'demo-tool\t1.2.3-1.el9\tx86_64\n' ;;
+  *' --checksig '*) test "${LSI_PROVIDER_TEST_RPM_SIGNATURE_FAIL:-0}" != 1 ;;
+  *) exit 0 ;;
+esac
+EOF
+  cat > "$tools/demo-tool" << 'EOF'
+#!/bin/sh
+set -eu
+test "${1:-}" = --version
+printf '%s\n' 'demo-tool 1.2.3-1.el9'
+EOF
+  chmod 0700 "$tools/dnf" "$tools/rpm" "$tools/demo-tool"
+}
+
+prepare_provider_dnf_install_case() {
+  local root=$1 tools=$2 digest
+  prepare_case
+  prepare_apply_root "$root" || return
+  prepare_provider_dnf_install_tools "$tools" || return
+  digest=$(printf '%s\n' 'verified rpm payload' | sha256sum) || return
+  digest=${digest%% *}
+  sed -i "3s/bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb/$digest/" \
+    "$CASE_ROOT/demo-provider/locks.tsv"
+  refresh_registry "$CASE_ROOT" demo-provider@2026-01 || return
+}
+
+provider_dnf_install_digest() {
+  LSI_PROVIDER_ROOT="$CASE_ROOT" \
+    LSI_OS_RELEASE_FILE="$ROOT_DIR/tests/fixtures/rocky.env" \
+    lsi_provider_plan_prepare demo-provider \
+    --allow-provider demo-provider@2026-01 \
+    --allow-preview-provider demo-provider \
+    --accept-provider-license demo-provider@2026-01 \
+    demo-tool || return
+  printf '%s\n' "$LSI_PROVIDER_PLAN_DIGEST"
+}
+
 provider_install_digest() {
   LSI_PROVIDER_ROOT="$CASE_ROOT" \
     LSI_OS_RELEASE_FILE="$ROOT_DIR/tests/fixtures/ubuntu.env" \
@@ -464,6 +527,82 @@ test_provider_install_rejects_stale_digest_without_mutation() {
     [[ ! -s $log ]] &&
     [[ ! -e $root/usr/share/keyrings/linux-software-installer-demo-provider.asc ]] &&
     [[ ! -e $root/etc/apt/sources.list.d/linux-software-installer-demo-provider.sources ]]
+}
+
+test_provider_dnf_install_verifies_locked_artifact_and_cleans_up() {
+  local root="$TEST_TMP/dnf-install-root" tools="$TEST_TMP/dnf-install-tools" log="$TEST_TMP/dnf-install.log" digest output
+  prepare_provider_dnf_install_case "$root" "$tools" || return 1
+  digest=$(provider_dnf_install_digest) || return 1
+  : > "$log"
+  output=$(PATH="$tools:$PATH" \
+    LSI_PROVIDER_ROOT="$CASE_ROOT" \
+    LSI_OS_RELEASE_FILE="$ROOT_DIR/tests/fixtures/rocky.env" \
+    LSI_PROVIDER_APPLY_ROOT="$root" \
+    LSI_PROVIDER_APPLY_ALLOW_NONROOT_TEST=true \
+    LSI_PROVIDER_TEST_LOG="$log" \
+    lsi_provider_install_current demo-provider \
+    --plan-sha256 "$digest" \
+    --allow-provider demo-provider@2026-01 \
+    --allow-preview-provider demo-provider \
+    --accept-provider-license demo-provider@2026-01 \
+    demo-tool) || return 1
+  grep -q 'repo_gpgcheck=1' "$log" &&
+    grep -q 'localpkg_gpgcheck=1' "$log" &&
+    grep -q -- '--downloadonly' "$log" &&
+    grep -q -- '--checksig --verbose' "$log" &&
+    grep -q 'demo-tool-1.2.3-1.el9.x86_64.rpm' "$log" &&
+    [[ ! -e $root/etc/pki/rpm-gpg/RPM-GPG-KEY-linux-software-installer-demo-provider ]] &&
+    [[ ! -e $root/etc/yum.repos.d/linux-software-installer-demo-provider.repo ]] &&
+    grep -q '^Verified provider package transaction completed from reviewed plan SHA-256:' <<< "$output"
+}
+
+test_provider_dnf_install_rejects_checksum_before_local_install() {
+  local root="$TEST_TMP/dnf-checksum-root" tools="$TEST_TMP/dnf-checksum-tools" log="$TEST_TMP/dnf-checksum.log" digest output
+  prepare_provider_dnf_install_case "$root" "$tools" || return 1
+  digest=$(provider_dnf_install_digest) || return 1
+  : > "$log"
+  output=$(PATH="$tools:$PATH" \
+    LSI_PROVIDER_ROOT="$CASE_ROOT" \
+    LSI_OS_RELEASE_FILE="$ROOT_DIR/tests/fixtures/rocky.env" \
+    LSI_PROVIDER_APPLY_ROOT="$root" \
+    LSI_PROVIDER_APPLY_ALLOW_NONROOT_TEST=true \
+    LSI_PROVIDER_TEST_LOG="$log" \
+    LSI_PROVIDER_TEST_DNF_PAYLOAD='wrong rpm payload' \
+    lsi_provider_install_current demo-provider \
+    --plan-sha256 "$digest" \
+    --allow-provider demo-provider@2026-01 \
+    --allow-preview-provider demo-provider \
+    --accept-provider-license demo-provider@2026-01 \
+    demo-tool 2>&1) && return 1
+  grep -q 'digest does not match the reviewed lock' <<< "$output" &&
+    ! grep -q -- '--checksig' "$log" &&
+    [[ ! -e $root/etc/pki/rpm-gpg/RPM-GPG-KEY-linux-software-installer-demo-provider ]] &&
+    [[ ! -e $root/etc/yum.repos.d/linux-software-installer-demo-provider.repo ]]
+}
+
+test_provider_dnf_install_rejects_invalid_signature_before_local_install() {
+  local root="$TEST_TMP/dnf-signature-root" tools="$TEST_TMP/dnf-signature-tools" log="$TEST_TMP/dnf-signature.log" digest output
+  prepare_provider_dnf_install_case "$root" "$tools" || return 1
+  digest=$(provider_dnf_install_digest) || return 1
+  : > "$log"
+  output=$(PATH="$tools:$PATH" \
+    LSI_PROVIDER_ROOT="$CASE_ROOT" \
+    LSI_OS_RELEASE_FILE="$ROOT_DIR/tests/fixtures/rocky.env" \
+    LSI_PROVIDER_APPLY_ROOT="$root" \
+    LSI_PROVIDER_APPLY_ALLOW_NONROOT_TEST=true \
+    LSI_PROVIDER_TEST_LOG="$log" \
+    LSI_PROVIDER_TEST_RPM_SIGNATURE_FAIL=1 \
+    lsi_provider_install_current demo-provider \
+    --plan-sha256 "$digest" \
+    --allow-provider demo-provider@2026-01 \
+    --allow-preview-provider demo-provider \
+    --accept-provider-license demo-provider@2026-01 \
+    demo-tool 2>&1) && return 1
+  grep -q 'package signature did not verify' <<< "$output" &&
+    grep -q -- '--checksig --verbose' "$log" &&
+    [[ $(grep -c 'demo-tool-1.2.3-1.el9.x86_64.rpm' "$log") -eq 2 ]] &&
+    [[ ! -e $root/etc/pki/rpm-gpg/RPM-GPG-KEY-linux-software-installer-demo-provider ]] &&
+    [[ ! -e $root/etc/yum.repos.d/linux-software-installer-demo-provider.repo ]]
 }
 
 test_provider_apply_writes_only_digest_bound_files() {
@@ -964,6 +1103,9 @@ run_test 'provider deactivation rejects drift without removal' test_provider_dea
 run_test 'provider install verifies a locked APT artifact and removes transient configuration' test_provider_install_verifies_locked_artifact_and_cleans_up
 run_test 'provider install rejects an unexpected signed-metadata origin before download' test_provider_install_rejects_wrong_origin_before_download
 run_test 'provider install rejects a stale digest before activation or package work' test_provider_install_rejects_stale_digest_without_mutation
+run_test 'provider install verifies a locked signed DNF RPM and removes transient configuration' test_provider_dnf_install_verifies_locked_artifact_and_cleans_up
+run_test 'provider DNF install rejects a mismatched RPM digest before signature or local installation' test_provider_dnf_install_rejects_checksum_before_local_install
+run_test 'provider DNF install rejects an invalid RPM signature before local installation' test_provider_dnf_install_rejects_invalid_signature_before_local_install
 run_test 'provider plan requires per-provider authorization' test_provider_plan_requires_distinct_authorization
 run_test 'provider plan rejects the global --yes alias' test_provider_plan_rejects_yes_alias
 run_test 'preview provider requires a separate acknowledgement' test_provider_plan_requires_preview_ack
