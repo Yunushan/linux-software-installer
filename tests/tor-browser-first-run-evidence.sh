@@ -76,6 +76,7 @@ finish_record() {
   else
     metadata failure_stage "$CURRENT_STAGE"
   fi
+  chmod -R a+rX "$EVIDENCE_DIR"
   exit "$code"
 }
 trap finish_record EXIT
@@ -92,7 +93,7 @@ stage_begin install-launcher
 export DEBIAN_FRONTEND=noninteractive
 apt-get update
 apt-get install -y --no-install-recommends \
-  ca-certificates gnupg torbrowser-launcher xauth xvfb
+  ca-certificates gnupg torbrowser-launcher xauth xvfb xz-utils
 dpkg-query -W -f='${binary:Package}\t${Version}\n' torbrowser-launcher \
   > "$EVIDENCE_DIR/launcher-package.tsv"
 command -v torbrowser-launcher > "$EVIDENCE_DIR/launcher-path.txt"
