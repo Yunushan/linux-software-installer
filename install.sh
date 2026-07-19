@@ -17,7 +17,7 @@ case "${1:-}" in
       LC_ALL=C \
       /usr/bin/bash "$ROOT_DIR/bin/linux-software-installer" "$@"
     ;;
-  providers | provider-info | provider-plan | provider-config | provider-apply | provider-deactivate)
+  providers | provider-info | provider-plan | provider-config | provider-apply | provider-deactivate | provider-install)
     # Provider parsing runs in a clean child process so caller-controlled
     # Bash functions, BASH_ENV, TMPDIR, and installer test hooks cannot cross
     # the public command boundary.
@@ -34,7 +34,8 @@ case "${1:-}" in
       '  ./install.sh provider-plan PROVIDER --allow-provider PROVIDER@CATALOG_REVISION [ACK...] MODULE...' \
       '  ./install.sh provider-config PROVIDER --allow-provider PROVIDER@CATALOG_REVISION [ACK...] MODULE...' \
       '  sudo ./install.sh provider-apply PROVIDER --plan-sha256 PLAN_SHA256 --allow-provider PROVIDER@CATALOG_REVISION [ACK...] MODULE...' \
-      '  sudo ./install.sh provider-deactivate PROVIDER --plan-sha256 PLAN_SHA256 --allow-provider PROVIDER@CATALOG_REVISION [ACK...] MODULE...'
+      '  sudo ./install.sh provider-deactivate PROVIDER --plan-sha256 PLAN_SHA256 --allow-provider PROVIDER@CATALOG_REVISION [ACK...] MODULE...' \
+      '  sudo ./install.sh provider-install PROVIDER --plan-sha256 PLAN_SHA256 --allow-provider PROVIDER@CATALOG_REVISION [ACK...] MODULE...'
     exit 0
     ;;
   *)

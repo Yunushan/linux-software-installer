@@ -1822,6 +1822,207 @@ lsi_provider_deactivate_current() {
   printf '%s\n' 'No repository metadata refresh, package removal or package installation was performed.'
 }
 
+lsi_provider_apt_install_locked_package() (
+  local row=$1 package version arch expected_sha256 verify_binary expected_origin
+  local apt_get apt_cache dpkg_deb sha256_bin stat_bin find_bin mktemp_bin rm_bin
+  local cache_root archive_dir artifact candidate package_fields field_package field_version field_arch
+  local observed_sha256 origin_line origin_found=false
+  local -a candidates=()
+
+  IFS=$'\t' read -r _module_id _cell_id package version arch expected_sha256 verify_binary <<< "$row"
+  [[ -n $LSI_PROVIDER_PLAN_PRIMARY ]] || {
+    lsi_provider_error 'Provider install has no primary provider snapshot.'
+    return 3
+  }
+  IFS=$'\t' read -r _cell_id _os_id _version_id _cell_arch _manager _channel _repository_uri \
+    _suite _components _key_file _key_fingerprints expected_origin _metadata_signature \
+    <<< "${LSI_PROVIDER_PLAN_ACTIVATION[$LSI_PROVIDER_PLAN_PRIMARY]}"
+
+  apt_get=$(lsi_provider_system_tool apt-get) || return
+  apt_cache=$(lsi_provider_system_tool apt-cache) || return
+  dpkg_deb=$(lsi_provider_system_tool dpkg-deb) || return
+  sha256_bin=$(lsi_provider_system_tool sha256sum) || return
+  stat_bin=$(lsi_provider_system_tool stat) || return
+  find_bin=$(lsi_provider_system_tool find) || return
+  mktemp_bin=$(lsi_provider_system_tool mktemp) || return
+  rm_bin=$(lsi_provider_system_tool rm) || return
+  verify_binary=$(lsi_provider_system_tool "$verify_binary") || return
+
+  cache_root=$(umask 077; "$mktemp_bin" -d '/tmp/lsi-provider-install.XXXXXX') || {
+    lsi_provider_error 'Unable to create the isolated provider package cache.'
+    return 3
+  }
+  trap '"$rm_bin" -rf -- "$cache_root"' EXIT HUP INT TERM
+  [[ -d $cache_root && ! -L $cache_root && ${cache_root#/tmp/} == lsi-provider-install.* ]] || {
+    lsi_provider_error 'The isolated provider package cache is unsafe.'
+    return 3
+  }
+  if [[ ${LSI_PROVIDER_APPLY_ALLOW_NONROOT_TEST:-false} != true ]]; then
+    [[ $("$stat_bin" -c '%u:%a' -- "$cache_root") == '0:700' ]] || {
+      lsi_provider_error 'The isolated provider package cache has unsafe ownership or mode.'
+      return 3
+    }
+  fi
+  archive_dir="$cache_root/archives"
+  /bin/mkdir -p -- "$archive_dir/partial" || return 3
+
+  # These options are explicit rather than relying on APT defaults: a provider
+  # transaction must never downgrade to insecure repository metadata or an
+  # unauthenticated package merely because a host-wide setting says otherwise.
+  "$apt_get" \
+    -o Acquire::AllowInsecureRepositories=false \
+    -o Acquire::AllowDowngradeToInsecureRepositories=false \
+    -o APT::Get::AllowUnauthenticated=false \
+    update || {
+      lsi_provider_error "Signed metadata refresh failed for provider $LSI_PROVIDER_PLAN_PRIMARY."
+      return 4
+    }
+
+  # APT exposes the publisher's Origin field from signed package metadata. It
+  # is checked before downloading so a same-version package from another
+  # configured source cannot satisfy the provider's lock.
+  origin_line=$("$apt_cache" show "$package=$version" 2> /dev/null || true)
+  while IFS= read -r candidate || [[ -n $candidate ]]; do
+    [[ $candidate == "Origin: $expected_origin" ]] && origin_found=true
+  done <<< "$origin_line"
+  [[ $origin_found == true ]] || {
+    lsi_provider_error "APT metadata does not declare the expected origin for $package=$version."
+    return 4
+  }
+
+  "$apt_get" \
+    -o Acquire::AllowInsecureRepositories=false \
+    -o Acquire::AllowDowngradeToInsecureRepositories=false \
+    -o APT::Get::AllowUnauthenticated=false \
+    -o "Dir::Cache::archives=$archive_dir" \
+    -o "Dir::Cache::archives/partial=$archive_dir/partial" \
+    --download-only --yes --no-install-recommends install "$package=$version" || {
+      lsi_provider_error "Locked package download failed for $package=$version."
+      return 4
+    }
+
+  while IFS= read -r candidate || [[ -n $candidate ]]; do
+    [[ -f $candidate && ! -L $candidate ]] || continue
+    package_fields=$("$dpkg_deb" --show --showformat '${Package}\t${Version}\t${Architecture}\n' -- "$candidate" 2> /dev/null) || continue
+    IFS=$'\t' read -r field_package field_version field_arch <<< "$package_fields"
+    [[ $field_package == "$package" && $field_version == "$version" && $field_arch == "$arch" ]] || continue
+    candidates+=("$candidate")
+  done < <("$find_bin" "$archive_dir" -maxdepth 1 -type f -name '*.deb' -print)
+  ((${#candidates[@]} == 1)) || {
+    lsi_provider_error "Locked package cache does not contain exactly one matching artifact for $package=$version."
+    return 4
+  }
+  artifact=${candidates[0]}
+  [[ $("$stat_bin" -c '%h' -- "$artifact") == 1 ]] || {
+    lsi_provider_error 'Downloaded provider package has unsafe links.'
+    return 3
+  }
+  if [[ ${LSI_PROVIDER_APPLY_ALLOW_NONROOT_TEST:-false} != true ]]; then
+    [[ $("$stat_bin" -c '%u:%a' -- "$artifact") =~ ^0:[0-7]{3,4}$ ]] || {
+      lsi_provider_error 'Downloaded provider package has unsafe ownership or mode.'
+      return 3
+    }
+  fi
+  observed_sha256=$("$sha256_bin" -- "$artifact") || return 3
+  observed_sha256=${observed_sha256%% *}
+  [[ $observed_sha256 == "$expected_sha256" ]] || {
+    lsi_provider_error "Downloaded provider package digest does not match the reviewed lock for $package=$version."
+    return 4
+  }
+
+  # Install the already verified local artifact. APT may resolve ordinary
+  # distribution dependencies, but it cannot substitute the locked provider
+  # package with an unreviewed repository result.
+  "$apt_get" \
+    -o Acquire::AllowInsecureRepositories=false \
+    -o Acquire::AllowDowngradeToInsecureRepositories=false \
+    -o APT::Get::AllowUnauthenticated=false \
+    --yes --no-install-recommends install "$artifact" || {
+      lsi_provider_error "Installation failed for verified provider package $package=$version."
+      return 4
+    }
+  "$verify_binary" --version > /dev/null || {
+    lsi_provider_error "Installed provider binary did not verify: ${verify_binary##*/}."
+    return 4
+  }
+)
+
+lsi_provider_cleanup_transient_configurations() {
+  local root=$1 provider index status=0
+  for ((index = ${#LSI_PROVIDER_PLAN_ORDER[@]} - 1; index >= 0; index--)); do
+    provider=${LSI_PROVIDER_PLAN_ORDER[index]}
+    [[ -z ${LSI_PROVIDER_PLAN_PERSIST[$provider]+x} ]] || continue
+    lsi_provider_deactivate_config_file "$provider" "$root" || status=$?
+  done
+  return "$status"
+}
+
+lsi_provider_install_current() {
+  local provider_id=${1:-} root=${LSI_PROVIDER_APPLY_ROOT:-/} provider row cell_id manager
+  local selected lock_row lock_cell status=0 cleanup_status=0
+  local -A requested=()
+  (($# > 0)) && shift
+  lsi_provider_valid_slug "$provider_id" || {
+    lsi_provider_error 'provider-install requires a valid provider ID.'
+    return 2
+  }
+  lsi_provider_apply_parse_args "$@" || return
+  lsi_provider_plan_prepare "$provider_id" "${LSI_PROVIDER_APPLY_ARGS[@]}" || return
+  [[ $LSI_PROVIDER_PLAN_DIGEST == "$LSI_PROVIDER_APPLY_EXPECTED_DIGEST" ]] || {
+    lsi_provider_error 'Reviewed provider plan SHA-256 does not match the current exact plan; refusing installation.'
+    return 5
+  }
+  [[ $root == /* && -d $root && ! -L $root ]] || {
+    lsi_provider_error 'Provider installation root must be an existing absolute, non-symlink directory.'
+    return 3
+  }
+  [[ ${LSI_PROVIDER_APPLY_ALLOW_NONROOT_TEST:-false} == true || $root == / ]] || {
+    lsi_provider_error 'A non-system provider installation root is test-only.'
+    return 3
+  }
+  [[ ${LSI_PROVIDER_APPLY_ALLOW_NONROOT_TEST:-false} == true ]] || lsi_require_root
+  [[ ${LSI_PROVIDER_APPLY_ALLOW_NONROOT_TEST:-false} == true ]] || lsi_acquire_lock
+
+  for provider in "${LSI_PROVIDER_PLAN_ORDER[@]}"; do
+    lsi_provider_apply_config_file "$provider" "$root" || {
+      status=$?
+      lsi_provider_cleanup_transient_configurations "$root" > /dev/null 2>&1 || :
+      return "$status"
+    }
+  done
+
+  row=${LSI_PROVIDER_PLAN_ACTIVATION[$provider_id]:-}
+  IFS=$'\t' read -r cell_id _os_id _version_id _arch manager _remainder <<< "$row"
+  case "$manager" in
+    apt-get)
+      for selected in "${LSI_PROVIDER_PLAN_MODULES[@]}"; do
+        requested["$selected"]=1
+      done
+      for lock_row in "${LSI_PROVIDER_PLAN_PRIMARY_LOCK_ROWS[@]}"; do
+        IFS=$'\t' read -r _module_id lock_cell _remainder <<< "$lock_row"
+        [[ $lock_cell == "$cell_id" && -n ${requested[$_module_id]+x} ]] || continue
+        lsi_provider_apt_install_locked_package "$lock_row" || {
+          status=$?
+          break
+        }
+      done
+      ;;
+    *)
+      lsi_provider_error "Provider installation has no safe implementation for package manager: $manager"
+      status=4
+      ;;
+  esac
+
+  lsi_provider_cleanup_transient_configurations "$root" || cleanup_status=$?
+  ((status == 0)) || return "$status"
+  ((cleanup_status == 0)) || {
+    lsi_provider_error 'Verified provider package installed, but transient repository cleanup failed.'
+    return "$cleanup_status"
+  }
+  printf 'Verified provider package transaction completed from reviewed plan SHA-256: %s\n' "$LSI_PROVIDER_PLAN_DIGEST"
+  printf '%s\n' 'Repository files were removed unless persistence was explicitly acknowledged.'
+}
+
 lsi_provider_usage() {
   cat << 'EOF'
 Provider catalog commands:
@@ -1831,6 +2032,7 @@ Provider catalog commands:
   ./install.sh provider-config PROVIDER --allow-provider PROVIDER@CATALOG_REVISION [ACK...] MODULE...
   sudo ./install.sh provider-apply PROVIDER --plan-sha256 PLAN_SHA256 --allow-provider PROVIDER@CATALOG_REVISION [ACK...] MODULE...
   sudo ./install.sh provider-deactivate PROVIDER --plan-sha256 PLAN_SHA256 --allow-provider PROVIDER@CATALOG_REVISION [ACK...] MODULE...
+  sudo ./install.sh provider-install PROVIDER --plan-sha256 PLAN_SHA256 --allow-provider PROVIDER@CATALOG_REVISION [ACK...] MODULE...
 
 Provider-plan acknowledgements (repeat for dependencies):
   --allow-preview-provider PROVIDER
@@ -1869,6 +2071,9 @@ lsi_provider_main() {
       ;;
     provider-deactivate)
       lsi_provider_deactivate_current "$@"
+      ;;
+    provider-install)
+      lsi_provider_install_current "$@"
       ;;
     *)
       lsi_provider_usage >&2
