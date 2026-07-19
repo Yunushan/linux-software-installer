@@ -167,8 +167,15 @@ chmod 700 "$VERIFY_HOME"
 gpg --batch --homedir "$VERIFY_HOME" --import \
   /usr/share/torbrowser-launcher/tor-browser-developers.asc \
   > "$EVIDENCE_DIR/key-import.log" 2>&1
-mapfile -t fingerprints < <(gpg --batch --homedir "$VERIFY_HOME" --with-colons --list-keys \
-  | awk -F: '$1 == "fpr" { print $10 }')
+gpg --batch --homedir "$VERIFY_HOME" --with-colons --list-keys \
+  > "$EVIDENCE_DIR/key-listing.txt"
+mapfile -t fingerprints < <(awk -F: '
+  $1 == "pub" { awaiting_primary_fingerprint = 1; next }
+  awaiting_primary_fingerprint && $1 == "fpr" {
+    print $10
+    awaiting_primary_fingerprint = 0
+  }
+' "$EVIDENCE_DIR/key-listing.txt")
 [[ ${#fingerprints[@]} -eq 1 && \
   ${fingerprints[0]} == EF6E286DDA85EA2A4BA7DE684E2C6E8793298290 ]] || {
   printf 'The launcher key does not contain exactly the documented Tor Browser signing fingerprint.\n' >&2
