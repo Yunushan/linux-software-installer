@@ -1,16 +1,16 @@
 {
-  "artifact_sha256": "fc5ac2ab60ee38fb242f0a6f245db74c98593c8df867305b6d273356c5112718",
+  "artifact_sha256": "b6c0c2e1dbeb2e4a64ea2f13698b1134cf4a6f41bea6d444d808c3db83818fe5",
   "cell_ids": [
     "debian-12/konversation",
     "ubuntu-24-04/konversation",
     "ubuntu-26-04/konversation"
   ],
-  "commit_sha": "b09dde4e407ed460782e7d2fe65538bcc159dea3",
+  "commit_sha": "6f653cacfba0ee08ee4ecbf4b6e09c4cc2be5360",
   "expected_cells": 371,
-  "index_sha256": "9f02c2f6cc5ce8408ba4a530933e7fa69ebe8e31e6c6557f2587202d06c7e3ab",
+  "index_sha256": "adcb6549b969447bf9c4a0fd40a18dfb8f1e2fdc04fc6385d92442492cce3658",
   "module": "konversation",
   "result": "verified-awaiting-parity-review-and-systemd-attestation",
-  "run_url": "https://github.com/Yunushan/linux-software-installer/actions/runs/29689788889",
+  "run_url": "https://github.com/Yunushan/linux-software-installer/actions/runs/29693350772",
   "schema": "linux-software-installer/accepted-evidence-verification/v2",
   "target_cells": [
     "debian-12",
