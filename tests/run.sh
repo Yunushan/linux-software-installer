@@ -316,7 +316,7 @@ test_standalone_evidence_matrices() {
     grep -Eq $'^verification_binary\t[^[:space:]]+$' <<< "$contract" || return 1
     ! grep -q $'\t$' <<< "$contract" || return 1
   done < <(tail -n +2 <<< "$all_cells")
-  [[ ${#checked_contracts[@]} -eq 138 ]] &&
+  [[ ${#checked_contracts[@]} -eq 139 ]] &&
     [[ $all_count -eq 104 && $debian_count -eq 101 && $rhel_count -eq 38 ]] &&
     [[ $filtered_count -eq 1 && $all_cell_count -eq 371 ]] &&
     [[ $debian_cell_count -eq 295 && $rhel_cell_count -eq 76 ]] &&

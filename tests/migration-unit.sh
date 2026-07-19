@@ -222,62 +222,27 @@ test_linked_module_manifests_fail_closed() (
 test_unvalidated_terminal_replacement_fails_closed() (
   local case_dir
   case_dir=$(prepare_case)
-  sed -i $'3s#\tplanned\tnginx\tintent\t-\t#\timplemented\tnginx\tintent\tdocs/MIGRATION.md\t#' \
+  sed -i $'/^ubuntu-002\t/s#\tplanned\tnginx\tintent\t-\t#\timplemented\tnginx\tintent\tdocs/MIGRATION.md\t#' \
     "$case_dir/legacy-inventory.tsv"
   use_case "$case_dir"
   ! lsi_migration_load > /dev/null 2>&1
 )
 
 test_admitted_terminal_replacement_loads() (
-  local case_dir commit artifact_digest index_digest systemd_digest reference output
+  local case_dir reference invalid_digest output
   case_dir=$(prepare_case)
-  commit=$(git -C "$ROOT_DIR" rev-parse HEAD 2> /dev/null || printf 'a%.0s' {1..40})
-  export LSI_TESTED_COMMIT=$commit
-  artifact_digest=$(printf 'b%.0s' {1..64})
-  index_digest=$(printf 'c%.0s' {1..64})
-  systemd_digest=$(printf 'd%.0s' {1..64})
-  reference="https://github.com/Yunushan/linux-software-installer/actions/runs/123#artifact-digest=$artifact_digest"
-  sed -i $'3s|\tplanned\tnginx\tintent\t-\t|\timplemented\tnginx\tintent\t'"$reference"$'\t|' \
-    "$case_dir/legacy-inventory.tsv"
-  printf '%s\n' \
-    $'evidence_key\tcommit_sha\trun_url\tartifact_url\tartifact_digest\tindex_sha256\ttarget_cells\tparity_report\tsystemd_run_url\tsystemd_artifact_url\tsystemd_artifact_digest\tverification_report' \
-    > "$case_dir/accepted-evidence.tsv"
-  mkdir -p "$case_dir/docs"
-  printf '%s\n' \
-    '{' \
-    "  \"artifact_sha256\": \"$artifact_digest\"," \
-    "  \"cell_ids\": [\"debian-12/nginx\", \"ubuntu-24-04/nginx\", \"ubuntu-26-04/nginx\"]," \
-    "  \"commit_sha\": \"$commit\"," \
-    "  \"expected_cells\": 3," \
-    "  \"index_sha256\": \"$index_digest\"," \
-    "  \"module\": \"nginx\"," \
-    "  \"result\": \"verified-awaiting-parity-review-and-systemd-attestation\"," \
-    "  \"run_url\": \"https://github.com/Yunushan/linux-software-installer/actions/runs/123\"," \
-    "  \"schema\": \"linux-software-installer/accepted-evidence-verification/v2\"," \
-    '  "target_cells": ["debian-12", "ubuntu-24-04", "ubuntu-26-04"]' \
-    '}' > "$case_dir/docs/verified-nginx.json"
-  printf '%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\n' \
-    debian/nginx "$commit" \
-    https://github.com/Yunushan/linux-software-installer/actions/runs/123 \
-    https://github.com/Yunushan/linux-software-installer/actions/runs/123/artifacts/456 \
-    "sha256:$artifact_digest" "$index_digest" debian-12,ubuntu-24-04,ubuntu-26-04 docs/MIGRATION.md \
-    https://evidence.example.invalid/systemd/123 \
-    https://evidence.example.invalid/systemd/123/artifacts/456 "sha256:$systemd_digest" \
-    docs/verified-nginx.json \
-    >> "$case_dir/accepted-evidence.tsv"
-  bash "$ROOT_DIR/tests/validate-legacy-promotion-readiness.sh" \
-    --inventory "$case_dir/legacy-inventory.tsv" \
-    --admissions "$case_dir/accepted-evidence.tsv" \
-    --report-root "$case_dir" \
-    --emit > "$case_dir/legacy-promotion-readiness.tsv" || return 1
-  use_case "$case_dir" "$case_dir/accepted-evidence.tsv" "$case_dir/legacy-promotion-readiness.tsv" "$case_dir"
+  reference=$(awk -F '\t' '$1 == "ubuntu-004" { print $11; exit }' \
+    "$case_dir/legacy-inventory.tsv")
+  [[ $reference =~ ^https://github\.com/Yunushan/linux-software-installer/actions/runs/[0-9]+#artifact-digest=[0-9a-f]{64}$ ]] || return 1
+  use_case "$case_dir"
   lsi_migration_load || return 1
-  output=$(lsi_migration_show ubuntu-002) || return 1
-  [[ $LSI_MIGRATION_TERMINAL -eq 193 && $LSI_MIGRATION_PLANNED -eq 36 ]] &&
+  output=$(lsi_migration_show ubuntu-004) || return 1
+  [[ $LSI_MIGRATION_TERMINAL -eq 193 && $LSI_MIGRATION_PLANNED -eq 37 ]] &&
     grep -q '^Disposition   : implemented$' <<< "$output" &&
-    grep -q "^Evidence      : $reference$" <<< "$output" &&
+    grep -Fq "Evidence      : $reference" <<< "$output" &&
     grep -q 'terminal replacement recorded with assessed parity and evidence' <<< "$output" || return 1
-  sed -i $'3s|artifact-digest='"$artifact_digest"$'|artifact-digest='"$systemd_digest"$'|' \
+  invalid_digest=$(printf 'e%.0s' {1..64})
+  sed -i $'/^ubuntu-004\t/s|artifact-digest=[0-9a-f]\{64\}|artifact-digest='"$invalid_digest"$'|' \
     "$case_dir/legacy-inventory.tsv"
   lsi_migration_reset
   ! lsi_migration_load > /dev/null 2>&1
