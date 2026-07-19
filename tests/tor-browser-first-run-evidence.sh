@@ -164,8 +164,14 @@ stage_pass
 stage_begin independent-signature-verification
 VERIFY_HOME=$(mktemp -d)
 chmod 700 "$VERIFY_HOME"
+REFRESHED_KEY="$EVIDENCE_HOME/.cache/torbrowser/torbrowser.gpg"
+[[ -s $REFRESHED_KEY ]] || {
+  printf 'The launcher did not retain the refreshed Tor Browser signing key.\n' >&2
+  exit 1
+}
+sha256sum "$REFRESHED_KEY" > "$EVIDENCE_DIR/refreshed-key.sha256"
 gpg --batch --homedir "$VERIFY_HOME" --import \
-  /usr/share/torbrowser-launcher/tor-browser-developers.asc \
+  /usr/share/torbrowser-launcher/tor-browser-developers.asc "$REFRESHED_KEY" \
   > "$EVIDENCE_DIR/key-import.log" 2>&1
 gpg --batch --homedir "$VERIFY_HOME" --with-colons --list-keys \
   > "$EVIDENCE_DIR/key-listing.txt"
@@ -181,10 +187,17 @@ mapfile -t fingerprints < <(awk -F: '
   printf 'The launcher key does not contain exactly the documented Tor Browser signing fingerprint.\n' >&2
   exit 1
 }
-gpgv --homedir "$VERIFY_HOME" \
+gpg --batch --homedir "$VERIFY_HOME" --status-fd 1 --verify \
   "$EVIDENCE_DIR/tor-browser.tar.xz.asc" \
   "$EVIDENCE_DIR/tor-browser.tar.xz" \
   > "$EVIDENCE_DIR/signature-verification.log" 2>&1
+awk -v expected_primary=EF6E286DDA85EA2A4BA7DE684E2C6E8793298290 '
+  /^\[GNUPG:\] VALIDSIG / && $NF == expected_primary { verified = 1 }
+  END { exit verified ? 0 : 1 }
+' "$EVIDENCE_DIR/signature-verification.log" || {
+  printf 'The payload signature was not bound to the expected Tor Browser primary key.\n' >&2
+  exit 1
+}
 sha256sum "$EVIDENCE_DIR/tor-browser.tar.xz" \
   > "$EVIDENCE_DIR/tor-browser.tar.xz.sha256"
 sha256sum "$EVIDENCE_DIR/tor-browser.tar.xz.asc" \
