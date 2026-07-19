@@ -65,6 +65,8 @@ finish_record() {
     ((code != 0)) || code=1
     printf '%s\tfailed\t%s\t%d\n' "$CURRENT_STAGE" \
       "$(date -u '+%Y-%m-%dT%H:%M:%SZ')" "$code" >> "$EVIDENCE_DIR/stages.tsv"
+    rm -f -- "$EVIDENCE_DIR/tor-browser.tar.xz" \
+      "$EVIDENCE_DIR/tor-browser.tar.xz.asc"
   fi
   metadata finished_at "$(date -u '+%Y-%m-%dT%H:%M:%SZ')"
   metadata result "$RESULT"
@@ -99,7 +101,12 @@ stage_pass
 stage_begin prepare-disposable-user
 id "$EVIDENCE_USER" > /dev/null 2>&1 || \
   useradd --create-home --user-group --home-dir "$EVIDENCE_HOME" --shell /usr/sbin/nologin "$EVIDENCE_USER"
-install -d -m 700 -o "$EVIDENCE_USER" -g "$EVIDENCE_USER" "$DOWNLOAD_DIR"
+install -d -m 700 -o "$EVIDENCE_USER" -g "$EVIDENCE_USER" \
+  "$EVIDENCE_HOME/.cache" \
+  "$EVIDENCE_HOME/.cache/torbrowser" \
+  "$DOWNLOAD_DIR" \
+  "$EVIDENCE_HOME/.config" \
+  "$EVIDENCE_HOME/.local/share"
 LOG_FILE="$EVIDENCE_DIR/launcher.log"
 stage_pass
 
