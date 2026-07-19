@@ -3,10 +3,10 @@
 ## Scope and decision
 
 - Evidence key: `rhel/nodejs`
-- Tested commit: `f59c5765b5e68ba4e074331a1b494a1bfdbcb125`
+- Tested commit: `27646bafef32bb78c3f5f97d3b9b41451ee96e2e`
 - Decision: `implemented`
 - Parity level: `intent`
-- Accepted evidence: [run 29648435978](https://github.com/Yunushan/linux-software-installer/actions/runs/29648435978), artifact digest `sha256:e9b7e22c95106d4e99fe8bff465e69c78afbb70b3025458fa4380dd5937bca64`
+- Accepted evidence: [run 29657467906](https://github.com/Yunushan/linux-software-installer/actions/runs/29657467906), artifact digest `sha256:5d84feef4344c29d39f8de5b713b55b3f12cb1b1378800fe68ca6b57c4cde30c`
 - Verification report: `docs/evidence-verification/rhel-nodejs.json`
 
 ## Legacy rows covered

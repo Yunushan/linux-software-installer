@@ -48,6 +48,8 @@ printf '%s\n' $'stage\tstatus\ttimestamp\texit_code' \
   $'snapshot-before-install\tpassed\t2026-01-01T00:00:04Z\t0' \
   $'initial-install\trunning\t2026-01-01T00:00:05Z\t-' \
   $'initial-install\tpassed\t2026-01-01T00:00:10Z\t0' \
+  $'foreign-architecture-check-after-install\trunning\t2026-01-01T00:00:11Z\t-' \
+  $'foreign-architecture-check-after-install\tpassed\t2026-01-01T00:00:12Z\t0' \
   $'binary-check-after-install\trunning\t2026-01-01T00:00:11Z\t-' \
   $'binary-check-after-install\tpassed\t2026-01-01T00:00:20Z\t0' \
   $'snapshot-after-install\trunning\t2026-01-01T00:00:21Z\t-' \
@@ -56,6 +58,8 @@ printf '%s\n' $'stage\tstatus\ttimestamp\texit_code' \
   $'package-source-capture\tpassed\t2026-01-01T00:00:30Z\t0' \
   $'repeat-install\trunning\t2026-01-01T00:00:31Z\t-' \
   $'repeat-install\tpassed\t2026-01-01T00:00:40Z\t0' \
+  $'foreign-architecture-check-after-repeat\trunning\t2026-01-01T00:00:41Z\t-' \
+  $'foreign-architecture-check-after-repeat\tpassed\t2026-01-01T00:00:42Z\t0' \
   $'binary-check-after-repeat\trunning\t2026-01-01T00:00:41Z\t-' \
   $'binary-check-after-repeat\tpassed\t2026-01-01T00:00:50Z\t0' \
   $'snapshot-after-repeat\trunning\t2026-01-01T00:00:51Z\t-' \
@@ -80,13 +84,17 @@ fi
 printf 'NAME=Ubuntu\nID=ubuntu\nVERSION_ID="24.04"\n' > "$RAW_CELL_DIR/os-release.txt"
 cp "$ROOT_DIR/modules/git/module.sh" "$RAW_CELL_DIR/module.sh"
 printf 'base\t1\n' > "$RAW_CELL_DIR/packages-before-install.tsv"
-printf 'base\t1\ngit\t1\n' > "$RAW_CELL_DIR/packages-after-install.tsv"
-printf 'base\t1\ngit\t1\n' > "$RAW_CELL_DIR/packages-after-repeat.tsv"
+# A Debian Multi-Arch package reports its canonical installed identity with an
+# architecture suffix.  The unqualified module contract must still bind it.
+printf 'base\t1\ngit:amd64\t1\n' > "$RAW_CELL_DIR/packages-after-install.tsv"
+printf 'base\t1\ngit:amd64\t1\n' > "$RAW_CELL_DIR/packages-after-repeat.tsv"
 printf '%s\n' $'binary\tpath' $'git\t/usr/bin/git' \
   > "$RAW_CELL_DIR/binary-paths-after-install.tsv"
 printf '%s\n' $'binary\tpath' $'git\t/usr/bin/git' \
   > "$RAW_CELL_DIR/binary-paths-after-repeat.tsv"
 printf '===== git =====\ngit package source\n' > "$RAW_CELL_DIR/package-sources.txt"
+: > "$RAW_CELL_DIR/foreign-architectures-after-install.txt"
+: > "$RAW_CELL_DIR/foreign-architectures-after-repeat.txt"
 printf 'container completed\n' > "$CELL_DIR/container.log"
 "$PYTHON" "$ROOT_DIR/tests/evidence-record.py" sanitize-tree \
   --source "$RAW_CELL_DIR" --destination "$CELL_DIR" \

@@ -60,10 +60,15 @@ Target restrictions are repository-trusted metadata, not a CLI override. The
 runtime rechecks detected host identity for both planning and installation,
 and evidence generation omits cells not listed by the module.
 
-The active catalog currently accepts only low-risk packages from enabled OS
-repositories. A module that needs external downloads, repositories, config
-rewrites or credentials requires a separate reviewed provider design and must
-not be added as a simple manifest.
+The active catalog ordinarily accepts only low-risk packages from enabled OS
+repositories. A narrowly reviewed `medium`-risk manifest may declare
+`MODULE_DEBIAN_FOREIGN_ARCHITECTURES=(i386)` only with exact x86_64 Debian
+target cells. This is a global dpkg-state change, so installation requires one
+matching `--allow-foreign-architecture i386` acknowledgement; `--yes` never
+implies it. The evidence contract records and verifies the post-install and
+post-repeat foreign architecture state. A module that needs external downloads,
+repositories, config rewrites or credentials still requires a separate
+reviewed provider design and must not be added as a simple manifest.
 
 ## Checklist
 

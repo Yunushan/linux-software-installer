@@ -34,11 +34,12 @@ elif lsi_module_has_target_restrictions; then
   lsi_die "Restricted module $MODULE requires an exact target cell for evidence contracts." 2
 fi
 
-declare -a packages=() binaries=() services=()
+declare -a packages=() binaries=() services=() foreign_architectures=()
 case "$FAMILY" in
   debian)
     binaries=("${MODULE_DEBIAN_VERIFY_BINARIES[@]}")
     services=("${MODULE_DEBIAN_SERVICES[@]}")
+    foreign_architectures=("${MODULE_DEBIAN_FOREIGN_ARCHITECTURES[@]}")
     ;;
   rhel)
     binaries=("${MODULE_RHEL_VERIFY_BINARIES[@]}")
@@ -53,3 +54,4 @@ printf 'type\tvalue\n'
 printf 'package\t%s\n' "${packages[@]}"
 printf 'verification_binary\t%s\n' "${binaries[@]}"
 ((${#services[@]} == 0)) || printf 'service\t%s\n' "${services[@]}"
+((${#foreign_architectures[@]} == 0)) || printf 'foreign_architecture\t%s\n' "${foreign_architectures[@]}"

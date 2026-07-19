@@ -1,15 +1,15 @@
 {
-  "artifact_sha256": "e9b7e22c95106d4e99fe8bff465e69c78afbb70b3025458fa4380dd5937bca64",
+  "artifact_sha256": "fc5ac2ab60ee38fb242f0a6f245db74c98593c8df867305b6d273356c5112718",
   "cell_ids": [
     "alma-9-8/gimp",
     "rocky-9-8/gimp"
   ],
-  "commit_sha": "f59c5765b5e68ba4e074331a1b494a1bfdbcb125",
-  "expected_cells": 370,
-  "index_sha256": "99533d5ae2171cd5479f183edf8a1eff82083f0b6433a962c21898ddafb34089",
+  "commit_sha": "b09dde4e407ed460782e7d2fe65538bcc159dea3",
+  "expected_cells": 371,
+  "index_sha256": "9f02c2f6cc5ce8408ba4a530933e7fa69ebe8e31e6c6557f2587202d06c7e3ab",
   "module": "gimp",
   "result": "verified-awaiting-parity-review-and-systemd-attestation",
-  "run_url": "https://github.com/Yunushan/linux-software-installer/actions/runs/29648435978",
+  "run_url": "https://github.com/Yunushan/linux-software-installer/actions/runs/29689788889",
   "schema": "linux-software-installer/accepted-evidence-verification/v2",
   "target_cells": [
     "alma-9-8",

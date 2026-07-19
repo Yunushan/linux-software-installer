@@ -2,7 +2,7 @@
 
 The machine-readable [provider backlog](provider-backlog.tsv) turns every current
 `blocked-third-party` row in `legacy-inventory.tsv` into a proposed next action.
-It is a planning ledger, not replacement evidence: all 127 source inventory rows
+It is a planning ledger, not replacement evidence: all 125 source inventory rows
 remain `blocked-third-party`, with `replacement=-` and `parity_level=unassessed`,
 until their normal evidence and disposition gates are independently satisfied.
 
@@ -47,10 +47,10 @@ totals below.
 
 | Recommended action | Rows | Meaning |
 | --- | ---: | --- |
-| `implement` | 110 | Build and verify a provider/module candidate. |
+| `implement` | 108 | Build and verify a provider/module candidate. |
 | `conditional-artifact` | 17 | Automate only when immutable, authenticated upstream artifacts can be proved. |
 | `terminal-handoff` | 0 | No reviewed handoff remains unresolved in the active backlog. |
-| **Total** | **127** | Exact current `blocked-third-party` coverage. |
+| **Total** | **125** | Exact current `blocked-third-party` coverage. |
 
 `implement` is an instruction to begin provider work, not a claim that the
 capability is already supported. `terminal-handoff` likewise does not make a
@@ -71,7 +71,7 @@ absent from this TSV because it covers only current `blocked-third-party` rows.
 | --- | --- | ---: | --- |
 | `authenticated-download` | `terminal-handoff` | 0 | Keep credentials, license acceptance, entitlements, and vendor kernel integration in the vendor workflow. |
 | `community-client-handoff` | `terminal-handoff` | 0 | Prefer the service's supported client or web surface over owning an unofficial client. |
-| `distro-component` | `implement` | 3 | Verify maintained Debian-family packages on every claimed image. |
+| `distro-component` | `implement` | 2 | Verify maintained Debian-family packages on every claimed image. |
 | `epel-package` | `implement` | 35 | Current admission is blocked; review a metalink-hash-and-package trust mode before producing authenticated solver/install evidence. |
 | `infrastructure-handoff` | `terminal-handoff` | 0 | Leave topology, secrets, certificates, databases, and enrollment to the upstream deployment workflow. |
 | `maintenance-handoff` | `terminal-handoff` | 0 | Leave privileged cleanup policy to distribution-supported administration and recovery tools. |
@@ -86,34 +86,31 @@ absent from this TSV because it covers only current `blocked-third-party` rows.
 ## Machine-checked closure shape
 
 The validator also cross-checks every proposed `replacement_outcome` against
-the active module catalog. The 127 rows represent 82 normalized capabilities
-and 80 canonical outcomes. Of those rows, 46 point to 19 existing modules:
+the active module catalog. The 125 rows represent 80 normalized capabilities
+and 78 canonical outcomes. Of those rows, 45 point to 18 existing modules:
 `clamav`, `composer`, `deluge`, `dvblast`, `fail2ban`, `ffmpeg`, `htop`,
 `magic-wormhole`, `monitoring-tools`, `neovim`, `quassel`, `timeshift`,
-`tinc`, `transmission`, `vlc`, `weechat`, `wine`, `telegram`, and
-`tor-browser`.
+`tinc`, `transmission`, `vlc`, `weechat`, `wine`, and `telegram`.
 
 That is implementation reuse, not current coverage. Forty-five rows are
 RHEL-family gaps while their 18 matching modules declare Debian-family support
 only; that includes the RHEL Telegram row whose matching module is Debian
-12-only. Tor Browser Launcher remains one Debian distro-component candidate
-restricted to one exact Tier-1 cell.
-Therefore the number of family-wide ready reuse rows remains **zero**, with one
-target-restricted reuse row. A row remains blocked until its applicable target
+12-only. The number of family-wide ready reuse rows remains **zero**, with no
+target-restricted reuse rows. A row remains blocked until its applicable target
 coverage and durable solver/install/repeat-install evidence are accepted. The
-other 81 rows cover 61 outcomes for which no active module exists yet.
+other 80 rows cover 60 outcomes for which no active module exists yet.
 
-Three rows can investigate distribution components without adding an external
-trust root: MakeHuman, Steam, and Tor Browser. PlayOnLinux and Telegram are
-now accepted on their exact verified target cells. The probe history and Tor
-Browser's remaining boundary are recorded in
+MakeHuman is the one remaining distribution-component investigation that does
+not add an external trust root. PlayOnLinux, Telegram, Steam, and Tor Browser
+are accepted on their exact verified target cells. The probe history is recorded
+in
 [`DISTRO_COMPONENT_PROBES.md`](DISTRO_COMPONENT_PROBES.md). The other 124 rows
 require an external signed repository/store or an immutable, authenticated
 upstream artifact. Their shared implementation leverage is:
 
 | Closure group | Rows | Canonical outcomes in group | Existing-module reuse | Required work |
 | --- | ---: | ---: | ---: | --- |
-| Distribution components | 3 | 3 | 1 row / 1 outcome | Tor Browser needs first-run browser evidence; Steam still needs multiarch design and MakeHuman remains unavailable. |
+| Distribution components | 1 | 1 | 0 rows / 0 outcomes | MakeHuman remains unavailable. |
 | EPEL | 35 | 16 | 34 rows / 15 outcomes | Resolve the metadata-trust blocker in `EPEL_AUDIT.md`; only then re-probe exact packages and consider RHEL mappings or a new `links` module. |
 | RPM Fusion | 10 | 2 | 10 rows / 2 outcomes | One signed RPM Fusion provider plus RHEL mappings for existing `ffmpeg` and `vlc`. |
 | Vendor APT and RPM | 28 | 16 | 0 rows / 0 outcomes | Family-specific repository adapters and new modules; five outcomes span both families. |
@@ -122,9 +119,9 @@ upstream artifact. Their shared implementation leverage is:
 
 The outcome column is not additive because Telegram appears in both the
 distribution-component and Snap groups. Across the complete backlog there are
-81 unique outcomes, including the Snap provider bootstrap outcome.
+79 unique outcomes, including the Snap provider bootstrap outcome.
 
-This gives a concrete closure order: finish the three distribution components;
+This gives a concrete closure order: resolve the remaining distribution-component gap;
 resolve the EPEL trust-model blocker before any EPEL implementation, investigate
 RPM Fusion separately, consolidate vendor APT/RPM work by product, and defer the
 opt-in Snap subsystem until its EPEL bootstrap is admissible. Individual public

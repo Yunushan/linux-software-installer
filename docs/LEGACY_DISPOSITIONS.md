@@ -98,10 +98,13 @@ obsolete.
 | `rhel-red-hat-enterprise-linux-8-056-passbolt-ce`, `rhel-red-hat-enterprise-linux-9-028-passbolt-ce` | Passbolt CE credential service | [Passbolt's self-hosted installation requires a database, web server, TLS certificate and server GPG keys](https://www.passbolt.com/docs/hosting/install/ce/from-source/). | `out-of-scope`; credential-service domain, keys, mail, database and recovery policy stay with the Passbolt operator. |
 | `rhel-red-hat-enterprise-linux-8-055-wazuh-agent`, `rhel-red-hat-enterprise-linux-8-054-wazuh-server`, `rhel-red-hat-enterprise-linux-9-019-wazuh-server` | Wazuh agent/SIEM deployment | [Wazuh's current quickstart owns server, indexer, dashboard, certificates and generated credentials](https://documentation.wazuh.com/current/quickstart.html). The old scripts instead hard-code a manager address or fixed `admin` secrets and use `curl -k`. | `out-of-scope`; use Wazuh's deployment and enrollment workflow with administrator-managed topology, certificates and secrets. |
 
-This review closes 84 of the 355 immutable legacy rows: 20 through a permanent
-safety rejection, 25 through retirement of an unsupported legacy scope and 39
-through a reviewed external handoff. The remaining 271 rows stay non-terminal
-as 142 active-module candidates and 129 third-party provider gaps until their
-replacement or disposition has evidence that satisfies `docs/REPLACEMENT.md`.
-The proposed next route for each of those 129 gaps is tracked without changing
-its status in [`PROVIDER_BACKLOG.md`](PROVIDER_BACKLOG.md).
+This review closes 84 of the 355 immutable legacy rows through 20 permanent
+safety rejections, 25 retirements of unsupported legacy scope and 39 reviewed
+external handoffs. Subsequent accepted active-replacement admissions have
+closed a further 109 rows (108 `implemented` and one `superseded`), bringing the
+terminal total to 193. The remaining 162 rows stay non-terminal as 37
+active-module candidates and 125 third-party provider gaps until their
+replacement or disposition has evidence that satisfies
+`docs/REPLACEMENT.md`. The proposed next route for each of those 125 gaps is
+tracked without changing its status in
+[`PROVIDER_BACKLOG.md`](PROVIDER_BACKLOG.md).

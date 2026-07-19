@@ -159,7 +159,9 @@ sudo ./install.sh install --profile developer
 ## Active modules
 
 The authoritative catalog is always available with `./install.sh list`.
-The current catalog includes 103 low-risk package modules.
+The current catalog includes 103 low-risk package modules and one explicit
+medium-risk multiarch module. Steam is limited to Ubuntu 24.04 x86_64 and
+requires `--allow-foreign-architecture i386`; it is not selected by profiles.
 
 | Category | Modules |
 |---|---|
@@ -167,7 +169,7 @@ The current catalog includes 103 low-risk package modules.
 | Editors and development | `ansible`, `bluefish`, `build-tools`, `composer`, `dotnet-sdk`, `emacs`, `geany`, `git`, `nano`, `neovim`, `nodejs`, `openjdk`, `python`, `qt`, `ruby`, `thonny`, `vim` |
 | Web, databases and sharing | `apache`, `mariadb`, `mysql`, `nfs-server`, `nginx`, `php`, `postgresql`, `redis`, `samba`, `sqlite` |
 | Containers and security | `clamav`, `docker`, `fail2ban`, `firewalld`, `podman`, `ufw` |
-| Desktop, creative and media | `audacity`, `blender`, `caffeine`, `calibre`, `clementine`, `conky`, `darktable`, `deluge`, `dvblast`, `ffmpeg`, `geary`, `gimp`, `go-for-it`, `handbrake`, `inkscape`, `kazam`, `kdenlive`, `kodi`, `krita`, `libreoffice`, `liferea`, `mpv`, `musicbrainz-picard`, `obs-studio`, `okular`, `openshot`, `plank`, `playonlinux`, `qbittorrent`, `sayonara`, `remmina`, `shotcut`, `shutter`, `simplescreenrecorder`, `smplayer`, `stacer`, `timeshift`, `tor-browser`, `transmission`, `typecatcher`, `variety`, `vlc`, `wings3d` |
+| Desktop, creative and media | `audacity`, `blender`, `caffeine`, `calibre`, `clementine`, `conky`, `darktable`, `deluge`, `dvblast`, `ffmpeg`, `geary`, `gimp`, `go-for-it`, `handbrake`, `inkscape`, `kazam`, `kdenlive`, `kodi`, `krita`, `libreoffice`, `liferea`, `mpv`, `musicbrainz-picard`, `obs-studio`, `okular`, `openshot`, `plank`, `playonlinux`, `qbittorrent`, `sayonara`, `remmina`, `shotcut`, `shutter`, `simplescreenrecorder`, `smplayer`, `stacer`, `steam`, `timeshift`, `tor-browser`, `transmission`, `typecatcher`, `variety`, `vlc`, `wings3d` |
 | Communication and networking | `hexchat`, `irssi`, `konversation`, `magic-wormhole`, `mumble`, `quassel`, `telegram`, `tinc`, `uget`, `vuze`, `weechat`, `wine` |
 
 Some modules intentionally support only one family. For example, the active
@@ -279,8 +281,8 @@ standalone parity evidence for each module. Service-state testing uses the
 separate manual disposable-systemd-VM workflow described below.
 
 The manual `Standalone module evidence` workflow uses one matrix job per module
-(103 jobs for the full catalog). Each job sequentially starts a separate fresh
-container for every applicable target, so all 370 declared module-image cells
+(104 jobs for the full catalog). Each job sequentially starts a separate fresh
+container for every applicable target, so all 371 declared module-image cells
 remain independent without exceeding GitHub's 256-job matrix limit. It records
 pre-install, post-install and post-repeat package state, tested commit and image
 digest, package sources, binary checks and structured failure details. A final
@@ -296,7 +298,7 @@ published artifact digest, tested commit and run URL. It rechecks the external
 ZIP digest and aggregate/bundle contract, but does not replace the required
 parity review or service attestation.
 
-The 103 modules contribute 370 cells across Ubuntu 24.04, Ubuntu 26.04,
+The 104 modules contribute 371 cells across Ubuntu 24.04, Ubuntu 26.04,
 Debian 12, Rocky Linux 9.8 and AlmaLinux 9.8. Target restrictions are filtered
 before matrix and contract generation, so totals are derived from manifest
 policy rather than blindly multiplying family mappings.

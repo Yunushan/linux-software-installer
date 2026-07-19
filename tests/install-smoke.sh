@@ -5,7 +5,7 @@ IFS=$'\n\t'
 ROOT_DIR=${1:-/workspace}
 shift || true
 
-declare -a modules=()
+declare -a modules=() foreign_options=()
 export LSI_PROJECT_ROOT="$ROOT_DIR"
 EVIDENCE_DIR=${LSI_EVIDENCE_DIR:-/tmp}
 mkdir -p "$EVIDENCE_DIR"
@@ -67,13 +67,24 @@ fi
   exit 2
 }
 
+declare -A requested_foreign_architectures=()
+for module in "${modules[@]}"; do
+  lsi_load_module "$module"
+  while IFS= read -r architecture; do
+    [[ -n $architecture ]] && requested_foreign_architectures["$architecture"]=1
+  done < <(lsi_module_debian_foreign_architectures)
+done
+for architecture in "${!requested_foreign_architectures[@]}"; do
+  foreign_options+=(--allow-foreign-architecture "$architecture")
+done
+
 printf 'Installing %d modules: %s\n' "${#modules[@]}" "${modules[*]}"
 printf '%s\n' "${modules[@]}" > "$EVIDENCE_DIR/selected-modules.txt"
-"$ROOT_DIR/install.sh" install --yes "${modules[@]}"
+"$ROOT_DIR/install.sh" install --yes "${foreign_options[@]}" "${modules[@]}"
 snapshot_packages "$EVIDENCE_DIR/packages-before-repeat.tsv"
 
 printf 'Repeating the same installation and comparing package state.\n'
-"$ROOT_DIR/install.sh" install --yes --no-refresh "${modules[@]}"
+"$ROOT_DIR/install.sh" install --yes --no-refresh "${foreign_options[@]}" "${modules[@]}"
 snapshot_packages "$EVIDENCE_DIR/packages-after-repeat.tsv"
 
 before_digest=$(sha256sum "$EVIDENCE_DIR/packages-before-repeat.tsv")

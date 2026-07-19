@@ -13,7 +13,7 @@ source "$ROOT_DIR/lib/os.sh"
 # shellcheck source=../lib/catalog.sh
 source "$ROOT_DIR/lib/catalog.sh"
 
-declare -A seen_packages=()
+declare -A seen_packages=() foreign_architectures=()
 declare -a packages=() module_packages=() missing=()
 resolved_modules=0
 
@@ -24,6 +24,9 @@ lsi_discover_modules
 for module in "${LSI_MODULE_IDS[@]}"; do
   lsi_load_module "$module"
   lsi_module_supports_current_target || continue
+  while IFS= read -r architecture; do
+    [[ -n $architecture ]] && foreign_architectures["$architecture"]=1
+  done < <(lsi_module_debian_foreign_architectures)
   mapfile -t module_packages < <(lsi_module_packages_for_target \
     "$LSI_OS_FAMILY" "$LSI_OS_ID" "$LSI_OS_VERSION_ID" "$LSI_ARCH")
   for package in "${module_packages[@]}"; do
@@ -38,6 +41,9 @@ printf 'Resolving %d unique packages for %s (%s)\n' \
 
 case "$LSI_OS_FAMILY" in
   debian)
+    for architecture in "${!foreign_architectures[@]}"; do
+      dpkg --add-architecture "$architecture"
+    done
     apt-get -o Acquire::Retries=3 update -qq
     for package in "${packages[@]}"; do
       apt-cache show --no-all-versions "$package" > /dev/null 2>&1 || missing+=("$package")

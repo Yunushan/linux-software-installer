@@ -1,0 +1,16 @@
+{
+  "artifact_sha256": "fc5ac2ab60ee38fb242f0a6f245db74c98593c8df867305b6d273356c5112718",
+  "cell_ids": [
+    "ubuntu-24-04/steam"
+  ],
+  "commit_sha": "b09dde4e407ed460782e7d2fe65538bcc159dea3",
+  "expected_cells": 371,
+  "index_sha256": "9f02c2f6cc5ce8408ba4a530933e7fa69ebe8e31e6c6557f2587202d06c7e3ab",
+  "module": "steam",
+  "result": "verified-awaiting-parity-review-and-systemd-attestation",
+  "run_url": "https://github.com/Yunushan/linux-software-installer/actions/runs/29689788889",
+  "schema": "linux-software-installer/accepted-evidence-verification/v2",
+  "target_cells": [
+    "ubuntu-24-04"
+  ]
+}

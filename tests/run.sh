@@ -80,7 +80,8 @@ test_module_catalog() {
   local output count
   output=$("$ROOT_DIR/install.sh" list)
   count=$(grep -Ec '^[a-z0-9][a-z0-9-]*[[:space:]]+' <<< "$output")
-  [[ $count -eq 103 ]] && grep -q '^nginx' <<< "$output" && grep -q '^postgresql' <<< "$output"
+  [[ $count -eq 104 ]] && grep -q '^nginx' <<< "$output" && grep -q '^postgresql' <<< "$output" &&
+    grep -q '^steam' <<< "$output"
 }
 
 test_all_declared_module_plans() (
@@ -146,10 +147,21 @@ test_module_schema_and_safety() (
   lsi_discover_modules
   for module in "${LSI_MODULE_IDS[@]}"; do
     lsi_load_module "$module"
-    [[ $MODULE_STATUS == stable && $MODULE_RISK == low ]] || {
-      printf '%s must be a stable, low-risk active module\n' "$module" >&2
+    [[ $MODULE_STATUS == stable && ($MODULE_RISK == low || $MODULE_RISK == medium) ]] || {
+      printf '%s must be a stable active module with a reviewed risk level\n' "$module" >&2
       return 1
     }
+    if [[ $MODULE_RISK == low ]]; then
+      ((${#MODULE_DEBIAN_FOREIGN_ARCHITECTURES[@]} == 0)) || {
+        printf '%s declares a global package-architecture change as low risk\n' "$module" >&2
+        return 1
+      }
+    else
+      ((${#MODULE_DEBIAN_FOREIGN_ARCHITECTURES[@]} > 0 && ${#MODULE_TARGET_CELLS[@]} > 0)) || {
+        printf '%s has medium risk without an explicit restricted multiarch contract\n' "$module" >&2
+        return 1
+      }
+    fi
 
     families=("${MODULE_FAMILIES[@]}")
     conflicts=("${MODULE_CONFLICTS[@]}")
@@ -305,10 +317,10 @@ test_standalone_evidence_matrices() {
     ! grep -q $'\t$' <<< "$contract" || return 1
   done < <(tail -n +2 <<< "$all_cells")
   [[ ${#checked_contracts[@]} -eq 138 ]] &&
-    [[ $all_count -eq 103 && $debian_count -eq 100 && $rhel_count -eq 38 ]] &&
-    [[ $filtered_count -eq 1 && $all_cell_count -eq 370 ]] &&
-    [[ $debian_cell_count -eq 294 && $rhel_cell_count -eq 76 ]] &&
-    [[ $unique_cell_count -eq 370 ]] &&
+    [[ $all_count -eq 104 && $debian_count -eq 101 && $rhel_count -eq 38 ]] &&
+    [[ $filtered_count -eq 1 && $all_cell_count -eq 371 ]] &&
+    [[ $debian_cell_count -eq 295 && $rhel_cell_count -eq 76 ]] &&
+    [[ $unique_cell_count -eq 371 ]] &&
     ! bash "$ROOT_DIR/tests/evidence-matrix.sh" \
       "$ROOT_DIR" matrix debian firewalld > /dev/null 2>&1
 }
@@ -479,6 +491,19 @@ test_explicit_service_activation_is_opt_in() {
     grep -q 'systemctl enable --now nginx' <<< "$enabled"
 }
 
+test_steam_multiarch_acknowledgement_is_explicit() {
+  local output
+  output=$(LSI_OS_RELEASE_FILE="$ROOT_DIR/tests/fixtures/ubuntu.env" \
+    "$ROOT_DIR/install.sh" plan --no-refresh steam 2>&1) || return 1
+  grep -q 'Foreign arch  : i386 (requires --allow-foreign-architecture i386)' <<< "$output" ||
+    return 1
+  ! LSI_OS_RELEASE_FILE="$ROOT_DIR/tests/fixtures/ubuntu.env" \
+    "$ROOT_DIR/install.sh" install --yes --no-refresh steam > /dev/null 2>&1 || return 1
+  LSI_OS_RELEASE_FILE="$ROOT_DIR/tests/fixtures/ubuntu.env" \
+    "$ROOT_DIR/install.sh" plan --no-refresh --allow-foreign-architecture i386 steam \
+    > /dev/null 2>&1
+}
+
 test_unsupported_direct_module_rejected() {
   ! LSI_OS_RELEASE_FILE="$ROOT_DIR/tests/fixtures/rocky.env" \
     "$ROOT_DIR/install.sh" plan --no-refresh docker > /dev/null 2>&1
@@ -530,6 +555,7 @@ run_test 'Ubuntu 16.04 is blocked from the active installer' test_ubuntu16_guard
 run_test 'Ubuntu legacy-version bypass must be explicit' test_ubuntu16_explicit_override
 run_test 'repository metadata refreshes only once per plan' test_repository_refresh_once
 run_test 'explicit systemctl activation is opt-in' test_explicit_service_activation_is_opt_in
+run_test 'Steam multiarch changes require explicit acknowledgement' test_steam_multiarch_acknowledgement_is_explicit
 run_test 'family-incompatible direct modules are rejected' test_unsupported_direct_module_rejected
 run_test 'comma-separated module input is supported' test_csv_module_input
 

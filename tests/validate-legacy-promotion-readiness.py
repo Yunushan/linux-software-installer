@@ -76,16 +76,16 @@ SERVICE_MISSING = (
 # ``planned_rows`` deliberately do not belong here: they must change when a
 # verified replacement is promoted from planned to implemented or superseded.
 EXPECTED_CATALOG_INVARIANTS = {
-    "active_rows": 144,
-    "debian_rows": 72,
+    "active_rows": 146,
+    "debian_rows": 74,
     "rhel_rows": 72,
-    "modules": 82,
-    "module_family_pairs": 92,
-    "standalone_cells": 249,
-    "service_rows": 32,
-    "service_modules": 9,
-    "service_pairs": 11,
-    "systemd_executions": 50,
+    "modules": 84,
+    "module_family_pairs": 94,
+    "standalone_cells": 251,
+    "service_rows": 37,
+    "service_modules": 12,
+    "service_pairs": 14,
+    "systemd_executions": 64,
 }
 
 
@@ -172,6 +172,9 @@ ADMISSION_ONLY_PATHS = {
     "docs/legacy-inventory.tsv",
     "docs/legacy-promotion-readiness.tsv",
     "docs/REPLACEMENT.md",
+    "docs/MIGRATION.md",
+    "docs/LEGACY_DISPOSITIONS.md",
+    "docs/PROVIDERS.md",
     "docs/DISTRO_COMPONENT_PROBES.md",
     "docs/PROVIDER_BACKLOG.md",
     "docs/provider-backlog.tsv",
@@ -182,6 +185,7 @@ ADMISSION_ONLY_PATHS = {
     # carried forward after an admission-only accounting correction, while any
     # change to installer or evidence behavior still requires a fresh run.
     "tests/validate-legacy-inventory.sh",
+    "tests/migration-unit.sh",
     "tests/validate-legacy-promotion-readiness.py",
     "tests/test-accepted-evidence.py",
     "tests/validate-provider-backlog.sh",
@@ -506,7 +510,8 @@ def derive_contract(
         raise ReadinessError(f"evidence contract for {family}/{module} has a bad header")
     rows = list(reader)
     if any(
-        row.get("type") not in {"package", "verification_binary", "service"}
+        row.get("type")
+        not in {"package", "verification_binary", "service", "foreign_architecture"}
         or not row.get("value")
         for row in rows
     ):

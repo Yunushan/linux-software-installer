@@ -1,12 +1,14 @@
 # Third-party provider architecture
 
-The provider catalog is currently a **catalog-integrity and transaction-planning
-foundation**. It can validate and display local provider metadata, resolve an
-exact dependency closure, print a fully authorized package-lock plan and,
-when a provider has been admitted, materialize only the reviewed keyring and
-repository file. No live provider is registered, and it cannot refresh remote
-metadata or install third-party packages. The ordinary package-only catalog
-continues to use repositories already enabled by the administrator.
+The provider catalog is a **catalog-integrity and transaction-planning
+foundation** with a narrowly scoped APT transaction boundary. It can validate
+and display local provider metadata, resolve an exact dependency closure, print
+a fully authorized package-lock plan and, when a provider has been admitted,
+materialize only the reviewed keyring and repository file. `provider-install`
+supports an exact locked APT package transaction; DNF intentionally remains
+fail-closed until it has an equivalent reviewed implementation. No live
+provider is registered yet. The ordinary package-only catalog continues to use
+repositories already enabled by the administrator.
 
 This separation is intentional. A provider must fail closed at metadata review
 before privileged repository code exists.
@@ -31,6 +33,10 @@ sudo ./install.sh provider-apply PROVIDER \
   --allow-provider PROVIDER@CATALOG_REVISION \
   [ACKNOWLEDGEMENTS...] MODULE...
 sudo ./install.sh provider-deactivate PROVIDER \
+  --plan-sha256 PLAN_SHA256 \
+  --allow-provider PROVIDER@CATALOG_REVISION \
+  [ACKNOWLEDGEMENTS...] MODULE...
+sudo ./install.sh provider-install PROVIDER \
   --plan-sha256 PLAN_SHA256 \
   --allow-provider PROVIDER@CATALOG_REVISION \
   [ACKNOWLEDGEMENTS...] MODULE...
@@ -64,6 +70,17 @@ the matching installer-managed key and repository file, in reverse dependency
 order. It preflights both files before deletion and rejects drift, links or
 foreign content without removing either file. It does not refresh metadata or
 remove packages.
+
+`provider-install` repeats the digest-bound plan validation, activates the
+reviewed repository files, explicitly refreshes signed APT metadata with
+insecure-repository and unauthenticated-package fallbacks disabled, requires
+the exact signed APT Release `Origin` claim, downloads the exact locked
+`.deb` into an isolated cache, verifies its SHA-256 and package identity, and
+installs that verified local artifact. It then invokes the declared binary with
+`--version`. Repository files are removed again unless `--persist-provider`
+was explicitly accepted. It does not currently support DNF: a DNF provider
+installation request fails before package work rather than falling back to an
+unverified command.
 
 `provider-plan` is deliberately non-mutating. For the exact detected OS,
 `VERSION_ID`, package architecture and package manager it validates every
@@ -138,12 +155,16 @@ must preserve that contract and bind its work to the exact reviewed plan digest.
 provider authorization, license acknowledgement, classic Snap confinement or
 authentication consent.
 
-Before any provider can become live, implementation and tests must prove:
+Before a provider can become live, its APT route must have the transaction
+boundary above plus real target-cell evidence. A DNF route additionally remains
+blocked until its equivalent runtime implementation and tests exist. Every
+provider still must prove:
 
 - an exact `ID`, `VERSION_ID`, architecture and package-manager cell;
-- package and repository-metadata signature verification with the already
+- repository-metadata and package signature verification with the already
   fingerprint-bound checked-in keys, including expiry and revocation policy;
-- exact package-version and origin enforcement with fail-closed solver checks;
+- exact package-version, package identity, digest and origin enforcement with
+  fail-closed solver checks;
 - locally generated, scoped repository configuration using APT `Signed-By` or
   DNF `gpgcheck=1` plus `repo_gpgcheck=1`, without `apt-key`, remote setup
   scripts or TLS bypasses;
@@ -155,7 +176,7 @@ Before any provider can become live, implementation and tests must prove:
 - real install, repeat, origin, signature and cleanup evidence on every exact
   claimed target cell.
 
-The 129 unresolved third-party legacy rows and their recommended provider or
+The 125 unresolved third-party legacy rows and their recommended provider or
 authenticated-artifact routes are tracked in
 [`PROVIDER_BACKLOG.md`](PROVIDER_BACKLOG.md). A backlog entry is not a support
 claim and must not be promoted merely because a provider manifest can be

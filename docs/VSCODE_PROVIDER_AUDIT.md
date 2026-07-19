@@ -4,9 +4,9 @@ This record captures a 2026-07-16 investigation of a possible Microsoft
 Visual Studio Code provider for the two unresolved `visual-studio-code`
 backlog rows. It is a planning record, not a provider-admission decision,
 module-support claim, replacement-evidence artifact or instruction to change a
-system repository. No provider is registered. This project has a narrowly
-scoped, digest-authorized `provider-apply` operation, but an empty live
-registry prevents this candidate from reaching it.
+system repository. No provider is registered. This project now has a narrowly
+scoped, digest-authorized APT `provider-install` transaction boundary, but an
+empty live registry prevents this candidate from reaching it.
 
 ## Legacy scope and proposed route
 
@@ -38,7 +38,7 @@ record a reviewed package object rather than assuming that the newest upstream
 release is immediately resolver-visible. See the [official VS Code Linux
 guide](https://code.visualstudio.com/docs/setup/linux).
 
-## Dated observation, not a catalog lock
+## Dated, signature-checked observation, not a catalog lock
 
 During the initial 2026-07-16 APT index inspection, the public key object at
 the published key URL had SHA-256
@@ -48,11 +48,22 @@ parsed OpenPGP primary fingerprint was
 an amd64 `code` package object with version `1.85.0-1701902998` and SHA-256
 `915b82483992df127d3c03835cbec37cc88724508d2e2a1fd93ec034e77ec26e`.
 
-These are untrusted, dated observations only. In particular, index ordering is
-not a freshness guarantee, the document does not independently publish the
-full key fingerprint, and this record does not establish a clean transport or
-publisher-provenance chain. They must not be copied to a provider fixture or
-registry row without a reviewed acquisition and rotation policy.
+On 2026-07-19, the public key was retrieved with the platform HTTPS client and
+parsed locally as the same primary fingerprint. Microsoft Learn's
+[Linux package repository guide](https://learn.microsoft.com/en-us/linux/packages)
+now independently publishes that full fingerprint for `microsoft.asc`. The
+downloaded `InRelease` signature was verified locally by `gpgv` against that
+key; the signed Release identity was `Origin: code stable`, and its declared
+SHA-256 for `main/binary-amd64/Packages.gz` matched the downloaded index:
+`5716bcf6a3a76bdb9d413a51008f1d0830dff51b163dc919c0acbb72df108083`.
+
+The signature-checked index still selected the same amd64 `code`
+`1.85.0-1701902998` object and digest above. That is not a current-version
+policy, clean target-cell installation result, repeat-install result or
+provider admission. In particular, a future route must establish an explicit
+supported-version and rotation policy rather than treating a signed index's
+first matching object as current. None of these observations may be copied to
+a provider fixture or registry row without that review and real evidence.
 
 ## Admission blockers
 
@@ -60,24 +71,25 @@ The proposed route remains planning-only because all of these independent
 requirements are unsatisfied:
 
 1. **No admitted route exists.** The installer can digest-authorize an
-   admitted provider to materialize its reviewed keyring and repository file,
-   and can safely deactivate those exact files. This candidate has no admitted
-   provider tree or exact-cell policy. Those primitives also intentionally do
-   not update metadata or install packages, so they are not installation
-   evidence.
-2. **Key provenance and lifecycle are unproved.** A checked-in key must be
-   independently bound to a publisher identity, primary fingerprint, expiry,
-   revocation and reviewed rotation process. A URL and a self-recorded hash are
-   not sufficient.
+   admitted APT provider to materialize its reviewed keyring and repository
+   file, verify signed Release metadata and its declared origin, verify an
+   exact downloaded `.deb`, install that local artifact and clean up the
+   repository by default. This candidate has no admitted provider tree or
+   exact-cell policy, and no runtime evidence uses this boundary yet.
+2. **Key lifecycle remains unproved.** Microsoft Learn now binds
+   `microsoft.asc` to the documented primary fingerprint, but a checked-in key
+   still needs expiry, revocation and reviewed rotation handling. A URL and a
+   self-recorded hash are not sufficient.
 3. **Exact target cells and locks are unproved.** The route needs separately
    reviewed OS/version/architecture/package-manager tuples and exact `code`
    package versions, architectures, digests and expected origins. The two
    historical rows cannot be covered by family-wide inference.
-4. **APT and DNF trust checks are incomplete.** The future APT path must
-   authenticate Release metadata, enforce its expected identity and freshness,
-   and bind the selected package to the approved origin. The RPM path must
-   authenticate both repository metadata and packages; `gpgcheck=1` alone does
-   not meet this project's DNF policy.
+4. **Exact runtime evidence is absent and DNF remains unavailable.** The APT
+   transaction boundary verifies Release metadata, Release origin and an exact
+   package digest, but this route has not shown a clean solver/install/repeat
+   result on a reviewed target. The RPM path has no equivalent installer yet;
+   it must authenticate both repository metadata and packages, because
+   `gpgcheck=1` alone does not meet this project's DNF policy.
 5. **Accepted evidence is absent.** There is no commit-bound,
    immutable-image-bound, externally authenticated solver/install/repeat-install
    bundle, and no update/cleanup evidence, for any target cell.
