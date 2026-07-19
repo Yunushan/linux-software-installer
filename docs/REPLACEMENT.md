@@ -101,8 +101,8 @@ supported catalog module in bounded catalog batches, check post-install binary
 presence and compare package/version state across a repeat install. Batch
 success is not standalone parity evidence for each module. A separate manual
 standalone workflow is configured
-as a 105-module matrix; each module job sequentially runs its applicable images
-in separate fresh containers, preserving all 374 independent module-image
+as a 104-module matrix; each module job sequentially runs its applicable images
+in separate fresh containers, preserving all 371 independent module-image
 cells without exceeding the workflow matrix limit. It emits structured
 pre/install/repeat evidence and an aggregate coverage/checksum bundle. A prior
 externally hashed aggregate admitted 79 module-family keys and 108 active rows,
@@ -164,7 +164,7 @@ rows. One hundred eight rows have accepted evidence and promotion readiness `yes
 37 remain at evidence class `none` and readiness `no`. Their mappings collapse
 to 83 unique modules and 93 module-family evidence keys, so duplicate legacy
 entries can share evidence. Those keys require 250 standalone module-image
-cells. A full-catalog standalone run emits 374 cells; its coverage includes
+cells. A full-catalog standalone run emits 371 cells; its coverage includes
 every active-replacement evidence key.
 
 The ledger labels 140 rows as `implemented-candidate` and five as
@@ -392,16 +392,16 @@ The gates are cumulative.
 - Conflicts are symmetric, profiles resolve, and package/service values cannot
   inject command-line options.
 - Every supported module-family pair generates the expected plan. The current
-  catalog has 139 such pairs: 101 Debian and 38 RHEL mappings.
+  catalog has 138 such pairs: 100 Debian and 38 RHEL mappings.
 
 ### G3 — Repository resolution
 
 - Fresh Tier-1 images refresh enabled repository metadata.
 - Every declared package set resolves through the distro dependency solver
   without adding an undeclared repository or bypassing signature checks.
-- The 101 family-wide modules contribute 370 candidate module-image cells.
-  Four distro-component modules contribute one declared exact cell each, for
-  374 total cells: 298 Debian-family and 76 RHEL-family. Totals are derived
+- The 100 family-wide modules contribute 270 candidate module-image cells.
+  Three distro-component modules contribute one declared exact cell each, for
+  371 total cells: 295 Debian-family and 76 RHEL-family. Totals are derived
   after exact-cell filtering.
 
 ### G4 — Real installation and verification

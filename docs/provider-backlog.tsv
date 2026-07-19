@@ -21,7 +21,7 @@ ubuntu-090	gitkraken	snap-store	implement	gitkraken	Add an opt-in Snap provider 
 ubuntu-091	wire	public-artifact	conditional-artifact	wire	Automate only with an immutable version and trusted upstream signature or digest; otherwise document a vendor handoff.
 ubuntu-092	kubectl	vendor-apt	implement	kubectl	Use the planning-only kubernetes-v1-36 contract in KUBECTL_PROVIDER_AUDIT.md; even a test fixture remains blocked on acquiring the exact key through valid TLS, and live APT apply also needs replay protection and accepted install and repeat evidence.
 ubuntu-093	zenkit	snap-store	implement	zenkit	Add an opt-in Snap provider only after publisher, channel, confinement and repeat-install review.
-ubuntu-097	makehuman	distro-component	implement	makehuman	A Debian-family package-only module candidate exists; require accepted solver, real-install, repeat-install and intent-parity evidence on every claimed image before promotion.
+ubuntu-097	makehuman	distro-component	implement	makehuman	Verify the maintained distribution package on every claimed Debian-family image before adding the package-only module.
 ubuntu-099	4k-video-downloader	public-artifact	conditional-artifact	4k-video-downloader	Automate only with an immutable version and trusted upstream signature or digest; otherwise document a vendor handoff.
 ubuntu-100	4k-youtube-to-mp3	public-artifact	conditional-artifact	4k-youtube-to-mp3	Automate only with an immutable version and trusted upstream signature or digest; otherwise document a vendor handoff.
 ubuntu-102	4k-slideshow-maker	public-artifact	conditional-artifact	4k-slideshow-maker	Automate only with an immutable version and trusted upstream signature or digest; otherwise document a vendor handoff.
