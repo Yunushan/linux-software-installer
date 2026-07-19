@@ -16,6 +16,11 @@ on:
         description: Optional single module ID; leave empty for the full catalog
         required: false
         type: string
+      tor_browser_first_run:
+        description: Also exercise Tor Browser Launcher's signed first-run payload path (Tor Browser only)
+        required: true
+        default: false
+        type: boolean
 
 permissions:
   contents: read
@@ -180,6 +185,79 @@ jobs:
           path: ${{ runner.temp }}/evidence
           if-no-files-found: warn
           retention-days: 90
+
+  tor-browser-first-run:
+    name: Tor Browser first-run payload evidence
+    needs: catalog
+    if: >-
+      inputs.tor_browser_first_run &&
+      inputs.scope == 'debian' &&
+      inputs.module == 'tor-browser' &&
+      needs.catalog.result == 'success'
+    runs-on: ubuntu-latest
+    timeout-minutes: 35
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+        with:
+          persist-credentials: false
+
+      - name: Prepare credential-free source export
+        run: |
+          mkdir -p "$RUNNER_TEMP/source"
+          git archive --format=tar --output="$RUNNER_TEMP/source.tar" "$GITHUB_SHA"
+          tar -xf "$RUNNER_TEMP/source.tar" -C "$RUNNER_TEMP/source"
+          test ! -e "$RUNNER_TEMP/source/.git"
+
+      - name: Exercise the launcher first-run payload path
+        env:
+          LSI_EVIDENCE_DIR: /evidence
+          LSI_IMAGE_REF: ${{ needs.catalog.outputs.ubuntu_ref }}
+          LSI_RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+          LSI_TARGET_ID: ubuntu-24-04
+          LSI_TESTED_COMMIT: ${{ github.sha }}
+        run: |
+          set -euo pipefail
+          mkdir -p "$RUNNER_TEMP/evidence"
+          docker run --rm \
+            --name lsi-tor-browser-first-run \
+            --env LSI_EVIDENCE_DIR \
+            --env LSI_IMAGE_REF \
+            --env LSI_RUN_URL \
+            --env LSI_TARGET_ID \
+            --env LSI_TESTED_COMMIT \
+            --volume "$RUNNER_TEMP/source:/workspace:ro" \
+            --volume "$RUNNER_TEMP/evidence:/evidence" \
+            "${{ needs.catalog.outputs.ubuntu_ref }}" \
+            bash /workspace/tests/tor-browser-first-run-evidence.sh /evidence
+
+      - name: Upload first-run evidence
+        id: upload_evidence
+        if: always()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: tor-browser-first-run-${{ github.sha }}
+          path: ${{ runner.temp }}/evidence
+          if-no-files-found: warn
+          retention-days: 90
+
+      - name: Record GitHub artifact digest
+        if: always() && steps.upload_evidence.outcome == 'success'
+        env:
+          ARTIFACT_DIGEST: ${{ steps.upload_evidence.outputs['artifact-digest'] }}
+          ARTIFACT_ID: ${{ steps.upload_evidence.outputs['artifact-id'] }}
+          ARTIFACT_URL: ${{ steps.upload_evidence.outputs['artifact-url'] }}
+        run: |
+          set -euo pipefail
+          [[ $ARTIFACT_DIGEST =~ ^(sha256:)?[0-9a-fA-F]{64}$ ]]
+          [[ $ARTIFACT_ID =~ ^[0-9]+$ ]]
+          [[ -n $ARTIFACT_URL ]]
+          {
+            printf '### Tor Browser first-run evidence artifact\n\n'
+            printf -- '- Artifact ID: `%s`\n' "$ARTIFACT_ID"
+            printf -- '- Artifact digest: `%s`\n' "$ARTIFACT_DIGEST"
+            printf -- '- Artifact URL: %s\n' "$ARTIFACT_URL"
+          } >> "$GITHUB_STEP_SUMMARY"
 
   aggregate:
     name: Validate complete evidence set
