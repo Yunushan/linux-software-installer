@@ -1904,6 +1904,7 @@ lsi_provider_apt_install_locked_package() (
 
   while IFS= read -r candidate || [[ -n $candidate ]]; do
     [[ -f $candidate && ! -L $candidate ]] || continue
+    # shellcheck disable=SC2016 # dpkg-deb, not Bash, expands its format fields.
     package_fields=$("$dpkg_deb" --show --showformat '${Package}\t${Version}\t${Architecture}\n' -- "$candidate" 2> /dev/null) || continue
     IFS=$'\t' read -r field_package field_version field_arch <<< "$package_fields"
     [[ $field_package == "$package" && $field_version == "$version" && $field_arch == "$arch" ]] || continue
