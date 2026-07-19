@@ -1878,15 +1878,16 @@ lsi_provider_apt_install_locked_package() (
       return 4
     }
 
-  # APT exposes the publisher's Origin field from signed package metadata. It
-  # is checked before downloading so a same-version package from another
-  # configured source cannot satisfy the provider's lock.
-  origin_line=$("$apt_cache" show "$package=$version" 2> /dev/null || true)
+  # APT exposes the Release ``Origin`` field from signed repository metadata
+  # through its policy view. It is checked before downloading so a
+  # same-version package from another configured source cannot satisfy the
+  # provider's lock. Package stanzas themselves need not repeat this field.
+  origin_line=$("$apt_cache" policy "$package" 2> /dev/null || true)
   while IFS= read -r candidate || [[ -n $candidate ]]; do
-    [[ $candidate == "Origin: $expected_origin" ]] && origin_found=true
+    [[ $candidate == *"release o=$expected_origin"* ]] && origin_found=true
   done <<< "$origin_line"
   [[ $origin_found == true ]] || {
-    lsi_provider_error "APT metadata does not declare the expected origin for $package=$version."
+    lsi_provider_error "Signed APT metadata does not declare the expected Release origin for $package=$version."
     return 4
   }
 

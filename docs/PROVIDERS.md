@@ -74,7 +74,7 @@ remove packages.
 `provider-install` repeats the digest-bound plan validation, activates the
 reviewed repository files, explicitly refreshes signed APT metadata with
 insecure-repository and unauthenticated-package fallbacks disabled, requires
-the exact signed package-metadata `Origin` claim, downloads the exact locked
+the exact signed APT Release `Origin` claim, downloads the exact locked
 `.deb` into an isolated cache, verifies its SHA-256 and package identity, and
 installs that verified local artifact. It then invokes the declared binary with
 `--version`. Repository files are removed again unless `--persist-provider`

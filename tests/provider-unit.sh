@@ -350,10 +350,11 @@ case " $* " in
     ;;
 esac
 EOF
-  cat > "$tools/apt-cache" << 'EOF'
+cat > "$tools/apt-cache" << 'EOF'
 #!/bin/sh
 set -eu
-printf '%s\n' 'Package: demo-tool' "Version: 1.2.3-1" "Origin: ${LSI_PROVIDER_TEST_ORIGIN:-Example Test Publisher}"
+printf '%s\n' 'demo-tool:' '  Installed: (none)' '  Candidate: 1.2.3-1' '  Version table:' \
+  '     1.2.3-1 500' "        release o=${LSI_PROVIDER_TEST_ORIGIN:-Example Test Publisher},a=stable,n=stable"
 EOF
   cat > "$tools/dpkg-deb" << 'EOF'
 #!/bin/sh
@@ -437,7 +438,7 @@ test_provider_install_rejects_wrong_origin_before_download() {
     --allow-preview-provider demo-provider \
     --accept-provider-license demo-provider@2026-01 \
     demo-tool 2>&1) && return 1
-  grep -q 'does not declare the expected origin' <<< "$output" &&
+  grep -q 'does not declare the expected Release origin' <<< "$output" &&
     ! grep -q -- '--download-only' "$log" &&
     [[ ! -e $root/usr/share/keyrings/linux-software-installer-demo-provider.asc ]] &&
     [[ ! -e $root/etc/apt/sources.list.d/linux-software-installer-demo-provider.sources ]]
