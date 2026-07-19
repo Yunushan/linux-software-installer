@@ -1848,7 +1848,10 @@ lsi_provider_apt_install_locked_package() (
   rm_bin=$(lsi_provider_system_tool rm) || return
   verify_binary=$(lsi_provider_system_tool "$verify_binary") || return
 
-  cache_root=$(umask 077; "$mktemp_bin" -d '/tmp/lsi-provider-install.XXXXXX') || {
+  cache_root=$(
+    umask 077
+    "$mktemp_bin" -d '/tmp/lsi-provider-install.XXXXXX'
+  ) || {
     lsi_provider_error 'Unable to create the isolated provider package cache.'
     return 3
   }
@@ -1874,9 +1877,9 @@ lsi_provider_apt_install_locked_package() (
     -o Acquire::AllowDowngradeToInsecureRepositories=false \
     -o APT::Get::AllowUnauthenticated=false \
     update || {
-      lsi_provider_error "Signed metadata refresh failed for provider $LSI_PROVIDER_PLAN_PRIMARY."
-      return 4
-    }
+    lsi_provider_error "Signed metadata refresh failed for provider $LSI_PROVIDER_PLAN_PRIMARY."
+    return 4
+  }
 
   # APT exposes the Release ``Origin`` field from signed repository metadata
   # through its policy view. It is checked before downloading so a
@@ -1898,9 +1901,9 @@ lsi_provider_apt_install_locked_package() (
     -o "Dir::Cache::archives=$archive_dir" \
     -o "Dir::Cache::archives/partial=$archive_dir/partial" \
     --download-only --yes --no-install-recommends install "$package=$version" || {
-      lsi_provider_error "Locked package download failed for $package=$version."
-      return 4
-    }
+    lsi_provider_error "Locked package download failed for $package=$version."
+    return 4
+  }
 
   while IFS= read -r candidate || [[ -n $candidate ]]; do
     [[ -f $candidate && ! -L $candidate ]] || continue
@@ -1940,9 +1943,9 @@ lsi_provider_apt_install_locked_package() (
     -o Acquire::AllowDowngradeToInsecureRepositories=false \
     -o APT::Get::AllowUnauthenticated=false \
     --yes --no-install-recommends install "$artifact" || {
-      lsi_provider_error "Installation failed for verified provider package $package=$version."
-      return 4
-    }
+    lsi_provider_error "Installation failed for verified provider package $package=$version."
+    return 4
+  }
   "$verify_binary" --version > /dev/null || {
     lsi_provider_error "Installed provider binary did not verify: ${verify_binary##*/}."
     return 4
@@ -1971,7 +1974,10 @@ lsi_provider_dnf_install_locked_package() (
   rm_bin=$(lsi_provider_system_tool rm) || return
   verify_binary=$(lsi_provider_system_tool "$verify_binary") || return
 
-  cache_root=$(umask 077; "$mktemp_bin" -d '/tmp/lsi-provider-install.XXXXXX') || {
+  cache_root=$(
+    umask 077
+    "$mktemp_bin" -d '/tmp/lsi-provider-install.XXXXXX'
+  ) || {
     lsi_provider_error 'Unable to create the isolated provider package cache.'
     return 3
   }
@@ -2004,9 +2010,9 @@ lsi_provider_dnf_install_locked_package() (
     --setopt="persistdir=$cache_root/persist" \
     --setopt="logdir=$cache_root/log" \
     --assumeyes --downloadonly --downloaddir="$archive_dir" install "$requested_nevra" || {
-      lsi_provider_error "Signed DNF metadata refresh or locked package download failed for $requested_nevra."
-      return 4
-    }
+    lsi_provider_error "Signed DNF metadata refresh or locked package download failed for $requested_nevra."
+    return 4
+  }
 
   while IFS= read -r candidate || [[ -n $candidate ]]; do
     [[ -f $candidate && ! -L $candidate ]] || continue
@@ -2066,9 +2072,9 @@ lsi_provider_dnf_install_locked_package() (
     --setopt=localpkg_gpgcheck=1 \
     --setopt=install_weak_deps=False \
     --assumeyes install "$artifact" || {
-      lsi_provider_error "Installation failed for verified provider package $requested_nevra."
-      return 4
-    }
+    lsi_provider_error "Installation failed for verified provider package $requested_nevra."
+    return 4
+  }
   "$verify_binary" --version > /dev/null || {
     lsi_provider_error "Installed provider binary did not verify: ${verify_binary##*/}."
     return 4

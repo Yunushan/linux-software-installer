@@ -350,7 +350,7 @@ case " $* " in
     ;;
 esac
 EOF
-cat > "$tools/apt-cache" << 'EOF'
+  cat > "$tools/apt-cache" << 'EOF'
 #!/bin/sh
 set -eu
 printf '%s\n' 'demo-tool:' '  Installed: (none)' '  Candidate: 1.2.3-1' '  Version table:' \

@@ -100,7 +100,7 @@ command -v torbrowser-launcher > "$EVIDENCE_DIR/launcher-path.txt"
 stage_pass
 
 stage_begin prepare-disposable-user
-id "$EVIDENCE_USER" > /dev/null 2>&1 || \
+id "$EVIDENCE_USER" > /dev/null 2>&1 ||
   useradd --create-home --user-group --home-dir "$EVIDENCE_HOME" --shell /usr/sbin/nologin "$EVIDENCE_USER"
 install -d -m 700 -o "$EVIDENCE_USER" -g "$EVIDENCE_USER" \
   "$EVIDENCE_HOME/.cache" \
@@ -129,7 +129,7 @@ for _ in $(seq 1 1200); do
   archives=("$DOWNLOAD_DIR"/tor-browser-linux-x86_64-*.tar.xz)
   signatures=("$DOWNLOAD_DIR"/tor-browser-linux-x86_64-*.tar.xz.asc)
   shopt -u nullglob
-  if [[ ${#archives[@]} -eq 1 && ${#signatures[@]} -eq 1 && \
+  if [[ ${#archives[@]} -eq 1 && ${#signatures[@]} -eq 1 &&
     -s ${archives[0]} && -s ${signatures[0]} ]]; then
     size_before=$(stat -c '%s' "${archives[0]}")
     sleep 2
@@ -141,7 +141,7 @@ for _ in $(seq 1 1200); do
       captured_signature=1
     fi
   fi
-  [[ -n $captured_archive && -n $captured_signature && \
+  [[ -n $captured_archive && -n $captured_signature &&
     -x "$DATA_DIR/start-tor-browser.desktop" ]] && break
   kill -0 "$LAUNCHER_PID" > /dev/null 2>&1 || break
   sleep 1
@@ -156,9 +156,9 @@ done
   exit 1
 }
 cp -- "$DATA_DIR/start-tor-browser.desktop" "$EVIDENCE_DIR/start-tor-browser.desktop"
-tar -tJf "$EVIDENCE_DIR/tor-browser.tar.xz" \
-  | grep -Fx 'tor-browser/start-tor-browser.desktop' \
-  > "$EVIDENCE_DIR/archive-layout.txt"
+tar -tJf "$EVIDENCE_DIR/tor-browser.tar.xz" |
+  grep -Fx 'tor-browser/start-tor-browser.desktop' \
+    > "$EVIDENCE_DIR/archive-layout.txt"
 stage_pass
 
 stage_begin independent-signature-verification
@@ -182,7 +182,7 @@ mapfile -t fingerprints < <(awk -F: '
     awaiting_primary_fingerprint = 0
   }
 ' "$EVIDENCE_DIR/key-listing.txt")
-[[ ${#fingerprints[@]} -eq 1 && \
+[[ ${#fingerprints[@]} -eq 1 &&
   ${fingerprints[0]} == EF6E286DDA85EA2A4BA7DE684E2C6E8793298290 ]] || {
   printf 'The launcher key does not contain exactly the documented Tor Browser signing fingerprint.\n' >&2
   exit 1
