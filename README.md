@@ -281,8 +281,8 @@ standalone parity evidence for each module. Service-state testing uses the
 separate manual disposable-systemd-VM workflow described below.
 
 The manual `Standalone module evidence` workflow uses one matrix job per module
-(104 jobs for the full catalog). Each job sequentially starts a separate fresh
-container for every applicable target, so all 371 declared module-image cells
+(105 jobs for the full catalog). Each job sequentially starts a separate fresh
+container for every applicable target, so all 374 declared module-image cells
 remain independent without exceeding GitHub's 256-job matrix limit. It records
 pre-install, post-install and post-repeat package state, tested commit and image
 digest, package sources, binary checks and structured failure details. A final
@@ -298,7 +298,7 @@ published artifact digest, tested commit and run URL. It rechecks the external
 ZIP digest and aggregate/bundle contract, but does not replace the required
 parity review or service attestation.
 
-The 104 modules contribute 371 cells across Ubuntu 24.04, Ubuntu 26.04,
+The 105 modules contribute 374 cells across Ubuntu 24.04, Ubuntu 26.04,
 Debian 12, Rocky Linux 9.8 and AlmaLinux 9.8. Target restrictions are filtered
 before matrix and contract generation, so totals are derived from manifest
 policy rather than blindly multiplying family mappings.

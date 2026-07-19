@@ -101,8 +101,8 @@ jobs:
           ((expected_cell_count > 0))
           if [[ -z $FILTER_MODULE ]]; then
             case "$INPUT_SCOPE" in
-              all) expected_modules=104; expected_cells=371 ;;
-              debian) expected_modules=101; expected_cells=295 ;;
+              all) expected_modules=105; expected_cells=374 ;;
+              debian) expected_modules=102; expected_cells=298 ;;
               rhel) expected_modules=38; expected_cells=76 ;;
               *) printf 'Unknown evidence scope: %s\n' "$INPUT_SCOPE" >&2; exit 2 ;;
             esac

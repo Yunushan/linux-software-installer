@@ -41,7 +41,7 @@ digests must have green runs, standalone parity remains a separate claim, and
 service-state claims still require systemd VM evidence.
 
 The manual `Standalone module evidence` workflow is separately configured for
-all 371 declared module-image cells. Its 104-module matrix stays below the
+all 374 declared module-image cells. Its 105-module matrix stays below the
 GitHub workflow limit; each module job sequentially starts one clean container
 for every applicable target. It records pre-install, post-install and
 post-repeat state, the commit and immutable image reference, declared binaries,
@@ -52,9 +52,9 @@ published and imported into a durable release record. Internal bundle hashes
 are integrity metadata, not independent authenticity: promotion must also pin
 an external GitHub artifact digest, signed release hash or attestation.
 
-The 100 family-wide modules contribute 270 cells. PlayOnLinux, Tor Browser
+The 101 family-wide modules contribute 370 cells. PlayOnLinux, Tor Browser
 Launcher and Steam are restricted to Ubuntu 24.04 x86_64, while Telegram Desktop
-is restricted to Debian 12 x86_64, for a current total of 371. Exact
+is restricted to Debian 12 x86_64, for a current total of 374. Exact
 `ID:VERSION_ID:architecture` restrictions are shown by `list` and `info`,
 enforced for plan/install, and removed from unsupported evidence cells; matrix
 totals are therefore derived rather than assumed from family counts.
