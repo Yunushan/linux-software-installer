@@ -58,9 +58,9 @@ use_case() {
 test_canonical_catalog_loads() (
   lsi_migration_load || return 1
   [[ $LSI_MIGRATION_TOTAL -eq 355 &&
-    $LSI_MIGRATION_TERMINAL -eq 192 &&
+    $LSI_MIGRATION_TERMINAL -eq 193 &&
     $LSI_MIGRATION_PLANNED -eq 37 &&
-    $LSI_MIGRATION_BLOCKED -eq 126 ]]
+    $LSI_MIGRATION_BLOCKED -eq 125 ]]
 )
 
 test_planned_lookup_is_provisional() (
@@ -99,7 +99,7 @@ test_list_is_complete_and_nonclaiming() (
   output=$(lsi_migration_list) || return 1
   count=$(grep -Ec '^(ubuntu|rhel)-[a-z0-9-]+[[:space:]]+' <<< "$output")
   [[ $count -eq 355 ]] &&
-    grep -q '355 entries: 192 terminal, 37 provisional, 126 unresolved third-party' <<< "$output" &&
+    grep -q '355 entries: 193 terminal, 37 provisional, 125 unresolved third-party' <<< "$output" &&
     grep -q 'not support claims' <<< "$output" &&
     grep -q 'Read-only migration guidance' <<< "$output"
 )
@@ -108,10 +108,10 @@ test_retirement_status_reports_exact_blockers() (
   local output
   output=$(lsi_migration_retirement_status) || return 1
   grep -q '^Tracked legacy entries        : 355$' <<< "$output" &&
-    grep -q '^Terminal dispositions         : 192$' <<< "$output" &&
+    grep -q '^Terminal dispositions         : 193$' <<< "$output" &&
     grep -q '^Provisional module candidates : 37$' <<< "$output" &&
-    grep -q '^Unresolved third-party routes : 126$' <<< "$output" &&
-    grep -q '^Accepted evidence admissions  : 79$' <<< "$output" &&
+    grep -q '^Unresolved third-party routes : 125$' <<< "$output" &&
+    grep -q '^Accepted evidence admissions  : 80$' <<< "$output" &&
     grep -q '^Registered live providers     : 0$' <<< "$output" &&
     grep -q '^Retirement decision           : NOT READY$' <<< "$output" &&
     grep -q 'Candidate module mappings do not become replacements' <<< "$output"

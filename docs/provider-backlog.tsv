@@ -2,7 +2,6 @@ legacy_id	normalized_capability	strategy	recommended_action	replacement_outcome	
 ubuntu-005	visual-studio-code	vendor-apt	implement	visual-studio-code	Add a signed vendor APT provider with a scoped keyring and verify solver, install and update behavior.
 ubuntu-018	sublime-text-3	vendor-apt	implement	sublime-text	Add a signed vendor APT provider with a scoped keyring and verify solver, install and update behavior.
 ubuntu-019	brave	vendor-apt	implement	brave	Add a signed vendor APT provider with a scoped keyring and verify solver, install and update behavior.
-ubuntu-020	tor-browser	distro-component	implement	tor-browser	An exact Ubuntu 24.04 x86_64 candidate module is present and locally probed; keep it provisional until accepted solver, real-install, repeat-state and intent-parity evidence is tied to reviewed commit and image digests.
 ubuntu-022	eclipse-ide	public-artifact	conditional-artifact	eclipse-ide	Automate only with an immutable version and trusted upstream signature or digest; otherwise document a vendor handoff.
 ubuntu-035	signal	vendor-apt	implement	signal	Add a signed vendor APT provider with a scoped keyring and verify solver, install and update behavior.
 ubuntu-036	dropbox	vendor-apt	implement	dropbox	Add a signed vendor APT provider with a scoped keyring and verify solver, install and update behavior.

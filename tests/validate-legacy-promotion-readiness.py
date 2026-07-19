@@ -76,12 +76,12 @@ SERVICE_MISSING = (
 # ``planned_rows`` deliberately do not belong here: they must change when a
 # verified replacement is promoted from planned to implemented or superseded.
 EXPECTED_CATALOG_INVARIANTS = {
-    "active_rows": 145,
-    "debian_rows": 73,
+    "active_rows": 146,
+    "debian_rows": 74,
     "rhel_rows": 72,
-    "modules": 83,
-    "module_family_pairs": 93,
-    "standalone_cells": 250,
+    "modules": 84,
+    "module_family_pairs": 94,
+    "standalone_cells": 251,
     "service_rows": 37,
     "service_modules": 12,
     "service_pairs": 14,

@@ -24,7 +24,7 @@ source locator is provenance only and must never be executed.
 | `out-of-scope` | Ownership belongs to a vendor, deployment system or other explicit handoff. | Follow the recorded handoff instead of the legacy script. |
 
 The current immutable denominator is 355 entries: 37 provisional active-module
-candidates, 126 unresolved third-party routes and 192 terminal dispositions.
+candidates, 125 unresolved third-party routes and 193 terminal dispositions.
 Those numbers describe migration accounting, not the public support level of a
 module.
 

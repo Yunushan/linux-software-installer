@@ -1,16 +1,16 @@
 {
-  "artifact_sha256": "5d84feef4344c29d39f8de5b713b55b3f12cb1b1378800fe68ca6b57c4cde30c",
+  "artifact_sha256": "fc5ac2ab60ee38fb242f0a6f245db74c98593c8df867305b6d273356c5112718",
   "cell_ids": [
     "debian-12/geany",
     "ubuntu-24-04/geany",
     "ubuntu-26-04/geany"
   ],
-  "commit_sha": "27646bafef32bb78c3f5f97d3b9b41451ee96e2e",
+  "commit_sha": "b09dde4e407ed460782e7d2fe65538bcc159dea3",
   "expected_cells": 371,
-  "index_sha256": "7b9f4bd77fdb460d0ef5fe890c68ec15e148cb16d755c1edf0b0b81cb08cb003",
+  "index_sha256": "9f02c2f6cc5ce8408ba4a530933e7fa69ebe8e31e6c6557f2587202d06c7e3ab",
   "module": "geany",
   "result": "verified-awaiting-parity-review-and-systemd-attestation",
-  "run_url": "https://github.com/Yunushan/linux-software-installer/actions/runs/29657467906",
+  "run_url": "https://github.com/Yunushan/linux-software-installer/actions/runs/29689788889",
   "schema": "linux-software-installer/accepted-evidence-verification/v2",
   "target_cells": [
     "debian-12",
