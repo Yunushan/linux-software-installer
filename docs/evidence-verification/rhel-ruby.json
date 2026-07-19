@@ -1,15 +1,15 @@
 {
-  "artifact_sha256": "b6c0c2e1dbeb2e4a64ea2f13698b1134cf4a6f41bea6d444d808c3db83818fe5",
+  "artifact_sha256": "db11a1416293854ad217b5ed4b585e69bd306506c2e429da88116d425658c5c3",
   "cell_ids": [
     "alma-9-8/ruby",
     "rocky-9-8/ruby"
   ],
-  "commit_sha": "6f653cacfba0ee08ee4ecbf4b6e09c4cc2be5360",
+  "commit_sha": "5c30eafd619db0a15bcf79b3dcf38cdb2e2db55e",
   "expected_cells": 371,
-  "index_sha256": "adcb6549b969447bf9c4a0fd40a18dfb8f1e2fdc04fc6385d92442492cce3658",
+  "index_sha256": "9ef28f9c0e0a6ad5a513e3b7e0851f43743f4f2fbcfeef12ea9dba196ce90557",
   "module": "ruby",
   "result": "verified-awaiting-parity-review-and-systemd-attestation",
-  "run_url": "https://github.com/Yunushan/linux-software-installer/actions/runs/29693350772",
+  "run_url": "https://github.com/Yunushan/linux-software-installer/actions/runs/29700388278",
   "schema": "linux-software-installer/accepted-evidence-verification/v2",
   "target_cells": [
     "alma-9-8",
