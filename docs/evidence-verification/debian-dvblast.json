@@ -1,16 +1,16 @@
 {
-  "artifact_sha256": "902d68e8676207aeafe7ead674ada2a4a1d7dcf32ee38db38031e23a770f5976",
+  "artifact_sha256": "29bc60acf8033a6727f6c1d67c9871e5d2330a76bb876612404977b4e0d955b8",
   "cell_ids": [
     "debian-12/dvblast",
     "ubuntu-24-04/dvblast",
     "ubuntu-26-04/dvblast"
   ],
-  "commit_sha": "2a0ac7ed6905d9a0ef1a68923087de2b91dbe688",
+  "commit_sha": "0bbebe6f60e80064b75dfb9b41b887358ea83d04",
   "expected_cells": 371,
-  "index_sha256": "afa5213a25f8225d31913c54ac73aab8c1b8032de831376bb580be3369c93a70",
+  "index_sha256": "b5eede2cb06a39c61214f16ac17ffd75abeed80d4cd946447eaaa88da3c2ecf4",
   "module": "dvblast",
   "result": "verified-awaiting-parity-review-and-systemd-attestation",
-  "run_url": "https://github.com/Yunushan/linux-software-installer/actions/runs/29702442865",
+  "run_url": "https://github.com/Yunushan/linux-software-installer/actions/runs/29753071695",
   "schema": "linux-software-installer/accepted-evidence-verification/v2",
   "target_cells": [
     "debian-12",
