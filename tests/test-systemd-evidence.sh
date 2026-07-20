@@ -18,7 +18,12 @@ FIXTURE=$TEMP_DIR/fixture
 mkdir -p "$MOCK_BIN" "$FIXTURE/proc/1" "$FIXTURE/run/systemd/system" \
   "$FIXTURE/ssh/sshd_config.d" "$TEMP_DIR/output"
 
-COMMIT=${LSI_TESTED_COMMIT:-$(git -C "$ROOT_DIR" rev-parse HEAD)}
+COMMIT=${LSI_TESTED_COMMIT:-$(awk -F $'\t' '$1 == "debian/tor-browser" { print $2; exit }' \
+  "$ROOT_DIR/docs/accepted-evidence.tsv")}
+[[ $COMMIT =~ ^[0-9a-f]{40}$ ]] || {
+  printf 'The systemd evidence test could not resolve an admitted evidence commit.\n' >&2
+  exit 2
+}
 IMAGE_REF=ubuntu-vm@sha256:2222222222222222222222222222222222222222222222222222222222222222
 BOOT_ID=33333333-3333-4333-8333-333333333333
 export MOCK_COMMIT=$COMMIT
