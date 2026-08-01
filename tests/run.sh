@@ -359,6 +359,10 @@ test_legacy_promotion_readiness_contract() {
   bash "$ROOT_DIR/tests/validate-legacy-promotion-readiness.sh" > /dev/null
 }
 
+test_admitted_parity_reviews_contract() {
+  bash "$ROOT_DIR/tests/validate-admitted-parity-reviews.sh" > /dev/null
+}
+
 test_pending_service_parity_reviews_contract() {
   bash "$ROOT_DIR/tests/validate-planned-service-parity-reviews.sh" > /dev/null
 }
@@ -539,6 +543,7 @@ run_test 'legacy inventory reconciles all 355 source entries' test_legacy_invent
 run_test 'retirement documentation matches the immutable inventory' test_retirement_documentation_contract
 run_test 'planned legacy rows have a fail-closed promotion ledger' test_legacy_promotion_readiness_contract
 run_test 'pending service mappings have explicit parity boundaries' test_pending_service_parity_reviews_contract
+run_test 'admitted legacy rows have source-traceable parity reviews' test_admitted_parity_reviews_contract
 run_test 'accepted evidence admissions bind external artifacts to exact contracts' test_accepted_evidence_admission_contract
 run_test 'downloaded GitHub evidence artifacts are revalidated before admission' test_downloaded_evidence_artifact_contract
 run_test 'legacy snapshot is pinned and excluded from the active path' test_legacy_quarantine_contract

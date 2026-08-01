@@ -101,6 +101,7 @@ command prints usage and exits instead of guessing.
 | `./install.sh info nginx` | Show module packages and safety notes | No |
 | `./install.sh migrations` | List read-only guidance for all 355 legacy entries | No |
 | `./install.sh migrate ubuntu-002` | Show read-only guidance for one legacy entry | No |
+| `./install.sh migration-strategy vendor-apt` | List one unresolved third-party route group | No |
 | `./install.sh retirement-status` | Show the evidence-backed retirement decision for the old repositories | No |
 | `./install.sh doctor` | Check distro detection and prerequisites | No |
 | `./install.sh plan nginx git` | Print the exact package commands | No |

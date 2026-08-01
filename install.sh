@@ -9,7 +9,7 @@ ROOT_DIR=$(/usr/bin/readlink -f -- "${BASH_SOURCE[0]}")
 ROOT_DIR=${ROOT_DIR%/*}
 
 case "${1:-}" in
-  migrations | migrate | retirement-status)
+  migrations | migrate | migration-strategy | retirement-status)
     # Migration guidance parses fixed local ledgers in a clean child process;
     # it never runs a legacy script or invokes a package manager.
     /usr/bin/env -i \

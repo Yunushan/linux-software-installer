@@ -81,8 +81,9 @@ mapping without editing a second source of truth, run:
 bash tests/validate-provider-audit-coverage.sh --emit
 ```
 
-`--emit` writes a header plus exact TSV rows only, so it is safe to inspect,
-filter, or compare without parsing human-status text.
+`--emit` writes a header plus exact TSV rows only, including each immutable
+source locator, so it is safe to inspect, filter, or compare without parsing
+human-status text.
 
 ## Schema
 

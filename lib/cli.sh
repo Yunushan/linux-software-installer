@@ -16,6 +16,7 @@ Usage:
   ./install.sh info MODULE             Show module details
   ./install.sh migrations              List all read-only legacy guidance
   ./install.sh migrate LEGACY_ID       Show read-only guidance for one legacy entry
+  ./install.sh migration-strategy NAME List one unresolved provider strategy
   ./install.sh retirement-status       Show whether the old repositories can be retired
   ./install.sh doctor                  Check the local environment
   ./install.sh plan MODULE...          Preview commands without changes
@@ -315,6 +316,10 @@ lsi_main() {
     migrations)
       (($# == 0)) || lsi_die 'migrations does not accept arguments.' 2
       lsi_migration_list
+      ;;
+    migration-strategy)
+      (($# == 1)) || lsi_die 'migration-strategy requires exactly one strategy name.' 2
+      lsi_migration_list_strategy "$1"
       ;;
     retirement-status)
       (($# == 0)) || lsi_die 'retirement-status does not accept arguments.' 2

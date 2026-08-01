@@ -3,6 +3,7 @@ set -Eeuo pipefail
 
 ROOT_DIR="$(CDPATH='' cd -- "$(dirname -- "${BASH_SOURCE[0]}")/.." && pwd -P)"
 BACKLOG="$ROOT_DIR/docs/provider-backlog.tsv"
+INVENTORY="$ROOT_DIR/docs/legacy-inventory.tsv"
 EMIT=false
 
 case "${1:-}" in
@@ -44,13 +45,20 @@ die() {
 }
 
 [[ -r $BACKLOG ]] || die "cannot read $BACKLOG"
+[[ -r $INVENTORY ]] || die "cannot read $INVENTORY"
 for document in "${audit_documents[@]}"; do
   [[ -s $document ]] || die "missing or empty audit document: $document"
 done
 
 declare -A actual_counts=()
+declare -A source_locators=()
 declare -a audit_rows=()
 total=0
+
+while IFS=$'\t' read -r source_legacy_id source_set source_path source_item rest; do
+  [[ $source_legacy_id == legacy_id ]] && continue
+  source_locators["$source_legacy_id"]="$source_path#$source_item"
+done < "$INVENTORY"
 
 while IFS=$'\t' read -r legacy_id capability strategy action outcome rationale; do
   [[ $legacy_id == legacy_id ]] && continue
@@ -76,7 +84,9 @@ while IFS=$'\t' read -r legacy_id capability strategy action outcome rationale; 
         die "$legacy_id is not explicitly named in $document"
       ;;
   esac
-  audit_rows+=("$legacy_id"$'\t'"$group"$'\t'"${audit_documents[$group]#"$ROOT_DIR/"}")
+  source_locator=${source_locators[$legacy_id]:-}
+  [[ -n $source_locator ]] || die "$legacy_id is missing from the immutable inventory"
+  audit_rows+=("$legacy_id"$'\t'"$source_locator"$'\t'"$group"$'\t'"${audit_documents[$group]#"$ROOT_DIR/"}")
   actual_counts["$group"]=$(( ${actual_counts[$group]:-0} + 1 ))
   total=$((total + 1))
 done < "$BACKLOG"
@@ -91,7 +101,7 @@ done
 [[ $total -eq 102 ]] || die "backlog has $total rows; expected 102"
 
 if [[ $EMIT == true ]]; then
-  printf 'legacy_id\taudit_group\taudit_document\n'
+  printf 'legacy_id\tsource_locator\taudit_group\taudit_document\n'
   printf '%s\n' "${audit_rows[@]}" | LC_ALL=C sort
   exit 0
 fi

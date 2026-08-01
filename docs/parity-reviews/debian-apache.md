@@ -11,7 +11,7 @@
 
 | Legacy ID | Immutable source locator | Legacy outcome |
 | --- | --- | --- |
-| `ubuntu-003` | `legacy/ubuntu-16.04/Ubuntu16-04-install-script.sh#choice-3` | Added the Ondřej Apache PPA, refreshed APT metadata, and installed `apache2`. |
+| `ubuntu-003` | `legacy/ubuntu-16.04/Ubuntu16-04-install-script.sh#menu:003` | Added the Ondřej Apache PPA, refreshed APT metadata, and installed `apache2`. |
 
 ## Active replacement contract and boundary
 

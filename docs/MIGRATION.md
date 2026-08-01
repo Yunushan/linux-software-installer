@@ -6,11 +6,15 @@ the quarantined Ubuntu 16.04 and RHEL-family installer repositories:
 ```bash
 ./install.sh migrations
 ./install.sh migrate ubuntu-002
+./install.sh migration-strategy vendor-apt
 ```
 
 These commands do not detect the host, require root, contact a repository, run
 a package manager or execute anything under `legacy/`. A displayed legacy
-source locator is provenance only and must never be executed.
+source locator is provenance only and must never be executed. The optional
+`migration-strategy` lookup lists only current `blocked-third-party` rows for a
+single canonical backlog strategy; its proposed outcomes are not install
+commands or support claims.
 
 ## What the statuses mean
 
@@ -32,6 +36,10 @@ module.
 external-evidence admissions and registered live providers. Those counts make
 future publication progress visible, but neither count independently changes a
 legacy disposition or proves retirement readiness.
+
+The same command also derives an exact strategy breakdown for all 102 unresolved
+third-party routes from the canonical provider backlog. It is a transparent
+work queue, not an installation recommendation or a replacement claim.
 
 ## Fail-closed data contract
 

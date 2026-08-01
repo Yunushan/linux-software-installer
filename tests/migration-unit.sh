@@ -104,6 +104,19 @@ test_list_is_complete_and_nonclaiming() (
     grep -q 'Read-only migration guidance' <<< "$output"
 )
 
+test_strategy_lookup_is_read_only_and_exact() (
+  local output count
+  output=$(lsi_migration_list_strategy vendor-apt) || return 1
+  count=$(grep -Ec '^(ubuntu|rhel)-[a-z0-9-]+[[:space:]]+' <<< "$output")
+  [[ $count -eq 9 ]] &&
+    grep -q '^Strategy      : vendor-apt$' <<< "$output" &&
+    grep -q '^ubuntu-005[[:space:]]+visual-studio-code[[:space:]]+visual-studio-code[[:space:]]+implement$' <<< "$output" &&
+    grep -q '^9 unresolved route(s) use vendor-apt\. These proposed outcomes are not install commands\.$' <<< "$output" &&
+    ! grep -Eq '(apt-get|dnf)[[:space:]]+(install|-y)' <<< "$output" &&
+    ! lsi_migration_list_strategy does-not-exist > /dev/null 2>&1 &&
+    ! lsi_migration_list_strategy 'Vendor-APT' > /dev/null 2>&1
+)
+
 test_retirement_status_reports_exact_blockers() (
   local output
   output=$(lsi_migration_retirement_status) || return 1
@@ -111,6 +124,7 @@ test_retirement_status_reports_exact_blockers() (
     grep -q '^Terminal dispositions         : 216$' <<< "$output" &&
     grep -q '^Provisional module candidates : 37$' <<< "$output" &&
     grep -q '^Unresolved third-party routes : 102$' <<< "$output" &&
+    grep -q '^Third-party route strategies  : epel-package=35, public-artifact=15, rpm-fusion=10, snap-bootstrap=2, snap-store=23, vendor-apt=9, vendor-rpm=8$' <<< "$output" &&
     grep -q '^Accepted evidence admissions  : 80$' <<< "$output" &&
     grep -q '^Registered live providers     : 0$' <<< "$output" &&
     grep -q '^Retirement decision           : NOT READY$' <<< "$output" &&
@@ -304,11 +318,16 @@ test_public_cli_is_exact_and_location_independent() (
   local output
   output=$(cd "$TEST_TMP" && "$ROOT_DIR/install.sh" migrate ubuntu-005) || return 1
   grep -q '^Legacy ID     : ubuntu-005$' <<< "$output" &&
+    output=$(cd "$TEST_TMP" && "$ROOT_DIR/install.sh" migration-strategy vendor-apt) &&
+    grep -q '^9 unresolved route(s) use vendor-apt\. These proposed outcomes are not install commands\.$' <<< "$output" &&
     output=$(cd "$TEST_TMP" && "$ROOT_DIR/install.sh" retirement-status) &&
     grep -q '^Retirement decision           : NOT READY$' <<< "$output" &&
     ! "$ROOT_DIR/install.sh" migrate > /dev/null 2>&1 &&
     ! "$ROOT_DIR/install.sh" migrate ubuntu-005 extra > /dev/null 2>&1 &&
     ! "$ROOT_DIR/install.sh" migrations extra > /dev/null 2>&1 &&
+    ! "$ROOT_DIR/install.sh" migration-strategy > /dev/null 2>&1 &&
+    ! "$ROOT_DIR/install.sh" migration-strategy vendor-apt extra > /dev/null 2>&1 &&
+    ! "$ROOT_DIR/install.sh" migration-strategy does-not-exist > /dev/null 2>&1 &&
     ! "$ROOT_DIR/install.sh" retirement-status extra > /dev/null 2>&1
 )
 
@@ -326,7 +345,9 @@ test_public_cli_ignores_exported_shell_functions() (
   export -f stat lsi_load_module
 
   output=$("$ROOT_DIR/install.sh" migrate ubuntu-002) || return 1
-  grep -q '^Legacy ID     : ubuntu-002$' <<< "$output" && [[ ! -e $marker ]]
+  grep -q '^Legacy ID     : ubuntu-002$' <<< "$output" && [[ ! -e $marker ]] || return 1
+  output=$("$ROOT_DIR/install.sh" migration-strategy vendor-apt) || return 1
+  grep -q '^Strategy      : vendor-apt$' <<< "$output" && [[ ! -e $marker ]]
 )
 
 run_test 'canonical 355-row migration catalog loads' test_canonical_catalog_loads
@@ -334,6 +355,7 @@ run_test 'planned lookup remains explicitly provisional' test_planned_lookup_is_
 run_test 'terminal lookup is a documented handoff' test_terminal_lookup_is_handoff
 run_test 'blocked lookup cannot become an install command' test_blocked_lookup_is_not_installable
 run_test 'complete list reports counts without support claims' test_list_is_complete_and_nonclaiming
+run_test 'strategy lookup lists only unresolved provider work' test_strategy_lookup_is_read_only_and_exact
 run_test 'retirement status reports exact remaining blockers' test_retirement_status_reports_exact_blockers
 run_test 'retirement status permits only a fully resolved ledger' test_retirement_status_allows_only_zero_remaining_rows
 run_test 'unknown and unsafe legacy IDs are rejected' test_unknown_and_unsafe_ids_fail

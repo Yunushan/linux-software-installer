@@ -9,9 +9,11 @@
 
 ## Legacy rows covered
 
-| Legacy IDs | Immutable source locators | Legacy outcome |
+| Legacy ID | Immutable source locator | Legacy outcome |
 | --- | --- | --- |
-| `rhel-almalinux-8-030-mariadb`, `rhel-centos-7-041-mariadb`, `rhel-red-hat-enterprise-linux-8-024-mariadb` | `legacy/rhel-family/{AlmaLinux-8,Centos-7,Red-Hat-Enterprise-Linux-8}/scripts/{30,41,24}-Mariadb.sh#script` | Downloaded and executed MariaDB's repository setup, selected 10.3–10.6, reset streams, and enabled/started MariaDB; the CentOS route removed packages and `/var/lib/mysql`. |
+| `rhel-almalinux-8-030-mariadb` | `legacy/rhel-family/AlmaLinux-8/scripts/30-Mariadb.sh#script` | Downloaded and executed MariaDB's repository setup, selected 10.3–10.6, reset streams, and enabled/started MariaDB. |
+| `rhel-centos-7-041-mariadb` | `legacy/rhel-family/Centos-7/scripts/41-Mariadb.sh#script` | Selected MariaDB 10.3–10.6, removed packages and `/var/lib/mysql`, then enabled/started MariaDB. |
+| `rhel-red-hat-enterprise-linux-8-024-mariadb` | `legacy/rhel-family/Red-Hat-Enterprise-Linux-8/scripts/24-Mariadb.sh#script` | Downloaded and executed MariaDB's repository setup, selected 10.3–10.6, reset streams, and enabled/started MariaDB. |
 
 ## Active replacement contract and boundary
 

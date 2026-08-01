@@ -3,11 +3,22 @@ set -Eeuo pipefail
 
 ROOT_DIR="$(CDPATH='' cd -- "$(dirname -- "${BASH_SOURCE[0]}")/.." && pwd -P)"
 READINESS="$ROOT_DIR/docs/legacy-promotion-readiness.tsv"
+INVENTORY="$ROOT_DIR/docs/legacy-inventory.tsv"
 
 [[ -f $READINESS && ! -L $READINESS ]] || {
   printf 'missing or unsafe promotion readiness ledger\n' >&2
   exit 1
 }
+[[ -f $INVENTORY && ! -L $INVENTORY ]] || {
+  printf 'missing or unsafe legacy inventory\n' >&2
+  exit 1
+}
+
+declare -A source_locators=()
+while IFS=$'\t' read -r inventory_legacy_id source_set source_path source_item rest; do
+  [[ $inventory_legacy_id == legacy_id ]] && continue
+  source_locators["$inventory_legacy_id"]="$source_path#$source_item"
+done < "$INVENTORY"
 
 count=0
 while IFS=$'\t' read -r legacy_id evidence_key service_contract promotion_ready; do
@@ -31,6 +42,16 @@ while IFS=$'\t' read -r legacy_id evidence_key service_contract promotion_ready;
   }
   grep -Fq "\`$legacy_id\`" "$review" || {
     printf 'parity review does not explicitly name planned legacy row %s: %s\n' \
+      "$legacy_id" "$review" >&2
+    exit 1
+  }
+  source_locator=${source_locators[$legacy_id]:-}
+  [[ -n $source_locator ]] || {
+    printf 'planned legacy row is missing from the immutable inventory: %s\n' "$legacy_id" >&2
+    exit 1
+  }
+  grep -Fq "\`$source_locator\`" "$review" || {
+    printf 'parity review does not contain the immutable source locator for %s: %s\n' \
       "$legacy_id" "$review" >&2
     exit 1
   }

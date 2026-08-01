@@ -11,7 +11,7 @@
 
 | Legacy ID | Immutable source locator | Legacy outcome |
 | --- | --- | --- |
-| `ubuntu-002` | `legacy/ubuntu-16.04/Ubuntu16-04-install-script.sh#choice-2` | Added the Nginx PPA, refreshed APT metadata, and installed `nginx`. |
+| `ubuntu-002` | `legacy/ubuntu-16.04/Ubuntu16-04-install-script.sh#menu:002` | Added the Nginx PPA, refreshed APT metadata, and installed `nginx`. |
 
 ## Active replacement contract and boundary
 

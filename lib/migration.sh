@@ -606,7 +606,44 @@ lsi_migration_list() {
     'Candidates and proposed routes are not support claims; inspect one with ./install.sh migrate LEGACY_ID.'
 }
 
+lsi_migration_list_strategy() {
+  local requested_strategy=$1 legacy_id backlog_row capability strategy recommended_action
+  local outcome rationale matches=0
+
+  [[ $requested_strategy =~ ^[a-z0-9][a-z0-9-]{0,79}$ ]] || {
+    lsi_migration_error 'provider strategy must contain only lowercase letters, digits and hyphens.' 2
+    return 2
+  }
+  lsi_migration_load || return 1
+
+  printf '%s\n' 'Read-only unresolved-provider guidance; no system changes are made.'
+  printf 'Strategy      : %s\n' "$requested_strategy"
+  printf '%-58s %-23s %-23s %s\n' \
+    'LEGACY ID' 'CAPABILITY' 'PROPOSED OUTCOME' 'ACTION'
+  for legacy_id in "${LSI_MIGRATION_IDS[@]}"; do
+    [[ -n ${LSI_MIGRATION_BACKLOG_ROWS[$legacy_id]+x} ]] || continue
+    backlog_row=${LSI_MIGRATION_BACKLOG_ROWS[$legacy_id]}
+    IFS=$'\t' read -r capability strategy recommended_action outcome rationale <<< "$backlog_row"
+    [[ $strategy == "$requested_strategy" ]] || continue
+    printf '%-58s %-23s %-23s %s\n' \
+      "$legacy_id" "$capability" "$outcome" "$recommended_action"
+    matches=$((matches + 1))
+  done
+  ((matches > 0)) || {
+    lsi_migration_error "unknown or inactive provider strategy: $requested_strategy." 2
+    return 2
+  }
+  printf '\n%d unresolved route(s) use %s. These proposed outcomes are not install commands.\n' \
+    "$matches" "$requested_strategy"
+  printf '%s\n' 'Inspect a source-specific rationale with ./install.sh migrate LEGACY_ID.'
+}
+
 lsi_migration_retirement_status() {
+  local legacy_id backlog_row backlog_capability strategy recommended_action
+  local outcome backlog_rationale
+  local strategy_total=0 strategy_summary= strategy_count
+  local -A strategy_counts=()
+
   lsi_migration_load || return 1
   lsi_migration_count_exact_tsv_rows \
     "$LSI_MIGRATION_ACCEPTED_EVIDENCE" 'accepted-evidence admission registry' \
@@ -617,11 +654,35 @@ lsi_migration_retirement_status() {
     "$LSI_MIGRATION_PROVIDER_REGISTRY_HEADER" 3 1048576 \
     LSI_MIGRATION_REGISTERED_PROVIDER_COUNT || return 1
 
+  # Display every validated unresolved-provider strategy rather than
+  # compressing it into a readiness claim. lsi_migration_load has already
+  # checked the canonical backlog schema, including any future strategy names.
+  for legacy_id in "${!LSI_MIGRATION_BACKLOG_ROWS[@]}"; do
+    backlog_row=${LSI_MIGRATION_BACKLOG_ROWS[$legacy_id]}
+    IFS=$'\t' read -r backlog_capability strategy recommended_action outcome \
+      backlog_rationale <<< "$backlog_row"
+    strategy_counts["$strategy"]=$(( ${strategy_counts[$strategy]:-0} + 1 ))
+    strategy_total=$((strategy_total + 1))
+  done
+  [[ $strategy_total -eq $LSI_MIGRATION_BLOCKED ]] || {
+    lsi_migration_error 'unresolved-provider strategy summary does not match the canonical backlog.'
+    return 1
+  }
+  while IFS=$'\t' read -r strategy strategy_count; do
+    [[ -n $strategy_summary ]] && strategy_summary+=', '
+    strategy_summary+="$strategy=$strategy_count"
+  done < <(
+    for strategy in "${!strategy_counts[@]}"; do
+      printf '%s\t%d\n' "$strategy" "${strategy_counts[$strategy]}"
+    done | LC_ALL=C sort
+  )
+
   printf '%s\n\n' 'Legacy replacement retirement status (read-only; no system changes are made).'
   printf 'Tracked legacy entries        : %d\n' "$LSI_MIGRATION_TOTAL"
   printf 'Terminal dispositions         : %d\n' "$LSI_MIGRATION_TERMINAL"
   printf 'Provisional module candidates : %d\n' "$LSI_MIGRATION_PLANNED"
   printf 'Unresolved third-party routes : %d\n' "$LSI_MIGRATION_BLOCKED"
+  printf 'Third-party route strategies  : %s\n' "$strategy_summary"
   printf 'Accepted evidence admissions  : %d\n' "$LSI_MIGRATION_ACCEPTED_EVIDENCE_COUNT"
   printf 'Registered live providers     : %d\n' "$LSI_MIGRATION_REGISTERED_PROVIDER_COUNT"
 
