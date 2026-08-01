@@ -15,14 +15,6 @@ on:
         description: Reviewed external ephemeral-VM provisioner identity
         required: true
         type: string
-      provisioner_attestation_url:
-        description: HTTPS URL for the external provision/create/destroy attestation
-        required: true
-        type: string
-      provisioner_attestation_digest:
-        description: SHA-256 digest of that externally published attestation
-        required: true
-        type: string
 
 permissions:
   contents: read
@@ -43,8 +35,6 @@ jobs:
       EXECUTION_ID: ${{ inputs.execution_id }}
       VM_IMAGE_REF: ${{ inputs.vm_image_ref }}
       PROVISIONER_ID: ${{ inputs.provisioner_id }}
-      PROVISIONER_ATTESTATION_URL: ${{ inputs.provisioner_attestation_url }}
-      PROVISIONER_ATTESTATION_DIGEST: ${{ inputs.provisioner_attestation_digest }}
     steps:
       - name: Check out repository
         uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
@@ -58,8 +48,6 @@ jobs:
           [[ $EXECUTION_ID =~ ^[a-z0-9]+(-[a-z0-9]+)*$ ]]
           [[ $VM_IMAGE_REF =~ ^[^[:space:]@]+@sha256:[0-9a-f]{64}$ ]]
           [[ $PROVISIONER_ID =~ ^[a-z0-9]+(-[a-z0-9]+)*$ ]]
-          [[ $PROVISIONER_ATTESTATION_URL =~ ^https://[^[:space:]]+$ ]]
-          [[ $PROVISIONER_ATTESTATION_DIGEST =~ ^sha256:[0-9a-f]{64}$ ]]
           sudo --non-interactive test -f /etc/linux-software-installer/systemd-evidence-vm.tsv
           sudo --non-interactive test ! -L /etc/linux-software-installer/systemd-evidence-vm.tsv
           [[ $(sudo --non-interactive stat -c '%u:%a:%h' \
@@ -93,14 +81,12 @@ jobs:
             --vm-image-ref "$VM_IMAGE_REF" \
             --require-real
 
-      - name: Record external attestation reference
+      - name: Record provisional capture context
         run: |
           set -Eeuo pipefail
-          reference="$RUNNER_TEMP/systemd-vm-evidence/provisioner-attestation.tsv"
+          reference="$RUNNER_TEMP/systemd-vm-evidence/provisioner-context.tsv"
           printf 'field\tvalue\n' > "$reference"
           printf 'provisioner_id\t%s\n' "$PROVISIONER_ID" >> "$reference"
-          printf 'provisioner_attestation_url\t%s\n' "$PROVISIONER_ATTESTATION_URL" >> "$reference"
-          printf 'provisioner_attestation_digest\t%s\n' "$PROVISIONER_ATTESTATION_DIGEST" >> "$reference"
           printf 'tested_commit\t%s\n' "$GITHUB_SHA" >> "$reference"
           printf 'execution_id\t%s\n' "$EXECUTION_ID" >> "$reference"
           printf 'vm_image_ref\t%s\n' "$VM_IMAGE_REF" >> "$reference"

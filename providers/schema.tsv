@@ -27,7 +27,7 @@ cells.tsv	8	suite	yes	exact-normal-apt-suite-or-slash-for-flat-apt-or-dash-for-d
 cells.tsv	9	components	yes	unique-normal-apt-component-list-or-dash-for-flat-apt-or-dnf
 cells.tsv	10	key_file	yes	provider-local-public-key-path-with-openpgp-parse
 cells.tsv	11	key_fingerprints	yes	exact-unique-primary-openpgp-fingerprint-set-40-or-64-hex
-cells.tsv	12	expected_origin	yes	non-control-text
+cells.tsv	12	expected_origin	yes	apt-release-origin-or-dnf-vendor-or-signer-colon-exact-single-declared-primary-fingerprint
 cells.tsv	13	metadata_signature	yes	apt-release-or-rpm-repodata-and-package
 locks.tsv	1	module_id	yes	lowercase-slug
 locks.tsv	2	cell_id	yes	existing-cell-id

@@ -123,6 +123,8 @@ test_schema_documented() {
     grep -q $'^registry.tsv\t1\tprovider_id\tyes\t' "$ROOT_DIR/providers/schema.tsv" &&
     grep -q $'^registry.tsv\t2\tcatalog_revision\tyes\t' "$ROOT_DIR/providers/schema.tsv" &&
     grep -q $'^registry.tsv\t3\tcatalog_sha256\tyes\t64-lowercase-hex-provider-tree-digest$' \
+      "$ROOT_DIR/providers/schema.tsv" &&
+    grep -q $'^cells.tsv\t12\texpected_origin\tyes\tapt-release-origin-or-dnf-vendor-or-signer-colon-exact-single-declared-primary-fingerprint$' \
       "$ROOT_DIR/providers/schema.tsv"
 }
 
@@ -224,6 +226,16 @@ test_invalid_normal_apt_coordinates() {
   esac
   refresh_registry "$CASE_ROOT" demo-provider@2026-01 || return
   ! lsi_provider_load demo-provider > /dev/null 2>&1
+}
+
+test_apt_cell_rejects_signer_origin_mode() {
+  local output
+  prepare_case
+  sed -i '2s/Example Test Publisher/signer:FF8AD1344597106ECE813B918A3872BF3228467C/' \
+    "$CASE_ROOT/demo-provider/cells.tsv"
+  refresh_registry "$CASE_ROOT" demo-provider@2026-01 || return 1
+  output=$(lsi_provider_load demo-provider 2>&1) && return 1
+  grep -q 'expected signed APT Release origin' <<< "$output"
 }
 
 valid_provider_plan() {
@@ -408,7 +420,7 @@ EOF
 set -eu
 printf '%s\n' "$*" >> "$LSI_PROVIDER_TEST_LOG"
 case " $* " in
-  *' -qp '*) printf 'demo-tool\t1.2.3-1.el9\tx86_64\n' ;;
+  *' -qp '*) printf 'demo-tool\t1.2.3-1.el9\tx86_64\t%s\n' "${LSI_PROVIDER_TEST_RPM_VENDOR-Example Test Publisher}" ;;
   *' --checksig '*) test "${LSI_PROVIDER_TEST_RPM_SIGNATURE_FAIL:-0}" != 1 ;;
   *) exit 0 ;;
 esac
@@ -548,6 +560,8 @@ test_provider_dnf_install_verifies_locked_artifact_and_cleans_up() {
     demo-tool) || return 1
   grep -q 'repo_gpgcheck=1' "$log" &&
     grep -q 'localpkg_gpgcheck=1' "$log" &&
+    grep -q -- '--disablerepo=*' "$log" &&
+    grep -q -- '--enablerepo=linux-software-installer-demo-provider' "$log" &&
     grep -q -- '--downloadonly' "$log" &&
     grep -q -- '--checksig --verbose' "$log" &&
     grep -q 'demo-tool-1.2.3-1.el9.x86_64.rpm' "$log" &&
@@ -601,6 +615,101 @@ test_provider_dnf_install_rejects_invalid_signature_before_local_install() {
   grep -q 'package signature did not verify' <<< "$output" &&
     grep -q -- '--checksig --verbose' "$log" &&
     [[ $(grep -c 'demo-tool-1.2.3-1.el9.x86_64.rpm' "$log") -eq 2 ]] &&
+    [[ ! -e $root/etc/pki/rpm-gpg/RPM-GPG-KEY-linux-software-installer-demo-provider ]] &&
+    [[ ! -e $root/etc/yum.repos.d/linux-software-installer-demo-provider.repo ]]
+}
+
+test_provider_dnf_install_rejects_unexpected_vendor_before_signature() {
+  local root="$TEST_TMP/dnf-vendor-root" tools="$TEST_TMP/dnf-vendor-tools" log="$TEST_TMP/dnf-vendor.log" digest output
+  prepare_provider_dnf_install_case "$root" "$tools" || return 1
+  digest=$(provider_dnf_install_digest) || return 1
+  : > "$log"
+  output=$(PATH="$tools:$PATH" \
+    LSI_PROVIDER_ROOT="$CASE_ROOT" \
+    LSI_OS_RELEASE_FILE="$ROOT_DIR/tests/fixtures/rocky.env" \
+    LSI_PROVIDER_APPLY_ROOT="$root" \
+    LSI_PROVIDER_APPLY_ALLOW_NONROOT_TEST=true \
+    LSI_PROVIDER_TEST_LOG="$log" \
+    LSI_PROVIDER_TEST_RPM_VENDOR='Unexpected Publisher' \
+    lsi_provider_install_current demo-provider \
+    --plan-sha256 "$digest" \
+    --allow-provider demo-provider@2026-01 \
+    --allow-preview-provider demo-provider \
+    --accept-provider-license demo-provider@2026-01 \
+    demo-tool 2>&1) && return 1
+  grep -q 'vendor does not match the reviewed origin' <<< "$output" &&
+    ! grep -q -- '--checksig' "$log" &&
+    [[ ! -e $root/etc/pki/rpm-gpg/RPM-GPG-KEY-linux-software-installer-demo-provider ]] &&
+    [[ ! -e $root/etc/yum.repos.d/linux-software-installer-demo-provider.repo ]]
+}
+
+test_dnf_signer_origin_requires_the_only_declared_primary_key() {
+  local output
+  prepare_case
+  sed -i '3s/Example Test Publisher/signer:AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA/' \
+    "$CASE_ROOT/demo-provider/cells.tsv"
+  refresh_registry "$CASE_ROOT" demo-provider@2026-01 || return 1
+  output=$(lsi_provider_load demo-provider 2>&1) && return 1
+  grep -q 'exact RPM Vendor or signer:<declared-primary-fingerprint>' <<< "$output"
+}
+
+test_dnf_signer_origin_rejects_ambiguous_key_set() {
+  ! lsi_provider_valid_dnf_expected_origin \
+    signer:FF8AD1344597106ECE813B918A3872BF3228467C \
+    FF8AD1344597106ECE813B918A3872BF3228467C,AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
+}
+
+test_provider_dnf_install_accepts_blank_vendor_with_exact_isolated_signer() {
+  local root="$TEST_TMP/dnf-signer-root" tools="$TEST_TMP/dnf-signer-tools" log="$TEST_TMP/dnf-signer.log" digest output
+  prepare_provider_dnf_install_case "$root" "$tools" || return 1
+  sed -i '3s/Example Test Publisher/signer:FF8AD1344597106ECE813B918A3872BF3228467C/' \
+    "$CASE_ROOT/demo-provider/cells.tsv"
+  refresh_registry "$CASE_ROOT" demo-provider@2026-01 || return 1
+  digest=$(provider_dnf_install_digest) || return 1
+  : > "$log"
+  output=$(PATH="$tools:$PATH" \
+    LSI_PROVIDER_ROOT="$CASE_ROOT" \
+    LSI_OS_RELEASE_FILE="$ROOT_DIR/tests/fixtures/rocky.env" \
+    LSI_PROVIDER_APPLY_ROOT="$root" \
+    LSI_PROVIDER_APPLY_ALLOW_NONROOT_TEST=true \
+    LSI_PROVIDER_TEST_LOG="$log" \
+    LSI_PROVIDER_TEST_RPM_VENDOR='' \
+    lsi_provider_install_current demo-provider \
+    --plan-sha256 "$digest" \
+    --allow-provider demo-provider@2026-01 \
+    --allow-preview-provider demo-provider \
+    --accept-provider-license demo-provider@2026-01 \
+    demo-tool) || return 1
+  grep -q -- '--checksig --verbose' "$log" &&
+    grep -q '^Verified provider package transaction completed from reviewed plan SHA-256:' <<< "$output" &&
+    [[ ! -e $root/etc/pki/rpm-gpg/RPM-GPG-KEY-linux-software-installer-demo-provider ]] &&
+    [[ ! -e $root/etc/yum.repos.d/linux-software-installer-demo-provider.repo ]]
+}
+
+test_provider_dnf_signer_origin_rejects_invalid_signature() {
+  local root="$TEST_TMP/dnf-signer-signature-root" tools="$TEST_TMP/dnf-signer-signature-tools" log="$TEST_TMP/dnf-signer-signature.log" digest output
+  prepare_provider_dnf_install_case "$root" "$tools" || return 1
+  sed -i '3s/Example Test Publisher/signer:FF8AD1344597106ECE813B918A3872BF3228467C/' \
+    "$CASE_ROOT/demo-provider/cells.tsv"
+  refresh_registry "$CASE_ROOT" demo-provider@2026-01 || return 1
+  digest=$(provider_dnf_install_digest) || return 1
+  : > "$log"
+  output=$(PATH="$tools:$PATH" \
+    LSI_PROVIDER_ROOT="$CASE_ROOT" \
+    LSI_OS_RELEASE_FILE="$ROOT_DIR/tests/fixtures/rocky.env" \
+    LSI_PROVIDER_APPLY_ROOT="$root" \
+    LSI_PROVIDER_APPLY_ALLOW_NONROOT_TEST=true \
+    LSI_PROVIDER_TEST_LOG="$log" \
+    LSI_PROVIDER_TEST_RPM_VENDOR='' \
+    LSI_PROVIDER_TEST_RPM_SIGNATURE_FAIL=1 \
+    lsi_provider_install_current demo-provider \
+    --plan-sha256 "$digest" \
+    --allow-provider demo-provider@2026-01 \
+    --allow-preview-provider demo-provider \
+    --accept-provider-license demo-provider@2026-01 \
+    demo-tool 2>&1) && return 1
+  grep -q 'package signature did not verify' <<< "$output" &&
+    grep -q -- '--checksig --verbose' "$log" &&
     [[ ! -e $root/etc/pki/rpm-gpg/RPM-GPG-KEY-linux-software-installer-demo-provider ]] &&
     [[ ! -e $root/etc/yum.repos.d/linux-software-installer-demo-provider.repo ]]
 }
@@ -1091,6 +1200,7 @@ run_test 'normal APT suites cannot use exact-path syntax' test_invalid_normal_ap
 run_test 'normal APT components cannot contain path separators' test_invalid_normal_apt_coordinates component
 run_test 'normal APT cells require one exact suite' test_invalid_normal_apt_coordinates multiple-suites
 run_test 'normal APT component lists cannot end with an empty item' test_invalid_normal_apt_coordinates trailing-component-separator
+run_test 'APT cells reject the DNF-only signer origin mode' test_apt_cell_rejects_signer_origin_mode
 run_test 'provider plan is explicit and non-mutating' test_provider_plan_is_explicit_and_non_mutating
 run_test 'prepared provider plan retains its exact digest-bound snapshot' test_provider_plan_snapshot_is_retained_for_apply_binding
 run_test 'provider configuration renders the exact reviewed target without mutation' test_provider_config_is_exact_and_read_only
@@ -1106,6 +1216,11 @@ run_test 'provider install rejects a stale digest before activation or package w
 run_test 'provider install verifies a locked signed DNF RPM and removes transient configuration' test_provider_dnf_install_verifies_locked_artifact_and_cleans_up
 run_test 'provider DNF install rejects a mismatched RPM digest before signature or local installation' test_provider_dnf_install_rejects_checksum_before_local_install
 run_test 'provider DNF install rejects an invalid RPM signature before local installation' test_provider_dnf_install_rejects_invalid_signature_before_local_install
+run_test 'provider DNF install rejects an unexpected RPM vendor before signature verification' test_provider_dnf_install_rejects_unexpected_vendor_before_signature
+run_test 'DNF signer origin requires the only declared primary key' test_dnf_signer_origin_requires_the_only_declared_primary_key
+run_test 'DNF signer origin rejects an ambiguous primary-key set' test_dnf_signer_origin_rejects_ambiguous_key_set
+run_test 'provider DNF install accepts a blank Vendor only through an exact isolated signer' test_provider_dnf_install_accepts_blank_vendor_with_exact_isolated_signer
+run_test 'provider DNF signer origin rejects an invalid RPM signature' test_provider_dnf_signer_origin_rejects_invalid_signature
 run_test 'provider plan requires per-provider authorization' test_provider_plan_requires_distinct_authorization
 run_test 'provider plan rejects the global --yes alias' test_provider_plan_rejects_yes_alias
 run_test 'preview provider requires a separate acknowledgement' test_provider_plan_requires_preview_ack

@@ -5,7 +5,7 @@ It is a source-baseline check only: it does **not** prove that the active
 installer replaces any legacy capability and it does not permit the old
 repositories to be archived or deleted.
 
-## Verified 2026-07-17
+## Verified 2026-08-01
 
 | Upstream repository | Pinned commit | Commit time (UTC) | Upstream blobs | Preserved blobs | Mismatches |
 |---|---|---|---:|---:|---:|
@@ -16,6 +16,10 @@ The verification compared every Git blob ID in each upstream commit tree with
 the corresponding file under `legacy/ubuntu-16.04/` or `legacy/rhel-family/`.
 Git blob IDs bind the exact file content, so a zero mismatch result proves the
 preserved files are byte-for-byte identical to those upstream snapshots.
+
+The same refresh also confirmed that each upstream default branch still points
+to its pinned commit. The source denominator has therefore not drifted since
+the recorded snapshots.
 
 ## Repeat the check
 

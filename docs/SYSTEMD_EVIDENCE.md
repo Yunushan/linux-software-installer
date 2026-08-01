@@ -88,7 +88,7 @@ from package-maintainer output. Every regular single-link output file is bound
 by `files.sha256`; links, special files, extra entries and output reuse fail
 closed.
 
-## Validation and the unmet trust gate
+## Validation and the signed trust gate
 
 Structural validation re-derives the current plan and module contract, checks
 the exact file set and hashes, parses every identity/state table, recomputes
@@ -104,13 +104,35 @@ bash tests/validate-systemd-evidence.sh "$PWD" \
 ```
 
 That command validates a real observation structurally; it does not accept it
-for promotion. `--require-accepted` intentionally refuses every current local
-bundle because no external provisioning-attestation verifier or durable trust
-anchor is implemented. Acceptance requires a future reviewed system to bind
-the 50 single-use runs to provider-authenticated instance creation and
-destruction, an allowlisted immutable VM image digest, the tested commit and a
-durable signed artifact digest. Until then the promotion ledger remains
-`evidence_class=none` and `promotion_ready=no`.
+for promotion. The stronger acceptance command additionally requires an
+absolute canonical evidence directory, a GitHub-published artifact digest, a
+post-destruction attestation and detached signature, and a matching public key
+in [`systemd-provisioners.tsv`](systemd-provisioners.tsv):
+
+```bash
+bash tests/validate-systemd-evidence.sh "$PWD" \
+  --evidence /absolute/path/to/downloaded/systemd-vm-evidence \
+  --require-accepted \
+  --artifact-digest sha256:<GITHUB_PUBLISHED_ARTIFACT_SHA256> \
+  --attestation /absolute/path/to/provisioner-attestation.tsv \
+  --attestation-signature /absolute/path/to/provisioner-attestation.tsv.asc \
+  --provisioner-registry "$PWD/docs/systemd-provisioners.tsv"
+```
+
+The verifier requires an exact field set, verifies its detached OpenPGP
+signature with the registry's single-link `keys/<provisioner_id>.gpg` key, and
+binds the statement to the execution and target IDs, tested commit, VM-image
+reference, boot ID, single-use marker nonce, captured `files.sha256` digest and
+the published GitHub artifact digest. It also requires a destruction time after
+the creation time. A signed statement cannot be reused for a different bundle
+or artifact.
+
+The checked-in registry is deliberately header-only: no provisioner public key
+is trusted yet. Therefore every real bundle still fails `--require-accepted`,
+and the promotion ledger remains `evidence_class=none` and
+`promotion_ready=no`. Adding a provisioner requires separate review of its
+identity, public-key fingerprint, VM-image policy and destruction controls; a
+registry row alone never promotes a legacy route.
 
 The checked-in [`Systemd VM evidence` workflow](../.github/workflows/systemd-vm-evidence.yml)
 is intentionally **not** a generic GitHub-hosted workflow. It can run only on
@@ -122,15 +144,15 @@ the VM after that one workflow execution. Persistent runners and GitHub-hosted
 container runners must never carry this label or be presented as systemd VM
 evidence.
 
-Dispatch one workflow run for one exact `execution_id`. In addition to the VM
-image reference, it requires a reviewed provisioner ID plus an HTTPS reference
-and SHA-256 digest for the externally published provision/create/destroy
-attestation. The job validates the real observation, uploads the observation
-and records that external reference, but it remains provisional: the current
-repository deliberately has no verifier that can independently validate the
-provider attestation or prove VM destruction. Do not add it to
-`accepted-evidence.tsv` until that verifier and durable trust anchor are
-implemented.
+Dispatch one workflow run for one exact `execution_id`, an immutable VM-image
+reference and a reviewed candidate provisioner ID. The job validates and uploads
+only a **provisional** observation. After the runner has been deregistered and
+the VM destroyed, the external provisioner must publish and sign the
+attestation described above using the GitHub artifact digest that the completed
+workflow published. This ordering prevents a capture-time claim from pretending
+that future destruction already happened. Do not add any result to
+`accepted-evidence.tsv` until an independent reviewer has downloaded the
+artifact and passed the stronger verifier.
 
 The deterministic and refusal paths are covered with mocks only:
 

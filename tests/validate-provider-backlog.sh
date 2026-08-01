@@ -11,20 +11,20 @@ source "$ROOT_DIR/lib/common.sh"
 # shellcheck source=../lib/catalog.sh
 source "$ROOT_DIR/lib/catalog.sh"
 
-EXPECTED_TOTAL=125
-EXPECTED_IMPLEMENT=108
-EXPECTED_CONDITIONAL_ARTIFACT=17
+EXPECTED_TOTAL=102
+EXPECTED_IMPLEMENT=87
+EXPECTED_CONDITIONAL_ARTIFACT=15
 EXPECTED_TERMINAL_HANDOFF=0
-EXPECTED_UNIQUE_CAPABILITIES=80
-EXPECTED_UNIQUE_OUTCOMES=78
+EXPECTED_UNIQUE_CAPABILITIES=61
+EXPECTED_UNIQUE_OUTCOMES=59
 EXPECTED_ACTIVE_REUSE_ROWS=45
 EXPECTED_ACTIVE_REUSE_OUTCOMES=18
 EXPECTED_FAMILY_READY_REUSE_ROWS=0
 EXPECTED_TARGET_RESTRICTED_REUSE_ROWS=0
-EXPECTED_NONREUSE_ROWS=80
-EXPECTED_NONREUSE_OUTCOMES=60
-EXPECTED_EXTERNAL_ROUTE_ROWS=124
-EXPECTED_DISTRO_ROUTE_ROWS=1
+EXPECTED_NONREUSE_ROWS=57
+EXPECTED_NONREUSE_OUTCOMES=41
+EXPECTED_EXTERNAL_ROUTE_ROWS=102
+EXPECTED_DISTRO_ROUTE_ROWS=0
 EXPECTED_INVENTORY_HEADER=$'legacy_id\tsource_set\tsource_path\tsource_item\tdisplay_name\tnormalized_capability\ttarget_family\tdisposition\treplacement\tparity_level\tevidence\trationale'
 EXPECTED_BACKLOG_HEADER=$'legacy_id\tnormalized_capability\tstrategy\trecommended_action\treplacement_outcome\trationale'
 
@@ -75,17 +75,17 @@ done < <(tail -n +2 "$INVENTORY")
 declare -A expected_strategy_counts=(
   ['authenticated-download']=0
   ['community-client-handoff']=0
-  ['distro-component']=1
+  ['distro-component']=0
   ['epel-package']=35
   ['infrastructure-handoff']=0
   ['maintenance-handoff']=0
-  ['public-artifact']=17
+  ['public-artifact']=15
   ['retired-review']=0
   ['rpm-fusion']=10
   ['snap-bootstrap']=2
-  ['snap-store']=32
-  ['vendor-apt']=12
-  ['vendor-rpm']=16
+  ['snap-store']=23
+  ['vendor-apt']=9
+  ['vendor-rpm']=8
 )
 declare -A strategy_counts=()
 declare -A seen_backlog_ids=()

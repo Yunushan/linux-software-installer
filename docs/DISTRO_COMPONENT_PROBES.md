@@ -1,8 +1,8 @@
 # Distribution-component probe record
 
 This is a **provisional engineering record**, not accepted replacement or
-release evidence. On 2026-07-15, the five `distro-component` backlog outcomes
-were checked in fresh x86_64 containers using only repositories enabled by the
+release evidence. On 2026-07-15, five candidate outcomes were checked in fresh
+x86_64 containers using only repositories enabled by the
 distribution images. No PPA, vendor repository, remote setup script or
 signature bypass was added.
 
@@ -21,7 +21,7 @@ signature bypass was added.
 | PlayOnLinux | `playonlinux` `4.3.4-3` resolved, installed, exposed `/usr/bin/playonlinux`, and repeated without package-state drift | No package candidate | Admitted as `debian/playonlinux`, restricted to `ubuntu:24.04:x86_64`, after immutable GitHub artifact and parity review verification. Applications selected later may download additional content. |
 | Telegram Desktop | No package candidate | `telegram-desktop` `4.6.5+ds-2+b1` resolved, installed, exposed `/usr/bin/telegram-desktop`, and repeated without package-state drift | Admitted as `debian/telegram`, restricted to `debian:12:x86_64`, after immutable GitHub artifact and parity review verification. |
 | Steam | `steam-installer` `1:1.0.0.79~ds-2` was visible, but the solver rejected the transaction because `steam-libs-i386` was unavailable under the default amd64-only architecture configuration | No package candidate | Admitted as `debian/steam`, restricted to `ubuntu:24.04:x86_64`, after the explicit i386 multiarch contract passed the full immutable GitHub evidence run and parity review. |
-| MakeHuman | No package candidate | No package candidate | Keep blocked; do not create a speculative module. |
+| MakeHuman | No package candidate | No package candidate | Reclassified as a `public-artifact` route: current upstream guidance is PPA or source, not a maintained distribution package. Keep blocked; do not create a speculative module. |
 
 Official package indexes corroborate the package identities: [Ubuntu Tor
 Browser Launcher](https://packages.ubuntu.com/noble/torbrowser-launcher),
@@ -45,5 +45,6 @@ contracts. [Tor Browser Launcher evidence](evidence-verification/debian-tor-brow
 and the separately downloaded first-run artifact prove the signed browser payload
 and launch handoff on Ubuntu 24.04 x86_64; the reviewed active contract is now
 admitted without claiming a Tor-network session. Steam is admitted on its exact
-Ubuntu 24.04 multiarch target after the fresh full artifact and parity review;
-MakeHuman remains an implementation gap.
+Ubuntu 24.04 multiarch target after the fresh full artifact and parity review.
+MakeHuman has no maintained distribution-package route and remains a separate
+external-artifact gap.

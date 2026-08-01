@@ -30,6 +30,7 @@ Run the standalone validator after changing it:
 bash tests/validate-legacy-inventory.sh
 bash tests/validate-legacy-quarantine.sh
 bash tests/validate-provider-backlog.sh
+bash tests/validate-provider-audit-coverage.sh
 ```
 
 The validator reconciles the inventory with all 159 source menu choices and
@@ -55,10 +56,10 @@ The TSV schema is deliberately reviewable without a database:
 
 ## Current coverage truth
 
-The current inventory snapshot has 193 terminal rows: 108 `implemented`, one
-`superseded`, 20 `blocked-safety`, 25 `retired` and 39 `out-of-scope`. The
-remaining 162 rows are non-terminal: 37 `planned` active-module candidates and
-125 `blocked-third-party` provider gaps. No legacy row is called replaced
+The current inventory snapshot has 216 terminal rows: 108 `implemented`, one
+`superseded`, 20 `blocked-safety`, 25 `retired` and 62 `out-of-scope`. The
+remaining 139 rows are non-terminal: 37 `planned` active-module candidates and
+102 `blocked-third-party` provider gaps. No legacy row is called replaced
 merely because a similarly named package module exists. The active catalog
 contains 103 low-risk package modules plus one explicit medium-risk multiarch
 module; 109 active-replacement rows now carry accepted evidence and completed
@@ -68,20 +69,20 @@ parity and installation evidence.
 A mechanical comparison after the current package-only migration batches finds:
 
 - 4 planned Ubuntu rows with an explicit Debian-family active-module candidate
-  and 52 `blocked-third-party` provider/repository rows;
+  and 39 `blocked-third-party` provider/repository rows;
 - 33 planned RHEL rows with an explicit RHEL-family active-module candidate and
   74 `blocked-third-party` provider/repository rows;
-- 37 candidate rows in total and 125 provider/repository rows in total, all
+- 37 candidate rows in total and 102 provider/repository rows in total, all
   still non-terminal pending their applicable evidence or reviewed handoff.
 
 These are discovery numbers, not accepted parity. For example, current modules
 deliberately do not reproduce pinned PHP, Python 2, GCC 8, JDK 8/11 selection,
 source builds, automatic vendor repositories or legacy configuration changes.
-The exact proposed route for all 125 third-party rows is recorded in
+The exact proposed route for all 102 third-party rows is recorded in
 [`provider-backlog.tsv`](provider-backlog.tsv) and explained in
-[`PROVIDER_BACKLOG.md`](PROVIDER_BACKLOG.md): 108 provider/module candidates
-and 17 conditional authenticated-artifact candidates. Thirty additional
-handoff rows and one upstream-retired product have already moved through the
+[`PROVIDER_BACKLOG.md`](PROVIDER_BACKLOG.md): 87 provider/module candidates
+and 15 conditional authenticated-artifact candidates. Reviewed handoff rows
+and one upstream-retired product have already moved through the
 reviewed terminal-disposition gate. Backlog rows remain planning decisions
 only; their inventory states do not change until the normal evidence gates
 pass.
@@ -89,9 +90,9 @@ pass.
 PlayOnLinux, Debian Telegram, and Steam have accepted exact-target evidence and
 are terminal `implemented` rows. Steam is restricted to Ubuntu 24.04 x86_64
 with explicit i386 multiarch acknowledgement. Tor Browser is also terminal on
-its exact Ubuntu 24.04 x86_64 launcher and signed-first-run contract; MakeHuman
-remains the one blocked `distro-component` outcome. The exact image and package
-probe record is
+its exact Ubuntu 24.04 x86_64 launcher and signed-first-run contract. MakeHuman
+has no maintained distribution-package route and remains a conditional external
+artifact gap. The exact image and package probe record is
 [`DISTRO_COMPONENT_PROBES.md`](DISTRO_COMPONENT_PROBES.md).
 
 The push/PR GitHub Actions workflow is configured to run detection, catalog and
@@ -111,7 +112,8 @@ Debian-family replacements.
 A separate manual self-hosted `Systemd VM
 evidence` workflow can validate one exact systemd plan row on one externally
 provisioned disposable VM; it remains provisional until an independent
-provision/create/destroy attestation verifier is implemented.
+provision/create/destroy attestation is signed by a reviewed, registered
+provisioner and independently verified against the published artifact digest.
 Bundle-internal hashes provide corruption checks, not an independent trust
 anchor. Durable promotion must additionally record an externally published
 GitHub artifact digest, signed release hash or attestation.
@@ -173,10 +175,12 @@ the inventory disposition. The five explicit supersession rationales are
 `ubuntu-024`, `ubuntu-038`, `ubuntu-121`, `ubuntu-122`, and
 `rhel-red-hat-enterprise-linux-8-039-ufw`. A reviewer must still confirm each
 row's retained outcome and intentional differences before changing the source
-inventory.
+inventory. The UFW-to-firewalld boundary is recorded in the
+[pre-admission firewall review](parity-reviews/rhel-firewalld.md); it remains
+pending the required systemd evidence.
 
-Thirty-two rows share 11 service-bearing module-family contracts across nine
-modules. Their normal standalone footprint is 25 module-image cells. G5 also
+Thirty-seven rows share 14 service-bearing module-family contracts across 12
+modules. Their normal standalone footprint is 32 module-image cells. G5 also
 requires each of those 14 contracts on every exact family target, with and without
 `--enable-services`, for 64 disposable systemd
 executions. Evidence may be reused by every row with the same `evidence_key`.
@@ -286,7 +290,7 @@ The smallest safe path to close the remaining 37 planned rows is:
    configuration, firewall, credential and data differences; then change each
    row's disposition and durable `evidence` link together in one review.
 
-Closing these 72 rows still leaves the separately tracked 125
+Closing these 37 rows still leaves the separately tracked 102
 `blocked-third-party` provider gaps; both sets must reach reviewed terminal
 states before the old repositories satisfy the retirement gate.
 

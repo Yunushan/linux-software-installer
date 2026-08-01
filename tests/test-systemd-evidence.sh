@@ -39,6 +39,7 @@ write_executable() {
 write_executable "$MOCK_BIN/git" '#!/usr/bin/env bash' \
   'case " $* " in' \
   '  *" rev-parse HEAD "*) printf "%s\n" "$MOCK_COMMIT" ;;' \
+  '  *" merge-base "*) exit 0 ;;' \
   '  *" diff "*) exit 0 ;;' \
   '  *" status "*) exit 0 ;;' \
   '  *) printf "unexpected mocked git arguments: %s\n" "$*" >&2; exit 2 ;;' \
@@ -98,6 +99,16 @@ write_executable "$MOCK_BIN/installer-forged-output" '#!/usr/bin/env bash' \
   'if [[ ${1:-} == plan ]]; then printf "Install apache; enable: apache2\n"; exit 0; fi' \
   'printf "installed=1\nenabled=1\nactive=1\n" > "$MOCK_STATE"' \
   'printf "+ systemctl enable --now apache2\n"'
+write_executable "$MOCK_BIN/gpgv" '#!/usr/bin/env bash' \
+  '[[ ${1:-} == --keyring && -f ${2:-} && ${4:-} == "${LSI_TEST_GPGV_ATTESTATION:-}" ]] || exit 2' \
+  'grep -qx "fixture-valid-signature" "${3:-}"'
+write_executable "$MOCK_BIN/timeout" '#!/usr/bin/env bash' \
+  '# The fixture installer is deterministic; production timeout behavior is exercised on the Linux VM.' \
+  '[[ $# -ge 2 ]] || exit 2' \
+  'shift' \
+  'exec "$@"'
+
+export PATH="$MOCK_BIN:$PATH"
 
 printf 'systemd\n' > "$FIXTURE/proc/1/comm"
 printf '%s\n' \
@@ -216,6 +227,80 @@ fi
 if bash "$ROOT_DIR/tests/validate-systemd-evidence.sh" "$ROOT_DIR" \
   --evidence "$DEFAULT_OUTPUT" --require-accepted > /dev/null 2>&1; then
   printf 'A local self-attested bundle unexpectedly passed the acceptance gate.\n' >&2
+  exit 1
+fi
+
+ACCEPTED_OUTPUT=$TEMP_DIR/output/accepted-fixture
+cp -a "$DEFAULT_OUTPUT" "$ACCEPTED_OUTPUT"
+sed -i \
+  -e 's/^test_mode\t1$/test_mode\t0/' \
+  -e 's/^result\ttest-only$/result\tprovisional/' \
+  "$ACCEPTED_OUTPUT/execution.tsv"
+(
+  cd "$ACCEPTED_OUTPUT"
+  while IFS= read -r file; do
+    sha256sum "$file"
+  done < <(find . -maxdepth 1 -type f ! -name files.sha256 -printf '%f\n' | sort)
+) > "$ACCEPTED_OUTPUT/files.sha256"
+
+ATTESTATION_DIR=$TEMP_DIR/attestation
+mkdir -p "$ATTESTATION_DIR/keys"
+REGISTRY=$ATTESTATION_DIR/systemd-provisioners.tsv
+ATTESTATION=$ATTESTATION_DIR/fixture-attestation.tsv
+SIGNATURE=$ATTESTATION_DIR/fixture-attestation.tsv.asc
+printf '%s\n' $'provisioner_id\tkey_file' \
+  $'fixture-provisioner\tkeys/fixture-provisioner.gpg' > "$REGISTRY"
+printf 'fixture test public key\n' > "$ATTESTATION_DIR/keys/fixture-provisioner.gpg"
+MANIFEST_DIGEST=$(sha256sum "$ACCEPTED_OUTPUT/files.sha256")
+MANIFEST_DIGEST=${MANIFEST_DIGEST%% *}
+ARTIFACT_DIGEST=4444444444444444444444444444444444444444444444444444444444444444
+printf '%s\n' \
+  $'field\tvalue' \
+  $'schema\tlinux-software-installer/systemd-provisioner-attestation/v1' \
+  $'provisioner_id\tfixture-provisioner' \
+  $'execution_id\t'"$DEFAULT_ID" \
+  $'target_id\tubuntu-24-04' \
+  $'tested_commit\t'"$COMMIT" \
+  $'vm_image_ref\t'"$IMAGE_REF" \
+  $'boot_id\t'"$BOOT_ID" \
+  $'nonce\taaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa' \
+  $'evidence_manifest_sha256\t'"$MANIFEST_DIGEST" \
+  $'github_artifact_digest\t'"$ARTIFACT_DIGEST" \
+  $'instance_id\tfixture-vm-1' \
+  $'created_at\t2026-08-01T00:00:00Z' \
+  $'destroyed_at\t2026-08-01T00:01:00Z' > "$ATTESTATION"
+printf 'fixture-valid-signature\n' > "$SIGNATURE"
+export LSI_TEST_GPGV_ATTESTATION=$ATTESTATION
+PATH="$MOCK_BIN:$PATH" bash "$ROOT_DIR/tests/validate-systemd-evidence.sh" "$ROOT_DIR" \
+  --evidence "$ACCEPTED_OUTPUT" --require-accepted \
+  --attestation "$ATTESTATION" --attestation-signature "$SIGNATURE" \
+  --provisioner-registry "$REGISTRY" --artifact-digest "sha256:$ARTIFACT_DIGEST" \
+  > /dev/null
+if PATH="$MOCK_BIN:$PATH" bash "$ROOT_DIR/tests/validate-systemd-evidence.sh" "$ROOT_DIR" \
+  --evidence "$ACCEPTED_OUTPUT" --require-accepted \
+  --attestation "$ATTESTATION" --attestation-signature "$SIGNATURE" \
+  --provisioner-registry "$ROOT_DIR/docs/systemd-provisioners.tsv" \
+  --artifact-digest "sha256:$ARTIFACT_DIGEST" > /dev/null 2>&1; then
+  printf 'An unregistered provisioner unexpectedly passed the acceptance gate.\n' >&2
+  exit 1
+fi
+printf 'fixture-invalid-signature\n' > "$SIGNATURE"
+if PATH="$MOCK_BIN:$PATH" bash "$ROOT_DIR/tests/validate-systemd-evidence.sh" "$ROOT_DIR" \
+  --evidence "$ACCEPTED_OUTPUT" --require-accepted \
+  --attestation "$ATTESTATION" --attestation-signature "$SIGNATURE" \
+  --provisioner-registry "$REGISTRY" --artifact-digest "sha256:$ARTIFACT_DIGEST" \
+  > /dev/null 2>&1; then
+  printf 'An invalid provisioner signature unexpectedly passed the acceptance gate.\n' >&2
+  exit 1
+fi
+printf 'fixture-valid-signature\n' > "$SIGNATURE"
+if PATH="$MOCK_BIN:$PATH" bash "$ROOT_DIR/tests/validate-systemd-evidence.sh" "$ROOT_DIR" \
+  --evidence "$ACCEPTED_OUTPUT" --require-accepted \
+  --attestation "$ATTESTATION" --attestation-signature "$SIGNATURE" \
+  --provisioner-registry "$REGISTRY" \
+  --artifact-digest sha256:5555555555555555555555555555555555555555555555555555555555555555 \
+  > /dev/null 2>&1; then
+  printf 'An attestation with a mismatched artifact digest unexpectedly passed.\n' >&2
   exit 1
 fi
 if run_fixture "$DEFAULT_ID" "$DEFAULT_MARKER" "$TEMP_DIR/output/reused" > /dev/null 2>&1; then

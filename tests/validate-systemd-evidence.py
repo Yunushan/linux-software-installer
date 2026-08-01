@@ -115,6 +115,23 @@ EXPECTED_FILES = {
     "service-attribution.tsv",
     "files.sha256",
 }
+PROVISIONER_HEADER = ["provisioner_id", "key_file"]
+ATTESTATION_FIELDS = {
+    "schema",
+    "provisioner_id",
+    "execution_id",
+    "target_id",
+    "tested_commit",
+    "vm_image_ref",
+    "boot_id",
+    "nonce",
+    "evidence_manifest_sha256",
+    "github_artifact_digest",
+    "instance_id",
+    "created_at",
+    "destroyed_at",
+}
+ATTESTATION_SCHEMA = "linux-software-installer/systemd-provisioner-attestation/v1"
 SHA256_RE = re.compile(r"^[0-9a-f]{64}$")
 COMMIT_RE = re.compile(r"^(?:[0-9a-f]{40}|[0-9a-f]{64})$")
 IMAGE_RE = re.compile(r"^[^\s@]+@sha256:[0-9a-f]{64}$")
@@ -123,6 +140,7 @@ BOOT_RE = re.compile(
 )
 NONCE_RE = re.compile(r"^[0-9a-f]{32,64}$")
 TIME_RE = re.compile(r"^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}Z$")
+SLUG_RE = re.compile(r"^[a-z0-9]+(?:-[a-z0-9]+)*$")
 
 
 class ValidationError(Exception):
@@ -231,6 +249,98 @@ def validate_manifest(evidence: Path) -> None:
         actual = hashlib.sha256((evidence / name).read_bytes()).hexdigest()
         if actual != expected:
             raise ValidationError(f"evidence manifest digest mismatch: {name}")
+
+
+def safe_regular_file(path: Path, label: str) -> None:
+    if not path.is_absolute() or path.resolve() != path:
+        raise ValidationError(f"{label} must be an absolute canonical path")
+    try:
+        metadata = path.lstat()
+    except OSError as error:
+        raise ValidationError(f"cannot inspect {label}: {error}") from None
+    if not path.is_file() or path.is_symlink() or metadata.st_nlink != 1:
+        raise ValidationError(f"{label} is not a single-link regular file")
+
+
+def provisioner_key(registry: Path, provisioner_id: str) -> Path:
+    rows = read_tsv(registry, PROVISIONER_HEADER, "systemd provisioner registry")
+    provisioners = unique_map(rows, "provisioner_id", "systemd provisioner registry")
+    row = provisioners.get(provisioner_id)
+    if row is None:
+        raise ValidationError(f"provisioner is not trusted by the registry: {provisioner_id}")
+    key_file = row["key_file"]
+    if (
+        not re.fullmatch(r"keys/[a-z0-9]+(?:-[a-z0-9]+)*\.gpg", key_file)
+        or key_file != f"keys/{provisioner_id}.gpg"
+    ):
+        raise ValidationError("provisioner registry key path is invalid")
+    key = registry.parent / key_file
+    safe_regular_file(key, "provisioner public key")
+    return key
+
+
+def validate_attestation(
+    root: Path,
+    evidence: Path,
+    execution: dict[str, str],
+    marker: dict[str, str],
+    attestation: Path,
+    signature: Path,
+    registry: Path,
+    artifact_digest: str,
+) -> None:
+    safe_regular_file(attestation, "provisioner attestation")
+    safe_regular_file(signature, "provisioner attestation signature")
+    safe_regular_file(registry, "systemd provisioner registry")
+    statement = read_fields(attestation, "provisioner attestation")
+    if set(statement) != ATTESTATION_FIELDS:
+        raise ValidationError("provisioner attestation field set is mismatched")
+    if statement["schema"] != ATTESTATION_SCHEMA:
+        raise ValidationError("provisioner attestation schema is unsupported")
+    provisioner_id = statement["provisioner_id"]
+    if not SLUG_RE.fullmatch(provisioner_id):
+        raise ValidationError("provisioner attestation ID is malformed")
+    expected = {
+        "execution_id": execution["execution_id"],
+        "target_id": execution["target_id"],
+        "tested_commit": execution["tested_commit"],
+        "vm_image_ref": execution["vm_image_ref"],
+        "boot_id": execution["boot_id"],
+        "nonce": marker["nonce"],
+        "evidence_manifest_sha256": hashlib.sha256(
+            (evidence / "files.sha256").read_bytes()
+        ).hexdigest(),
+        "github_artifact_digest": artifact_digest,
+    }
+    for field, value in expected.items():
+        if statement[field] != value:
+            raise ValidationError(f"provisioner attestation mismatches {field}")
+    if not SLUG_RE.fullmatch(statement["instance_id"]):
+        raise ValidationError("provisioner attestation instance ID is malformed")
+    if not TIME_RE.fullmatch(statement["created_at"]) or not TIME_RE.fullmatch(
+        statement["destroyed_at"]
+    ):
+        raise ValidationError("provisioner attestation timestamps are malformed")
+    if statement["destroyed_at"] <= statement["created_at"]:
+        raise ValidationError("provisioner attestation destruction is not after creation")
+    key = provisioner_key(registry, provisioner_id)
+    try:
+        completed = subprocess.run(
+            ["gpgv", "--keyring", str(key), str(signature), str(attestation)],
+            cwd=root,
+            check=False,
+            capture_output=True,
+            text=True,
+            encoding="utf-8",
+            timeout=60,
+        )
+    except (OSError, subprocess.TimeoutExpired) as error:
+        raise ValidationError(f"cannot verify provisioner attestation signature: {error}") from None
+    if completed.returncode != 0:
+        raise ValidationError(
+            "provisioner attestation signature did not verify: "
+            + (completed.stderr.strip() or "unknown gpgv failure")
+        )
 
 
 def parse_os_release(path: Path) -> dict[str, str]:
@@ -625,6 +735,10 @@ def main() -> int:
     parser.add_argument("--evidence", type=Path, required=True)
     parser.add_argument("--require-real", action="store_true")
     parser.add_argument("--require-accepted", action="store_true")
+    parser.add_argument("--attestation", type=Path)
+    parser.add_argument("--attestation-signature", type=Path)
+    parser.add_argument("--provisioner-registry", type=Path)
+    parser.add_argument("--artifact-digest")
     parser.add_argument("--tested-commit")
     parser.add_argument("--vm-image-ref")
     args = parser.parse_args()
@@ -632,23 +746,46 @@ def main() -> int:
         parser.error("--tested-commit must be a full lowercase hexadecimal object ID")
     if args.vm_image_ref is not None and not IMAGE_RE.fullmatch(args.vm_image_ref):
         parser.error("--vm-image-ref must be an immutable sha256 reference")
+    if args.artifact_digest is not None:
+        args.artifact_digest = args.artifact_digest.removeprefix("sha256:")
+        if not SHA256_RE.fullmatch(args.artifact_digest):
+            parser.error("--artifact-digest must be a SHA-256 digest")
+    if args.require_accepted and (
+        args.attestation is None
+        or args.attestation_signature is None
+        or args.provisioner_registry is None
+        or args.artifact_digest is None
+    ):
+        parser.error(
+            "--require-accepted requires --attestation, --attestation-signature, "
+            "--provisioner-registry and --artifact-digest"
+        )
     try:
-        if args.require_accepted:
-            raise ValidationError(
-                "local bundles are provisional: no external provisioning attestation "
-                "verifier or durable trust anchor is implemented"
-            )
         validate_complete(
             args.root.resolve(),
             args.evidence,
-            args.require_real,
+            args.require_real or args.require_accepted,
             args.tested_commit,
             args.vm_image_ref,
         )
+        if args.require_accepted:
+            execution = read_fields(args.evidence / "execution.tsv", "execution identity")
+            marker = read_fields(args.evidence / "provision-marker.tsv", "provisioning marker")
+            validate_attestation(
+                args.root.resolve(),
+                args.evidence,
+                execution,
+                marker,
+                args.attestation,
+                args.attestation_signature,
+                args.provisioner_registry,
+                args.artifact_digest,
+            )
     except (ValidationError, OSError, UnicodeDecodeError) as error:
         print(f"systemd evidence validation failed: {error}", file=sys.stderr)
         return 1
-    print(f"Provisional systemd evidence structurally validated: {args.evidence.name}")
+    result = "Accepted" if args.require_accepted else "Provisional"
+    print(f"{result} systemd evidence structurally validated: {args.evidence.name}")
     return 0
 
 

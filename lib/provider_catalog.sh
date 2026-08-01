@@ -182,6 +182,23 @@ lsi_provider_valid_fingerprints() {
   done
 }
 
+lsi_provider_valid_dnf_expected_origin() {
+  local value=$1 key_fingerprints=$2 signer declared
+  local -a declared_fingerprints=()
+
+  if [[ $value == signer:* ]]; then
+    signer=${value#signer:}
+    [[ $signer =~ ^([A-F0-9]{40}|[A-F0-9]{64})$ ]] || return 1
+    IFS=',' read -r -a declared_fingerprints <<< "$key_fingerprints"
+    ((${#declared_fingerprints[@]} == 1)) || return 1
+    declared=${declared_fingerprints[0]^^}
+    [[ $signer == "$declared" ]]
+    return
+  fi
+
+  lsi_provider_valid_safe_text "$value" && [[ $value != '-' ]]
+}
+
 lsi_provider_remove_gpg_home() {
   local path=$1 rm_bin=$2 stat_bin=$3 owner mode
   [[ $path =~ ^/tmp/lsi-provider-gpg[.][A-Za-z0-9]+$ && -d $path && ! -L $path ]] || return 0
@@ -831,8 +848,13 @@ lsi_provider_read_cells() {
       return 3
     }
     lsi_provider_validate_key_file "$provider_directory" "$key_file" "$key_fingerprints" || return
-    if ! lsi_provider_valid_safe_text "$expected_origin" || [[ $expected_origin == '-' ]]; then
-      lsi_provider_error "$path:$line_number must declare the expected package origin."
+    if [[ $manager == dnf ]]; then
+      lsi_provider_valid_dnf_expected_origin "$expected_origin" "$key_fingerprints" || {
+        lsi_provider_error "$path:$line_number must declare an exact RPM Vendor or signer:<declared-primary-fingerprint> origin."
+        return 3
+      }
+    elif ! lsi_provider_valid_safe_text "$expected_origin" || [[ $expected_origin == '-' || $expected_origin == signer:* ]]; then
+      lsi_provider_error "$path:$line_number must declare the expected signed APT Release origin."
       return 3
     fi
 
@@ -1956,7 +1978,7 @@ lsi_provider_dnf_install_locked_package() (
   local row=$1 package version arch expected_sha256 verify_binary expected_origin
   local dnf rpm sha256_bin stat_bin find_bin mktemp_bin rm_bin
   local cache_root archive_dir rpm_db artifact candidate package_fields field_package field_version field_arch
-  local observed_sha256 requested_nevra key_source
+  local field_vendor observed_sha256 requested_nevra key_source provider_repo_id
   local -a candidates=()
 
   IFS=$'\t' read -r _module_id _cell_id package version arch expected_sha256 verify_binary <<< "$row"
@@ -1964,6 +1986,10 @@ lsi_provider_dnf_install_locked_package() (
     lsi_provider_error 'Provider install has no primary provider snapshot.'
     return 3
   }
+  IFS=$'\t' read -r _cell_id _os_id _version_id _arch _manager _channel _repository_uri \
+    _suite _components key_file _key_fingerprints expected_origin _metadata_signature \
+    <<< "${LSI_PROVIDER_PLAN_ACTIVATION[$LSI_PROVIDER_PLAN_PRIMARY]}"
+  provider_repo_id="linux-software-installer-$LSI_PROVIDER_PLAN_PRIMARY"
 
   dnf=$(lsi_provider_system_tool dnf) || return
   rpm=$(lsi_provider_system_tool rpm) || return
@@ -2001,6 +2027,8 @@ lsi_provider_dnf_install_locked_package() (
   # trusting a host cache or a stale artifact from another transaction.
   requested_nevra="$package-$version.$arch"
   "$dnf" \
+    --disablerepo='*' \
+    --enablerepo="$provider_repo_id" \
     --setopt=gpgcheck=1 \
     --setopt=repo_gpgcheck=1 \
     --setopt=localpkg_gpgcheck=1 \
@@ -2016,9 +2044,15 @@ lsi_provider_dnf_install_locked_package() (
 
   while IFS= read -r candidate || [[ -n $candidate ]]; do
     [[ -f $candidate && ! -L $candidate ]] || continue
-    package_fields=$("$rpm" -qp --qf '%{NAME}\t%{VERSION}-%{RELEASE}\t%{ARCH}\n' -- "$candidate" 2> /dev/null) || continue
-    IFS=$'\t' read -r field_package field_version field_arch <<< "$package_fields"
+    package_fields=$("$rpm" -qp --qf '%{NAME}\t%{VERSION}-%{RELEASE}\t%{ARCH}\t%{VENDOR}\n' -- "$candidate" 2> /dev/null) || continue
+    IFS=$'\t' read -r field_package field_version field_arch field_vendor <<< "$package_fields"
     [[ $field_package == "$package" && $field_version == "$version" && $field_arch == "$arch" ]] || continue
+    if [[ $expected_origin != signer:* ]]; then
+      [[ $field_vendor == "$expected_origin" ]] || {
+        lsi_provider_error "Downloaded provider package vendor does not match the reviewed origin for $requested_nevra."
+        return 4
+      }
+    fi
     candidates+=("$candidate")
   done < <("$find_bin" "$archive_dir" -maxdepth 1 -type f -name '*.rpm' -print)
   ((${#candidates[@]} == 1)) || {
@@ -2045,10 +2079,10 @@ lsi_provider_dnf_install_locked_package() (
 
   # Verify the RPM signature against an isolated RPM database containing only
   # the provider's checked-in key.  This remains independent from any key the
-  # host might already have imported.
-  IFS=$'\t' read -r _cell_id _os_id _version_id _arch _manager _channel _repository_uri \
-    _suite _components key_file _key_fingerprints expected_origin _metadata_signature \
-    <<< "${LSI_PROVIDER_PLAN_ACTIVATION[$LSI_PROVIDER_PLAN_PRIMARY]}"
+  # host might already have imported.  A signer: expected-origin is admitted
+  # only when parsing established that this key file contains exactly that one
+  # declared primary key, so successful verification binds the package to the
+  # reviewed signer without accepting a blank or invented RPM Vendor field.
   key_source="$LSI_PROVIDER_ROOT/$LSI_PROVIDER_PLAN_PRIMARY/$key_file"
   "$rpm" --dbpath "$rpm_db" --initdb || {
     lsi_provider_error 'Unable to initialize the isolated RPM verification database.'
@@ -2067,6 +2101,7 @@ lsi_provider_dnf_install_locked_package() (
   # distribution dependencies, but it cannot replace the locked provider RPM
   # with an unreviewed repository result.
   "$dnf" \
+    --disablerepo="$provider_repo_id" \
     --setopt=gpgcheck=1 \
     --setopt=repo_gpgcheck=1 \
     --setopt=localpkg_gpgcheck=1 \

@@ -350,9 +350,17 @@ test_legacy_inventory_contract() {
   bash "$ROOT_DIR/tests/validate-legacy-inventory.sh" > /dev/null
 }
 
+test_retirement_documentation_contract() {
+  bash "$ROOT_DIR/tests/validate-retirement-documentation.sh" > /dev/null
+}
+
 test_legacy_promotion_readiness_contract() {
   test_python_available || return 77
   bash "$ROOT_DIR/tests/validate-legacy-promotion-readiness.sh" > /dev/null
+}
+
+test_pending_service_parity_reviews_contract() {
+  bash "$ROOT_DIR/tests/validate-planned-service-parity-reviews.sh" > /dev/null
 }
 
 test_accepted_evidence_admission_contract() {
@@ -374,6 +382,10 @@ test_legacy_quarantine_contract() {
 
 test_provider_backlog_contract() {
   bash "$ROOT_DIR/tests/validate-provider-backlog.sh" > /dev/null
+}
+
+test_provider_audit_coverage_contract() {
+  bash "$ROOT_DIR/tests/validate-provider-audit-coverage.sh" > /dev/null
 }
 
 test_migration_lookup_contract() {
@@ -524,11 +536,14 @@ run_test 'every module plans for every declared family' test_all_declared_module
 run_test 'module manifests satisfy schema and token safety rules' test_module_schema_and_safety
 run_test 'all profile entries resolve to module manifests' test_all_profile_modules_exist
 run_test 'legacy inventory reconciles all 355 source entries' test_legacy_inventory_contract
+run_test 'retirement documentation matches the immutable inventory' test_retirement_documentation_contract
 run_test 'planned legacy rows have a fail-closed promotion ledger' test_legacy_promotion_readiness_contract
+run_test 'pending service mappings have explicit parity boundaries' test_pending_service_parity_reviews_contract
 run_test 'accepted evidence admissions bind external artifacts to exact contracts' test_accepted_evidence_admission_contract
 run_test 'downloaded GitHub evidence artifacts are revalidated before admission' test_downloaded_evidence_artifact_contract
 run_test 'legacy snapshot is pinned and excluded from the active path' test_legacy_quarantine_contract
 run_test 'provider backlog covers every unresolved third-party row' test_provider_backlog_contract
+run_test 'every unresolved provider route has a reviewed audit boundary' test_provider_audit_coverage_contract
 run_test 'read-only migration lookup fails closed on ledger drift' test_migration_lookup_contract
 run_test 'read-only provider catalog rejects unsafe trust metadata' test_provider_catalog_contract
 run_test 'operational behavior fails closed without Docker or systemd' test_operational_safety_contract

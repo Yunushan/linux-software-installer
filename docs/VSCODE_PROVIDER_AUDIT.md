@@ -84,11 +84,13 @@ requirements are unsatisfied:
    reviewed OS/version/architecture/package-manager tuples and exact `code`
    package versions, architectures, digests and expected origins. The two
    historical rows cannot be covered by family-wide inference.
-4. **Exact runtime evidence is absent and DNF remains unavailable.** The APT
-   transaction boundary verifies Release metadata, Release origin and an exact
-   package digest, but this route has not shown a clean solver/install/repeat
-   result on a reviewed target. The RPM path has no equivalent installer yet;
-   it must authenticate both repository metadata and packages, because
+4. **Exact runtime evidence is absent.** The APT transaction boundary verifies
+   Release metadata, Release origin and an exact package digest. The DNF
+   boundary now likewise enables only the reviewed repository for download,
+   verifies signed metadata and packages, SHA-256, NEVRA and the signed RPM
+   `Vendor`, then disables that repository before local installation. Neither
+   route has shown a clean solver/install/repeat result on a reviewed target;
+   both must authenticate repository metadata and packages, because
    `gpgcheck=1` alone does not meet this project's DNF policy.
 5. **Accepted evidence is absent.** There is no commit-bound,
    immutable-image-bound, externally authenticated solver/install/repeat-install

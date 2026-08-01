@@ -8,6 +8,12 @@ directory is registered. The installer does have a tightly scoped,
 digest-authorized `provider-apply` operation, but the empty live registry means
 this candidate cannot reach it.
 
+| Legacy ID | Immutable source locator | Current-target conclusion |
+| --- | --- | --- |
+| `ubuntu-092` | `legacy/ubuntu-16.04/Ubuntu16-04-install-script.sh#choice-92` | A future Debian route must be independently reviewed on an exact current target. |
+| `rhel-almalinux-8-020-kubectl` | `legacy/rhel-family/AlmaLinux-8/scripts/20-Kubectl.sh#script` | The historical EL 8 source does not imply eligibility for an EL 9 route. |
+| `rhel-centos-7-020-kubectl` | `legacy/rhel-family/Centos-7/scripts/20-Kubectl.sh#script` | CentOS 7 remains outside the active installer. |
+
 The proposed catalog identity is deliberately version- and channel-specific:
 
 | Field | Audited candidate value |
