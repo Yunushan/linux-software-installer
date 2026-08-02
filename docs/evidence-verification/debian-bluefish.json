@@ -1,16 +1,16 @@
 {
-  "artifact_sha256": "29bc60acf8033a6727f6c1d67c9871e5d2330a76bb876612404977b4e0d955b8",
+  "artifact_sha256": "9b19da4e4779dd10071a94fd5f137f153fadbe335074b5a59e48de18028b82d5",
   "cell_ids": [
     "debian-12/bluefish",
     "ubuntu-24-04/bluefish",
     "ubuntu-26-04/bluefish"
   ],
-  "commit_sha": "0bbebe6f60e80064b75dfb9b41b887358ea83d04",
+  "commit_sha": "4feb21e1ae162f5d9dbdd98df2a05aad4ed3c632",
   "expected_cells": 371,
-  "index_sha256": "b5eede2cb06a39c61214f16ac17ffd75abeed80d4cd946447eaaa88da3c2ecf4",
+  "index_sha256": "7a729d53622bf2c00a80a455534c172e3721fb21c2a8f1628f2aeecbbb8ab528",
   "module": "bluefish",
   "result": "verified-awaiting-parity-review-and-systemd-attestation",
-  "run_url": "https://github.com/Yunushan/linux-software-installer/actions/runs/29753071695",
+  "run_url": "https://github.com/Yunushan/linux-software-installer/actions/runs/30744748151",
   "schema": "linux-software-installer/accepted-evidence-verification/v2",
   "target_cells": [
     "debian-12",

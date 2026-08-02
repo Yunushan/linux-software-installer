@@ -3,10 +3,10 @@
 ## Scope and decision
 
 - Evidence key: `debian/wine`
-- Tested commit: `27646bafef32bb78c3f5f97d3b9b41451ee96e2e`
+- Tested commit: `4feb21e1ae162f5d9dbdd98df2a05aad4ed3c632`
 - Decision: `implemented`
 - Parity level: `intent`
-- Accepted evidence: [run 29657467906](https://github.com/Yunushan/linux-software-installer/actions/runs/29657467906), artifact digest `sha256:5d84feef4344c29d39f8de5b713b55b3f12cb1b1378800fe68ca6b57c4cde30c`
+- Accepted evidence: [run 30744748151](https://github.com/Yunushan/linux-software-installer/actions/runs/30744748151), artifact digest `sha256:9b19da4e4779dd10071a94fd5f137f153fadbe335074b5a59e48de18028b82d5`
 - Verification report: `docs/evidence-verification/debian-wine.json`
 
 ## Legacy rows covered

@@ -3,10 +3,10 @@
 ## Scope and decision
 
 - Evidence key: `debian/tor-browser`
-- Tested commit: `0bbebe6f60e80064b75dfb9b41b887358ea83d04`
+- Tested module commit: `4feb21e1ae162f5d9dbdd98df2a05aad4ed3c632`
 - Decision: `implemented`
 - Parity level: `intent`
-- Accepted module evidence: [run 29753071695](https://github.com/Yunushan/linux-software-installer/actions/runs/29753071695), aggregate artifact digest `sha256:29bc60acf8033a6727f6c1d67c9871e5d2330a76bb876612404977b4e0d955b8`
+- Accepted module evidence: [run 30744748151](https://github.com/Yunushan/linux-software-installer/actions/runs/30744748151), aggregate artifact digest `sha256:9b19da4e4779dd10071a94fd5f137f153fadbe335074b5a59e48de18028b82d5`
 - First-run payload evidence: [artifact 8466911980](https://github.com/Yunushan/linux-software-installer/actions/runs/29753073842/artifacts/8466911980), digest `sha256:5233d850fdc10d6bf650071519fb48d61c7e0d00f657b8f433a2e528419d6adf`; its recorded archive signature chains to Tor Browser's primary fingerprint `EF6E286DDA85EA2A4BA7DE684E2C6E8793298290`
 - Verification report: `docs/evidence-verification/debian-tor-browser.json`
 
