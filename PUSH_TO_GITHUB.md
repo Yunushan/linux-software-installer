@@ -16,7 +16,9 @@ commit, push or pull request.
 make check
 actionlint .github/workflows/ci.yml \
   .github/workflows/install-smoke.yml \
-  .github/workflows/module-evidence.yml
+  .github/workflows/module-evidence.yml \
+  .github/workflows/systemd-vm-evidence.yml \
+  .github/workflows/release-candidate.yml
 git diff --check
 git status --short
 ```
@@ -43,18 +45,20 @@ merely by existing in the repository.
 
 For a release candidate:
 
-1. Run standalone evidence for the exact candidate commit.
-2. Require its aggregate job to validate the complete expected cell set.
-3. Record the immutable image references and GitHub artifact digest.
-4. Confirm checkout credentials were not persisted or mounted; raw container
+1. Run `make release-archive-check` locally and confirm the archive hash is
+   reproducible.
+2. Run standalone evidence for the exact candidate commit.
+3. Require its aggregate job to validate the complete expected cell set.
+4. Record the immutable image references and GitHub artifact digest.
+5. Confirm checkout credentials were not persisted or mounted; raw container
    paths were outside upload paths; container cleanup preceded sanitization;
    and sanitizer reports contain no rejected links, special files, hard links
    or collisions.
-5. Review failures and package/service side effects; do not discard failed
+6. Review failures and package/service side effects; do not discard failed
    cells from the bundle.
-6. Publish the reviewed bundle through a durable release record with an
+7. Publish the reviewed bundle through a durable release record with an
    external signed hash or attestation.
-7. Run systemd VM evidence separately before promoting service-behavior claims.
+8. Run systemd VM evidence separately before promoting service-behavior claims.
 
 GitHub Actions artifacts are transport, not permanent provenance. The legacy
 inventory may be promoted only when the evidence and disposition requirements

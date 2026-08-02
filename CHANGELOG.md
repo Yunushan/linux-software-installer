@@ -32,6 +32,11 @@ All notable changes to this project are documented here. The format follows
   preview/license/authentication and persistence gates, immutable cached
   rendering, a plan SHA-256, and locked
   package/version/architecture/digest output.
+- Added a tag-gated release-candidate workflow that verifies the semantic
+  version, runs the release-blocking checks, and publishes a deterministic
+  source archive with its checksum and GitHub artifact provenance.
+- Added a local deterministic-archive check so release packaging can be
+  validated before creating a tag.
 
 ### Fixed
 
@@ -99,7 +104,7 @@ All notable changes to this project are documented here. The format follows
 - Module conflict detection and path-traversal rejection.
 - Local tests plus GitHub Actions syntax, lint and container smoke checks.
 - Complete snapshots of both original repositories under `legacy/`.
-- MIT license, security policy, contribution guide and architecture docs.
+- 0BSD license, security policy, contribution guide and architecture docs.
 
 ### Security
 

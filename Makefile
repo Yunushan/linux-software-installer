@@ -1,12 +1,13 @@
 SHELL := /usr/bin/env bash
 
-.PHONY: help syntax test lint format-check check
+.PHONY: help syntax test lint format-check release-archive-check check
 
 help:
 	@printf '%s\n' 'make syntax       Validate supported Bash syntax' \
 	  'make test         Run the dependency-free test suite' \
 	  'make lint         Run ShellCheck when installed' \
 	  'make format-check Run shfmt when installed' \
+	  'make release-archive-check Verify deterministic source archives' \
 	  'make check        Run every available check'
 
 syntax:
@@ -25,4 +26,7 @@ format-check:
 	@command -v shfmt >/dev/null || { printf '%s\n' 'shfmt is not installed; skipping local format check'; exit 0; }
 	@shfmt -d -i 2 -ci -sr install.sh bin/linux-software-installer bin/provider-catalog lib modules tests
 
-check: syntax lint format-check test
+release-archive-check:
+	@./tests/release-archive.sh
+
+check: syntax lint format-check release-archive-check test

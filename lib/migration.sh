@@ -641,7 +641,7 @@ lsi_migration_list_strategy() {
 lsi_migration_retirement_status() {
   local legacy_id backlog_row backlog_capability strategy recommended_action
   local outcome backlog_rationale
-  local strategy_total=0 strategy_summary= strategy_count
+  local strategy_total=0 strategy_summary='' strategy_count
   local -A strategy_counts=()
 
   lsi_migration_load || return 1
@@ -661,7 +661,7 @@ lsi_migration_retirement_status() {
     backlog_row=${LSI_MIGRATION_BACKLOG_ROWS[$legacy_id]}
     IFS=$'\t' read -r backlog_capability strategy recommended_action outcome \
       backlog_rationale <<< "$backlog_row"
-    strategy_counts["$strategy"]=$(( ${strategy_counts[$strategy]:-0} + 1 ))
+    strategy_counts["$strategy"]=$((${strategy_counts[$strategy]:-0} + 1))
     strategy_total=$((strategy_total + 1))
   done
   [[ $strategy_total -eq $LSI_MIGRATION_BLOCKED ]] || {

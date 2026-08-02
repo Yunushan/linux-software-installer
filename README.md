@@ -310,6 +310,13 @@ provisioned, disposable self-hosted VM. It requires an immutable VM image
 reference and external provision/create/destroy attestation, and remains
 provisional until that external attestation is independently verified.
 
+Tagged release candidates use the
+[`Release candidate`](.github/workflows/release-candidate.yml) workflow. It
+requires a `vX.Y.Z` tag that matches `VERSION` and the checked-out commit,
+runs the release-blocking checks, then publishes a deterministic source
+archive, SHA-256 checksum and GitHub artifact provenance. Run
+`make release-archive-check` locally before creating a tag.
+
 Container-based workflows disable persisted checkout credentials and export
 the tested commit with `git archive`, so containers receive neither `.git` nor
 checkout credentials. Container-writable evidence and installer-log trees stay

@@ -1,0 +1,93 @@
+name: Release candidate
+
+on:
+  push:
+    tags: ['v*']
+
+permissions:
+  contents: read
+
+concurrency:
+  group: release-candidate-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  verify-and-package:
+    name: Verify and package ${{ github.ref_name }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+        with:
+          persist-credentials: false
+          fetch-depth: 0
+
+      - name: Verify immutable tag and version
+        shell: bash
+        run: |
+          set -euo pipefail
+          [[ $GITHUB_REF_TYPE == tag && $GITHUB_REF_NAME =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]]
+          version=$(tr -d '\r\n' < VERSION)
+          [[ $GITHUB_REF_NAME == "v$version" ]]
+          git show-ref --verify --quiet "refs/tags/$GITHUB_REF_NAME"
+          [[ $(git rev-list -n 1 "$GITHUB_REF_NAME^{commit}") == "$GITHUB_SHA" ]]
+          [[ -z $(git status --porcelain) ]]
+
+      - name: Install shell tooling
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y gnupg shellcheck shfmt
+
+      - name: Run release-blocking checks
+        env:
+          LSI_REQUIRE_REAL_GPG: '1'
+        run: make check
+
+      - name: Build deterministic source archive
+        shell: bash
+        run: |
+          set -euo pipefail
+          archive="linux-software-installer-${GITHUB_REF_NAME#v}.tar.gz"
+          git archive \
+            --format=tar \
+            --prefix="linux-software-installer-${GITHUB_REF_NAME#v}/" \
+            "$GITHUB_SHA" | gzip -n > "$archive"
+          sha256sum "$archive" > "$archive.sha256"
+          {
+            printf 'tag=%s\n' "$GITHUB_REF_NAME"
+            printf 'commit=%s\n' "$GITHUB_SHA"
+            printf 'version=%s\n' "${GITHUB_REF_NAME#v}"
+            cat "$archive.sha256"
+          } > release-manifest.txt
+
+      - name: Upload release candidate artifact
+        id: upload_release
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: release-candidate-${{ github.ref_name }}
+          path: |
+            linux-software-installer-*.tar.gz
+            linux-software-installer-*.tar.gz.sha256
+            release-manifest.txt
+          if-no-files-found: error
+          retention-days: 90
+
+      - name: Record release artifact provenance
+        if: always() && steps.upload_release.outcome == 'success'
+        env:
+          ARTIFACT_DIGEST: ${{ steps.upload_release.outputs['artifact-digest'] }}
+          ARTIFACT_ID: ${{ steps.upload_release.outputs['artifact-id'] }}
+          ARTIFACT_URL: ${{ steps.upload_release.outputs['artifact-url'] }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          [[ $ARTIFACT_DIGEST =~ ^(sha256:)?[0-9a-fA-F]{64}$ ]]
+          [[ $ARTIFACT_ID =~ ^[0-9]+$ ]]
+          [[ -n $ARTIFACT_URL ]]
+          {
+            printf '### Release candidate artifact\n\n'
+            printf -- '- Artifact ID: `%s`\n' "$ARTIFACT_ID"
+            printf -- '- Artifact digest: `%s`\n' "$ARTIFACT_DIGEST"
+            printf -- '- Artifact URL: %s\n' "$ARTIFACT_URL"
+          } >> "$GITHUB_STEP_SUMMARY"

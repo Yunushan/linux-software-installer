@@ -87,7 +87,7 @@ while IFS=$'\t' read -r legacy_id capability strategy action outcome rationale; 
   source_locator=${source_locators[$legacy_id]:-}
   [[ -n $source_locator ]] || die "$legacy_id is missing from the immutable inventory"
   audit_rows+=("$legacy_id"$'\t'"$source_locator"$'\t'"$group"$'\t'"${audit_documents[$group]#"$ROOT_DIR/"}")
-  actual_counts["$group"]=$(( ${actual_counts[$group]:-0} + 1 ))
+  actual_counts["$group"]=$((${actual_counts[$group]:-0} + 1))
   total=$((total + 1))
 done < "$BACKLOG"
 
