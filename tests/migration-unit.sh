@@ -110,7 +110,7 @@ test_strategy_lookup_is_read_only_and_exact() (
   count=$(grep -Ec '^(ubuntu|rhel)-[a-z0-9-]+[[:space:]]+' <<< "$output")
   [[ $count -eq 9 ]] &&
     grep -q '^Strategy      : vendor-apt$' <<< "$output" &&
-    grep -q '^ubuntu-005[[:space:]]+visual-studio-code[[:space:]]+visual-studio-code[[:space:]]+implement$' <<< "$output" &&
+    grep -Eq '^ubuntu-005[[:space:]]+visual-studio-code[[:space:]]+visual-studio-code[[:space:]]+implement$' <<< "$output" &&
     grep -q '^9 unresolved route(s) use vendor-apt\. These proposed outcomes are not install commands\.$' <<< "$output" &&
     ! grep -Eq '(apt-get|dnf)[[:space:]]+(install|-y)' <<< "$output" &&
     ! lsi_migration_list_strategy does-not-exist > /dev/null 2>&1 &&
@@ -134,8 +134,12 @@ test_retirement_status_reports_exact_blockers() (
 test_retirement_status_allows_only_zero_remaining_rows() (
   local output
   lsi_migration_load || return 1
+  # Model a genuinely resolved ledger: no provisional rows and no backlog
+  # entries remain when retirement status is evaluated.
+  LSI_MIGRATION_TERMINAL=$LSI_MIGRATION_TOTAL
   LSI_MIGRATION_PLANNED=0
   LSI_MIGRATION_BLOCKED=0
+  LSI_MIGRATION_BACKLOG_ROWS=()
   output=$(lsi_migration_retirement_status) || return 1
   grep -q '^Retirement decision           : READY TO RETIRE$' <<< "$output" &&
     grep -q 'Every tracked legacy entry is a validated terminal replacement or documented handoff' <<< "$output" &&
