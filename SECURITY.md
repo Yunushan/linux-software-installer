@@ -6,6 +6,11 @@ Security fixes are applied to the latest release on the `main` branch. Legacy
 snapshots under `legacy/` are preserved for historical reference and do not
 receive security fixes.
 
+The repository also runs the pinned CodeQL workflow against its GitHub Actions
+workflow source on pushes, pull requests and a weekly schedule. A green scan
+does not replace maintainer review or the installer evidence gates; it is an
+additional supply-chain and workflow-safety signal.
+
 | Version | Security support |
 |---|---|
 | Latest `1.x` | Yes |
