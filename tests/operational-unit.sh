@@ -401,6 +401,50 @@ test_refresh_once_execution() (
   grep -qx 'apt-get update' "$trace" || fail 'Debian refresh command was not apt-get update'
 )
 
+test_selected_foreign_architectures_precede_first_refresh() {
+  local trace="$TEMP_DIR/selected-foreign-architecture.trace"
+  LSI_PROJECT_ROOT="$ROOT_DIR" TRACE="$trace" bash -c '
+    set -Eeuo pipefail
+    source "$LSI_PROJECT_ROOT/lib/common.sh"
+    source "$LSI_PROJECT_ROOT/lib/catalog.sh"
+    source "$LSI_PROJECT_ROOT/lib/package.sh"
+    source "$LSI_PROJECT_ROOT/lib/cli.sh"
+    LSI_OS_FAMILY=debian
+    LSI_OS_ID=ubuntu
+    LSI_OS_VERSION_ID=24.04
+    LSI_ARCH=x86_64
+    LSI_DRY_RUN=false
+    LSI_NO_REFRESH=false
+    LSI_FINAL_MODULES=(base steam)
+    lsi_load_module() {
+      MODULE_ID=$1
+      MODULE_FAMILIES=(debian)
+      MODULE_DEBIAN_PACKAGES=(fixture-package)
+      MODULE_RHEL_PACKAGES=()
+      MODULE_DEBIAN_FOREIGN_ARCHITECTURES=()
+      MODULE_VERIFY_BINARIES=(fixture-binary)
+      MODULE_DEBIAN_VERIFY_BINARIES=(fixture-binary)
+      MODULE_RHEL_VERIFY_BINARIES=()
+      MODULE_DEBIAN_SERVICES=()
+      MODULE_RHEL_SERVICES=()
+      MODULE_TARGET_CELLS=(ubuntu:24.04:x86_64)
+      if [[ $MODULE_ID == steam ]]; then
+        MODULE_DEBIAN_FOREIGN_ARCHITECTURES=(i386)
+      fi
+    }
+    dpkg() {
+      [[ ${1:-} == --print-foreign-architectures ]]
+    }
+    lsi_run() { printf "%s\n" "$*" >> "$TRACE"; }
+    lsi_prepare_foreign_architectures
+    lsi_refresh_repositories
+  ' > /dev/null
+  [[ $(sed -n '1p' "$trace") == 'dpkg --add-architecture i386' ]] ||
+    fail 'selected foreign architecture was not prepared before refresh'
+  [[ $(sed -n '2p' "$trace") == 'apt-get update' ]] ||
+    fail 'first refresh did not follow selected foreign-architecture preparation'
+}
+
 test_foreign_architecture_precedes_refresh_and_install() {
   local trace="$TEMP_DIR/foreign-architecture.trace"
   LSI_PROJECT_ROOT="$ROOT_DIR" TRACE="$trace" bash -c '
@@ -477,6 +521,7 @@ test_package_failure_propagates
 test_verification_failure_propagates
 test_stop_on_error
 test_refresh_once_execution
+test_selected_foreign_architectures_precede_first_refresh
 test_foreign_architecture_precedes_refresh_and_install
 test_explicit_service_activation
 

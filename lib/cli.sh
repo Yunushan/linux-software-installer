@@ -196,6 +196,16 @@ lsi_check_foreign_architecture_acknowledgements() {
   done
 }
 
+lsi_prepare_foreign_architectures() {
+  local id
+
+  [[ $LSI_OS_FAMILY == debian ]] || return 0
+  for id in "${LSI_FINAL_MODULES[@]}"; do
+    lsi_load_module "$id"
+    lsi_configure_debian_foreign_architectures
+  done
+}
+
 lsi_show_plan() {
   local id architecture
   local -a foreign_architectures=()
@@ -288,6 +298,11 @@ lsi_execute() {
   lsi_acquire_lock
   lsi_initialize_log
   lsi_preflight
+  # Configure every selected Debian foreign architecture before the first
+  # repository refresh.  Adding one after apt-get update leaves the package
+  # lists without that architecture, which can make a later multiarch module
+  # fail even though its explicit acknowledgement was supplied.
+  lsi_prepare_foreign_architectures
   for id in "${LSI_FINAL_MODULES[@]}"; do
     lsi_install_module "$id"
   done
