@@ -371,6 +371,7 @@ test_stop_on_error() {
     lsi_acquire_lock() { :; }
     lsi_initialize_log() { :; }
     lsi_preflight() { :; }
+    lsi_prepare_foreign_architectures() { :; }
     lsi_install_module() {
       printf "%s\n" "$1" >> "$TRACE"
       [[ $1 != first ]] || return 31
