@@ -107,9 +107,9 @@ in separate fresh containers, preserving all 371 independent module-image
 cells without exceeding the workflow matrix limit. It emits structured
 pre/install/repeat evidence and an aggregate coverage/checksum bundle. The
 current externally hashed aggregate (run
-[`30830718610`](https://github.com/Yunushan/linux-software-installer/actions/runs/30830718610),
+[`30838575507`](https://github.com/Yunushan/linux-software-installer/actions/runs/30838575507),
 artifact digest
-`sha256:f382d63596e5376ed179fd5f577d3dc8c10b6d000408c656d6081b02e7a815f3`)
+`sha256:f8120aa9eb93ba6878a0e732b29b17218cef6ae1a78bcb981563dc59c9f91852`)
 verified all 371 cells for the 104-module catalog. The admission registry
 contains 80 accepted module-family keys covering 109 active rows, including
 the Steam multiarch contract and thirty-four additional non-service

@@ -1,16 +1,16 @@
 {
-  "artifact_sha256": "f382d63596e5376ed179fd5f577d3dc8c10b6d000408c656d6081b02e7a815f3",
+  "artifact_sha256": "f8120aa9eb93ba6878a0e732b29b17218cef6ae1a78bcb981563dc59c9f91852",
   "cell_ids": [
     "debian-12/mariadb",
     "ubuntu-24-04/mariadb",
     "ubuntu-26-04/mariadb"
   ],
-  "commit_sha": "3e19212041ce9707c7c457fa2e2f29c7c0afa9b1",
+  "commit_sha": "739dd664383221912ab00c18e32e762743c8748f",
   "expected_cells": 371,
-  "index_sha256": "8288901d316fddd6eec776abf20ef9c42f28022d24109027aa9a42c3ac3269e5",
+  "index_sha256": "7452710406555cebe6f5392575dc88e04e7d1c04908ac04e9885eeedb76dbfa2",
   "module": "mariadb",
   "result": "verified-awaiting-parity-review-and-systemd-attestation",
-  "run_url": "https://github.com/Yunushan/linux-software-installer/actions/runs/30830718610",
+  "run_url": "https://github.com/Yunushan/linux-software-installer/actions/runs/30838575507",
   "schema": "linux-software-installer/accepted-evidence-verification/v2",
   "target_cells": [
     "debian-12",

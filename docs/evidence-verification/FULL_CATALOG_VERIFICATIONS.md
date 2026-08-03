@@ -20,6 +20,24 @@ summary and expected-cell tables, tested-commit marker and every indexed cell
 result digest. This receipt rebinds the accepted-evidence registry to the
 multi-architecture fix on `main`.
 
+## 2026-08-03: CodeQL-rebound full matrix
+
+- Tested commit: `739dd664383221912ab00c18e32e762743c8748f`
+- Workflow run: [30838575507](https://github.com/Yunushan/linux-software-installer/actions/runs/30838575507)
+- Artifact: `module-evidence-aggregate-739dd664383221912ab00c18e32e762743c8748f` ([artifact 8867385491](https://github.com/Yunushan/linux-software-installer/actions/runs/30838575507/artifacts/8867385491))
+- GitHub-published ZIP digest: `sha256:f8120aa9eb93ba6878a0e732b29b17218cef6ae1a78bcb981563dc59c9f91852`
+- Observed downloaded ZIP digest: `sha256:f8120aa9eb93ba6878a0e732b29b17218cef6ae1a78bcb981563dc59c9f91852`
+- Matrix result: 106 successful jobs; no failed jobs
+- Independent verifier result: all 139 catalog report keys (including the 80
+  currently admitted keys) and all 371 indexed cells verified cleanly.
+  Aggregate index SHA-256:
+  `7452710406555cebe6f5392575dc88e04e7d1c04908ac04e9885eeedb76dbfa2`.
+
+The verifier checked the ZIP and internal checksum records, aggregate index,
+summary and expected-cell tables, tested-commit marker and every indexed cell
+result digest. The accepted-evidence registry and derived readiness ledger now
+bind to this artifact.
+
 ## 2026-07-18: previous full matrix
 
 - Tested commit: `f59c5765b5e68ba4e074331a1b494a1bfdbcb125`

@@ -7,9 +7,9 @@ tested commit, aggregate-index digest, and GitHub-published ZIP digest.
 
 The directory deliberately contains both full-catalog reports and focused
 refreshes. The current full-catalog artifact from
-[`30830718610`](https://github.com/Yunushan/linux-software-installer/actions/runs/30830718610)
+[`30838575507`](https://github.com/Yunushan/linux-software-installer/actions/runs/30838575507)
 verified all 371 indexed cells on commit
-`3e19212041ce9707c7c457fa2e2f29c7c0afa9b1`, while a focused run may supersede
+`739dd664383221912ab00c18e32e762743c8748f`, while a focused run may supersede
 one report after that module's contract changes. Always use
 the individual report's `run_url`,
 `commit_sha`, `index_sha256`, and `artifact_sha256`; do not infer those values

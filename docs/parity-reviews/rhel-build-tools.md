@@ -3,10 +3,10 @@
 ## Scope and decision
 
 - Evidence key: `rhel/build-tools`
-- Tested commit: `3e19212041ce9707c7c457fa2e2f29c7c0afa9b1`
+- Tested commit: `739dd664383221912ab00c18e32e762743c8748f`
 - Decision: `implemented`
 - Parity level: `intent`
-- Accepted evidence: [run 30830718610](https://github.com/Yunushan/linux-software-installer/actions/runs/30830718610), artifact digest `sha256:f382d63596e5376ed179fd5f577d3dc8c10b6d000408c656d6081b02e7a815f3`
+- Accepted evidence: [run 30838575507](https://github.com/Yunushan/linux-software-installer/actions/runs/30838575507), artifact digest `sha256:f8120aa9eb93ba6878a0e732b29b17218cef6ae1a78bcb981563dc59c9f91852`
 - Verification report: `docs/evidence-verification/rhel-build-tools.json`
 
 ## Legacy rows covered
