@@ -1,0 +1,18 @@
+{
+  "artifact_sha256": "f8120aa9eb93ba6878a0e732b29b17218cef6ae1a78bcb981563dc59c9f91852",
+  "cell_ids": [
+    "alma-9-8/nginx",
+    "rocky-9-8/nginx"
+  ],
+  "commit_sha": "739dd664383221912ab00c18e32e762743c8748f",
+  "expected_cells": 371,
+  "index_sha256": "7452710406555cebe6f5392575dc88e04e7d1c04908ac04e9885eeedb76dbfa2",
+  "module": "nginx",
+  "result": "verified-awaiting-parity-review-and-systemd-attestation",
+  "run_url": "https://github.com/Yunushan/linux-software-installer/actions/runs/30838575507",
+  "schema": "linux-software-installer/accepted-evidence-verification/v2",
+  "target_cells": [
+    "alma-9-8",
+    "rocky-9-8"
+  ]
+}
