@@ -3,8 +3,8 @@
 ## Scope and status
 
 - Evidence key: `rhel/samba`
-- Tested commit: `4feb21e1ae162f5d9dbdd98df2a05aad4ed3c632`
-- Container evidence: [run 30744748151](https://github.com/Yunushan/linux-software-installer/actions/runs/30744748151), aggregate artifact digest `sha256:9b19da4e4779dd10071a94fd5f137f153fadbe335074b5a59e48de18028b82d5`
+- Tested commit: `3e19212041ce9707c7c457fa2e2f29c7c0afa9b1`
+- Container evidence: [run 30830718610](https://github.com/Yunushan/linux-software-installer/actions/runs/30830718610), aggregate artifact digest `sha256:f382d63596e5376ed179fd5f577d3dc8c10b6d000408c656d6081b02e7a815f3`
 - Verification report: `docs/evidence-verification/rhel-samba.json`
 - Parity level on admission: `intent`
 - Admission status: **pending disposable-VM/systemd attestation**. This review

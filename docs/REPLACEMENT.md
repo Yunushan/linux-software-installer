@@ -105,9 +105,14 @@ standalone workflow is configured
 as a 104-module matrix; each module job sequentially runs its applicable images
 in separate fresh containers, preserving all 371 independent module-image
 cells without exceeding the workflow matrix limit. It emits structured
-pre/install/repeat evidence and an aggregate coverage/checksum bundle. A prior
-externally hashed aggregate admitted 80 module-family keys and 109 active rows,
-including the Steam multiarch contract and thirty-four additional non-service
+pre/install/repeat evidence and an aggregate coverage/checksum bundle. The
+current externally hashed aggregate (run
+[`30830718610`](https://github.com/Yunushan/linux-software-installer/actions/runs/30830718610),
+artifact digest
+`sha256:f382d63596e5376ed179fd5f577d3dc8c10b6d000408c656d6081b02e7a815f3`)
+verified all 371 cells for the 104-module catalog. The admission registry
+contains 80 accepted module-family keys covering 109 active rows, including
+the Steam multiarch contract and thirty-four additional non-service
 Debian-family replacements.
 A separate manual self-hosted `Systemd VM
 evidence` workflow can validate one exact systemd plan row on one externally
@@ -467,8 +472,8 @@ separate responsibilities:
   shared evidence keys and still-missing acceptance gates for every planned row;
   it cannot promote or override the source inventory.
 - [`accepted-evidence.tsv`](accepted-evidence.tsv) is the reviewed external
-  evidence admission registry; it is currently empty and cannot promote or
-  override the source inventory.
+  evidence admission registry; it currently contains 80 accepted
+  module-family admissions and cannot promote or override the source inventory.
 - [`legacy-source-defects.tsv`](legacy-source-defects.tsv) records preserved
   launcher/menu defects that replacements must not reproduce.
 - [`provider-backlog.tsv`](provider-backlog.tsv) maps every unresolved

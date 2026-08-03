@@ -1,16 +1,16 @@
 {
-  "artifact_sha256": "9b19da4e4779dd10071a94fd5f137f153fadbe335074b5a59e48de18028b82d5",
+  "artifact_sha256": "f382d63596e5376ed179fd5f577d3dc8c10b6d000408c656d6081b02e7a815f3",
   "cell_ids": [
     "debian-12/obs-studio",
     "ubuntu-24-04/obs-studio",
     "ubuntu-26-04/obs-studio"
   ],
-  "commit_sha": "4feb21e1ae162f5d9dbdd98df2a05aad4ed3c632",
+  "commit_sha": "3e19212041ce9707c7c457fa2e2f29c7c0afa9b1",
   "expected_cells": 371,
-  "index_sha256": "7a729d53622bf2c00a80a455534c172e3721fb21c2a8f1628f2aeecbbb8ab528",
+  "index_sha256": "8288901d316fddd6eec776abf20ef9c42f28022d24109027aa9a42c3ac3269e5",
   "module": "obs-studio",
   "result": "verified-awaiting-parity-review-and-systemd-attestation",
-  "run_url": "https://github.com/Yunushan/linux-software-installer/actions/runs/30744748151",
+  "run_url": "https://github.com/Yunushan/linux-software-installer/actions/runs/30830718610",
   "schema": "linux-software-installer/accepted-evidence-verification/v2",
   "target_cells": [
     "debian-12",

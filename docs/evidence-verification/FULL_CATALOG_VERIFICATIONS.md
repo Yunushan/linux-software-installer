@@ -4,7 +4,23 @@ This log records independent local verification of immutable GitHub Actions
 aggregate artifacts. It does not itself admit a legacy row: row-level parity
 reviews and any required systemd attestations remain mandatory.
 
-## 2026-07-18: current full matrix
+## 2026-08-03: current full matrix
+
+- Tested commit: `3e19212041ce9707c7c457fa2e2f29c7c0afa9b1`
+- Workflow run: [30830718610](https://github.com/Yunushan/linux-software-installer/actions/runs/30830718610)
+- Artifact: `module-evidence-aggregate-3e19212041ce9707c7c457fa2e2f29c7c0afa9b1` ([artifact 8864367977](https://github.com/Yunushan/linux-software-installer/actions/runs/30830718610/artifacts/8864367977))
+- GitHub-published ZIP digest: `sha256:f382d63596e5376ed179fd5f577d3dc8c10b6d000408c656d6081b02e7a815f3`
+- Observed downloaded ZIP digest: `sha256:f382d63596e5376ed179fd5f577d3dc8c10b6d000408c656d6081b02e7a815f3`
+- Matrix result: 106 successful jobs; no failed jobs
+- Independent verifier result: all 94 tracked `family/module` report keys and
+  all 371 indexed cells verified cleanly.
+
+The verifier checked the ZIP and internal checksum records, aggregate index,
+summary and expected-cell tables, tested-commit marker and every indexed cell
+result digest. This receipt rebinds the accepted-evidence registry to the
+multi-architecture fix on `main`.
+
+## 2026-07-18: previous full matrix
 
 - Tested commit: `f59c5765b5e68ba4e074331a1b494a1bfdbcb125`
 - Workflow run: [29648435978](https://github.com/Yunushan/linux-software-installer/actions/runs/29648435978)
@@ -34,10 +50,10 @@ The verifier checked the ZIP and internal checksum records, aggregate index,
 summary and expected-cell tables, tested-commit marker, every indexed cell
 result digest, and the requested 90-key catalog coverage.
 
-## Historical artifact record
+## Older historical artifact record
 
 Run [29640717432](https://github.com/Yunushan/linux-software-installer/actions/runs/29640717432)
 at commit `f7b772a72fa8c543cb84f79db0473cf5ad05daf5` remains recorded as
 historical provenance only. The `*.json` reports in this directory and all
-accepted-evidence admissions are now rebound to the fresh f59 artifact
+accepted-evidence admissions are rebound to the 2026-08-03 artifact
 documented above.
