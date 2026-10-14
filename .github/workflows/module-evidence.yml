@@ -278,14 +278,14 @@ jobs:
           persist-credentials: false
 
       - name: Download immutable evidence plan
-        uses: actions/download-artifact@fd7ae8fda6dc16277a9ffbc91cdb0eedf156e912 # v7.0.0
+        uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v7.0.0
         with:
           name: module-evidence-plan
           path: ${{ runner.temp }}/module-evidence-plan
 
       - name: Download all module evidence
         continue-on-error: true
-        uses: actions/download-artifact@fd7ae8fda6dc16277a9ffbc91cdb0eedf156e912 # v7.0.0
+        uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v7.0.0
         with:
           pattern: module-cell-*
           path: ${{ runner.temp }}/module-cells
